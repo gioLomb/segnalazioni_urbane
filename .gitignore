@@ -1,0 +1,14 @@
+todo.md
+test.sh
+a.out
+prime_proof.txt
+report_threadPool.txt
+server
+stress.c
+benchmark_report.docx
+temp/
+*.bin
+*.lua
+*.py
+*.md
+*.html
