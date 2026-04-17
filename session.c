@@ -35,13 +35,14 @@ bool session_create(Hash_Table *sessionTable, uint64_t userId, char *outToken) {
 }
 
 bool session_verify(Hash_Table *sessionTable, const char *token, uint64_t *outUserId) {
-    if (!sessionTable || !token || !outUserId) return false;
-    return ht_get(sessionTable, token, strlen(token) + 1, outUserId, sizeof(uint64_t));
+    if (!sessionTable || !token) return false;
+    return ht_get(sessionTable, (void *)token, strlen(token) + 1, outUserId, sizeof(uint64_t));
 }
 
 void session_destroy(Hash_Table *sessionTable, const char *token) {
-    if (!sessionTable || !token) return;
-    ht_delete(sessionTable, token, strlen(token) + 1);
+    if (sessionTable && token) {
+        ht_delete(sessionTable, (void *)token, strlen(token) + 1);
+    }
 }
 
 void session_clear_all(Hash_Table *sessionTable) {

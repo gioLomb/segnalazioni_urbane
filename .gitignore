@@ -12,3 +12,4 @@ temp/
 *.py
 *.md
 *.html
+test_modules.c

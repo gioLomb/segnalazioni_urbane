@@ -4,7 +4,7 @@
 #include <string.h>
 
 static sqlite3 *g_db = NULL;
-static char *g_errmsg = NULL;
+static const char *g_errmsg = NULL;
 
 int db_init(const char *path) {
     if (g_db) sqlite3_close(g_db);
