@@ -1,39 +1,35 @@
-/**
- * This module parses incoming HTTP requests and dispatches them to the
- * appropriate route handler. Routes are stored in a static array of Route
- * structs; each entry pairs a URL path prefix with a handler function that
- * reads query parameters, interacts with the hash table, and writes a
- * plain-text or JSON response into the caller-supplied buffer.
- * All handler functions return an HTTP status code and write a human-readable
- * message (or a JSON object for /get) into responseBuffer.
- */
-
 #ifndef ROUTE_HANDLER_H
 #define ROUTE_HANDLER_H
 
 #include "config.h"
-#include "hash_table.h"
 
-/**
- * Associates a URL path prefix with its handler function.
- * handle_request() iterates over the static routes array and calls the first
- * handler whose path is a prefix of the extracted URL.
- * The handler receives the full URL string, the shared hash table, and a
- * buffer to fill with the response body; it returns an HTTP status code.
+#define COOKIE_MAX 512
+
+/*
+ * Extra out-of-band data a handler may attach to a response.
+ * server_functions.c reads these after handle_request() returns.
+ *
+ *   set_cookie – non-empty → add "Set-Cookie: <set_cookie>" header
+ *   location   – non-empty → 302 redirect; body is ignored
  */
-typedef struct Route{
-    char *path;
-    int (*handler)(Hash_Table* table, const char* url, char* responseBuffer);
+typedef struct {
+    char set_cookie[COOKIE_MAX];
+    char location[256];
+} RouteExtra;
+
+typedef struct {
+    const char *method; /* "GET", "POST", or "*" for both */
+    const char *path;
+    int (*handler)(const char *req, char *resp, size_t respMax, RouteExtra *extra);
 } Route;
 
-/**
- * Parses an HTTP request from requestBuffer, extracts the URL from the
- * first request line using strtok_r (re-entrant and therefore thread-safe),
- * and dispatches it to the first matching route handler.
- * The handler fills responseBuffer with the response body.
- * Returns 200 on success, 400 if the first line is missing or malformed,
- * 404 if no registered route matches the URL.
+/*
+ * Dispatches the HTTP request in req to the matching route, fills resp,
+ * populates extra if needed, and sets *keepAlive.
+ * Returns an HTTP status code (200, 302, 400, 401, 404, 405, 500, ...).
+ * g_sessions is accessed directly from server_functions.c via extern.
  */
-int handle_request(Hash_Table* db, char *requestBuffer, char *responseBuffer,int *keepAlive);
+int handle_request(const char *req, char *resp, size_t respMax,
+                   RouteExtra *extra, int *keepAlive);
 
 #endif /* ROUTE_HANDLER_H */

@@ -3,9 +3,12 @@
 #include <string.h>
 #include <stdio.h>
 #include <time.h>
+#include <unistd.h>
 
 // Generatore di token casuali (usa rand() + time, non crittografico ma sufficiente per demo)
 static void generate_token(char *out, size_t len) {
+    static int seeded = 0;
+    if (!seeded) { srand((unsigned)time(NULL) ^ (unsigned)getpid()); seeded = 1; }
     const char hex[] = "0123456789abcdef";
     for (size_t i = 0; i < len; i++) {
         unsigned char r = (unsigned char)(rand() & 0xFF);

@@ -25,6 +25,14 @@ const char *db_errmsg(void) {
     return g_errmsg ? g_errmsg : sqlite3_errmsg(g_db);
 }
 
+sqlite3_int64 db_last_insert_id(void) {
+    return g_db ? sqlite3_last_insert_rowid(g_db) : 0;
+}
+
+int db_changes(void) {
+    return g_db ? sqlite3_changes(g_db) : 0;
+}
+
 static int bind_variadic(sqlite3_stmt *stmt, va_list args) {
     int idx = 1;
     while (1) {
@@ -34,7 +42,7 @@ static int bind_variadic(sqlite3_stmt *stmt, va_list args) {
             case 1: { int v = va_arg(args, int); sqlite3_bind_int(stmt, idx++, v); break; }
             case 2: { sqlite3_int64 v = va_arg(args, sqlite3_int64); sqlite3_bind_int64(stmt, idx++, v); break; }
             case 3: { double v = va_arg(args, double); sqlite3_bind_double(stmt, idx++, v); break; }
-            case 4: { char *v = va_arg(args, char*); sqlite3_bind_text(stmt, idx++, v, -1, SQLITE_STATIC); break; }
+            case 4: { char *v = va_arg(args, char*); sqlite3_bind_text(stmt, idx++, v, -1, SQLITE_TRANSIENT); break; }
             case 5: sqlite3_bind_null(stmt, idx++); break;
             default: return -1;
         }

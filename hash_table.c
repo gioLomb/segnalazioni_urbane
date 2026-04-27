@@ -1,73 +1,68 @@
 #include "hash_table.h"
 
-/* STATIC FUNCTION PROTOTYPES */
+/* ── Static prototypes ───────────────────────────────────────────────── */
 
 /**
- * Allocates and initialises a new Entry node, performing deep copies of
- * the key and the value. The raw hash is cached in the entry to avoid recomputing
- * it during resize. Returns NULL on allocation failure.
+ * Allocates and deep-copies key and value into a new Entry.
+ * Caches the raw hash to avoid recomputation during resize.
+ * Returns NULL on allocation failure.
  */
-static Entry *create_entry(void *key, size_t keySize, void *value, size_t valueSize, unsigned long hash);
+static Entry *create_entry(void *key, size_t keySize,
+                            void *value, size_t valueSize,
+                            unsigned long hash);
 
 /**
- * Grows the bucket array to the next prime >= 2 * current capacity and relinks
- * all existing entries into the new pool without reallocating them, adapting
- * the cached hash field to avoid recomputing it. The old pool is freed after
- * relinking. Returns 1 on success, 0 if the
- * new pool allocation fails, in this case the table is left unchanged.
+ * Grows the bucket array to the next prime >= 2 * current capacity,
+ * relinking every existing entry into the new pool using the cached hash.
+ * Leaves the table unchanged if the new allocation fails.
+ * Returns 1 on success, 0 on failure.
  */
 static int ht_resize(Hash_Table *table);
 
 /**
- * Deterministic primality test using trial division with the 6k ± 1 optimisation:
- * since all primes > 3 are of the form 6k ± 1, only those candidates are tested,
- * reducing iterations. Returns 1 if n is prime, 0 otherwise.
+ * Primality test via trial division with the 6k±1 optimisation.
+ * Returns 1 if n is prime, 0 otherwise.
  */
 static int is_prime(size_t n);
 
 /**
- * Returns the smallest prime >= n, starting the search on the nearest odd number
- * to avoid testing even candidates.
+ * Returns the smallest prime >= n.
  */
 static size_t next_prime(size_t n);
 
 /**
- * Serialises a single entry to an already-open binary file. Called internally
- * by ht_destroy() for each entry. Both entryToSave and file pointer must not be NULL.
+ * Serialises one entry to an open binary file.
+ * Neither argument may be NULL.
  */
-static inline void save_data_on_file(Entry *entryToSave, FILE *f);
+static inline void save_entry(Entry *e, FILE *f);
 
 /**
- * Generates a random seed by reading it from /dev/urandom,
- * falling back to time(NULL) if unavailable. Note that the fallback is deterministic
- * and should not be relied upon for security-sensitive contexts.
+ * Reads a cryptographic seed from /dev/urandom, falling back to time(NULL).
+ * The fallback is deterministic and must not be used in security-sensitive
+ * contexts.
  */
-static unsigned long generate_secure_seed(void);
+static unsigned long generate_seed(void);
 
 /**
- * Compares two generic memory buffers for equality.
- * First checks if sizes match to avoid unnecessary memory comparison.
- * Returns 1 if buffers are identical, 0 otherwise.
+ * Returns 1 if the two memory buffers are identical, 0 otherwise.
+ * Checks sizes first to short-circuit the memcmp.
  */
-static inline int keys_equal(const void *a, size_t aSize, const void *b, size_t bSize);
+static inline int keys_equal(const void *a, size_t aSize,
+                              const void *b, size_t bSize);
 
-/* API IMPLEMENTATION */
 
+/* ── API implementation ──────────────────────────────────────────────── */
 
 Hash_Table *ht_create(size_t initialCapacity, hash_func hashFunction) {
     Hash_Table *table = malloc(sizeof(Hash_Table));
     if (!table) return NULL;
 
-    table->size = 0;
-    table->capacity = initialCapacity > 0 ? initialCapacity : HT_DEFAULT_CAPACITY;
-    table->pool = calloc(table->capacity, sizeof(Entry *));
+    table->size       = 0;
+    table->capacity   = initialCapacity > 0 ? initialCapacity : HT_DEFAULT_CAPACITY;
+    table->pool       = calloc(table->capacity, sizeof(Entry *));
+    if (!table->pool) { free(table); return NULL; }
 
-    if (!table->pool) {
-        free(table);
-        return NULL;
-    }
-
-    table->seed = generate_secure_seed();
+    table->seed         = generate_seed();
     table->hashFunction = hashFunction;
     pthread_rwlock_init(&table->lock, NULL);
     return table;
@@ -77,121 +72,104 @@ void ht_snapshot(Hash_Table *table, const char *path) {
     if (!table || !path) return;
 
     FILE *f = fopen(path, "wb");
-    if (!f) { perror("ht_snapshot: fopen failed"); return; }
+    if (!f) { perror("ht_snapshot: fopen"); return; }
 
-    pthread_rwlock_rdlock(&table->lock); 
-    //save every entry
+    pthread_rwlock_rdlock(&table->lock);
     for (size_t i = 0; i < table->capacity; i++) {
-        Entry *current = table->pool[i];
-        while (current) {
-            save_data_on_file(current, f);
-            current = current->next;
-        }
+        for (Entry *e = table->pool[i]; e; e = e->next)
+            save_entry(e, f);
     }
     pthread_rwlock_unlock(&table->lock);
     fclose(f);
 }
 
-int ht_set(Hash_Table *table, void *key, size_t keySize, void *value, size_t valueSize) {
+int ht_set(Hash_Table *table, void *key, size_t keySize,
+           void *value, size_t valueSize) {
     if (!table || !key) return 0;
     pthread_rwlock_wrlock(&table->lock);
 
-    unsigned long h = table->hashFunction(key,keySize, table->seed);
-    unsigned int index = h % table->capacity;
-    Entry *current = table->pool[index];
+    unsigned long h     = table->hashFunction(key, keySize, table->seed);
+    unsigned int  index = h % table->capacity;
 
-    // linear research of the specified key in the bucket chain
-    while (current != NULL) {
-        if (keys_equal(current->key, current->keySize, key, keySize)) {
-            void *newValue = malloc(valueSize);
-            if (!newValue) goto error;
+    /* Update existing entry if key is already present. */
+    for (Entry *e = table->pool[index]; e; e = e->next) {
+        if (!keys_equal(e->key, e->keySize, key, keySize)) continue;
 
-            free(current->value);
-            current->value = newValue;
-            memcpy(current->value, value, valueSize);
-            current->size = valueSize;
+        void *newValue = malloc(valueSize);
+        if (!newValue) goto error;
+        free(e->value);
+        e->value = newValue;
+        memcpy(e->value, value, valueSize);
+        e->size = valueSize;
 
-            pthread_rwlock_unlock(&table->lock);
-            return 1;
-        }
-        current = current->next;
+        pthread_rwlock_unlock(&table->lock);
+        return 1;
     }
 
-    // eventually resize before inserting so the new entry lands in the right bucket
+    /* Resize before inserting so the new entry lands in the right bucket. */
     if (table->size + 1 >= table->capacity) {
         if (!ht_resize(table)) goto error;
         index = h % table->capacity;
     }
 
-    // prepend the new entry to the head of the bucket chain
-    Entry *newEntry = create_entry(key,keySize, value, valueSize, h);
+    Entry *newEntry = create_entry(key, keySize, value, valueSize, h);
     if (!newEntry) goto error;
 
-    newEntry->next = table->pool[index];
-    table->pool[index] = newEntry;
+    newEntry->next      = table->pool[index];
+    table->pool[index]  = newEntry;
     table->size++;
 
     pthread_rwlock_unlock(&table->lock);
     return 1;
 
-    error:
+error:
     pthread_rwlock_unlock(&table->lock);
     return 0;
 }
 
-int ht_get(Hash_Table *table, void *key, size_t keySize, void *destBuffer, size_t destSize) {
+int ht_get(Hash_Table *table, void *key, size_t keySize,
+           void *destBuffer, size_t destSize) {
     if (!table || !key || !destBuffer) return 0;
     pthread_rwlock_rdlock(&table->lock);
 
-    unsigned int index = table->hashFunction(key,keySize, table->seed) % table->capacity;
-    Entry *current = table->pool[index];
+    unsigned int index = table->hashFunction(key, keySize, table->seed) % table->capacity;
+    for (Entry *e = table->pool[index]; e; e = e->next) {
+        if (!keys_equal(e->key, e->keySize, key, keySize)) continue;
 
-    while (current != NULL) {
-        if (keys_equal(current->key, current->keySize, key, keySize)) {
-            // copy only as many bytes as fit in the caller's buffer
-            size_t sizeToCopy = (current->size < destSize) ? current->size : destSize;
-            memcpy(destBuffer, current->value, sizeToCopy);
-            pthread_rwlock_unlock(&table->lock);
-            return 1;
-        }
-        current = current->next;
+        size_t n = e->size < destSize ? e->size : destSize;
+        memcpy(destBuffer, e->value, n);
+        pthread_rwlock_unlock(&table->lock);
+        return 1;
     }
 
-    //key not found
     pthread_rwlock_unlock(&table->lock);
-    return 0;  
+    return 0;
 }
 
-int ht_delete(Hash_Table *table, void *key,size_t keySize) {
+int ht_delete(Hash_Table *table, void *key, size_t keySize) {
     if (!table || !key) return 0;
     pthread_rwlock_wrlock(&table->lock);
 
-    unsigned int index = table->hashFunction(key,keySize, table->seed) % table->capacity;
-    Entry *current = table->pool[index];
+    unsigned int index = table->hashFunction(key, keySize, table->seed) % table->capacity;
     Entry *prev = NULL;
+    Entry *e    = table->pool[index];
 
-    // scan the chain to find the deletion
-    while (current != NULL && !keys_equal(current->key, current->keySize, key, keySize)) {
-        prev = current;
-        current = current->next;
+    while (e && !keys_equal(e->key, e->keySize, key, keySize)) {
+        prev = e;
+        e    = e->next;
     }
 
-    if (!current) {
-        // key not found
+    if (!e) {
         pthread_rwlock_unlock(&table->lock);
         return 0;
     }
 
-    // unlink
-    if (!prev) {
-        table->pool[index] = current->next;
-    }else{
-        prev->next = current->next;
-    } 
+    if (prev) prev->next         = e->next;
+    else      table->pool[index] = e->next;
 
-    free(current->key);
-    free(current->value);
-    free(current);
+    free(e->key);
+    free(e->value);
+    free(e);
     table->size--;
 
     pthread_rwlock_unlock(&table->lock);
@@ -202,150 +180,153 @@ void ht_destroy(Hash_Table *table, const char *persistenceFilePath) {
     if (!table) return;
     if (persistenceFilePath) ht_snapshot(table, persistenceFilePath);
 
-    // walk through the bucket chains in the table
     for (size_t i = 0; i < table->capacity; i++) {
-        Entry *current = table->pool[i];
-        while (current) {
-            Entry *next = current->next;
-            free(current->key);
-            free(current->value);
-            free(current);
-            current = next;
+        Entry *e = table->pool[i];
+        while (e) {
+            Entry *next = e->next;
+            free(e->key);
+            free(e->value);
+            free(e);
+            e = next;
         }
     }
-
     free(table->pool);
     pthread_rwlock_destroy(&table->lock);
     free(table);
 }
 
-static inline void save_data_on_file(Entry *entryToSave, FILE *f) {
-    fwrite(&entryToSave->keySize, sizeof(size_t), 1, f);
-    fwrite(entryToSave->key, entryToSave->keySize, 1, f);
-    fwrite(&entryToSave->size, sizeof(size_t), 1, f);
-    fwrite(entryToSave->value, entryToSave->size, 1, f);
-}
-
 int ht_load(Hash_Table *table, const char *path) {
-    if(!table || !path) return 0;
-
+    if (!table || !path) return 0;
     if (table->size > 0) {
-        fprintf(stderr, "ht_load: table is not empty, aborting load\n");
+        fprintf(stderr, "ht_load: table is not empty, aborting\n");
         return 0;
     }
-    
+
     FILE *f = fopen(path, "rb");
     if (!f) return 0;
 
     size_t keyLen, valLen;
-    char* key;
-    //read in the same order save_data_on_file writes
-    while (fread(&keyLen, sizeof(size_t), 1, f) == 1) {
+    char  *key = NULL;
 
-        if (keyLen > MAX_KEY_LEN) {
-            fprintf(stderr, "Error: Malformed database file (key too large)\n");
+    while (fread(&keyLen, sizeof(size_t), 1, f) == 1) {
+        if (keyLen == 0 || keyLen > MAX_KEY_LEN) {
+            fprintf(stderr, "ht_load: invalid key length %zu, aborting\n", keyLen);
             break;
         }
-
         key = malloc(keyLen);
         if (!key) break;
-
         if (fread(key, 1, keyLen, f) != keyLen) goto clean;
-
         if (fread(&valLen, sizeof(size_t), 1, f) != 1) goto clean;
-
-        if (valLen > MAX_VALUE_SIZE) {
-            fprintf(stderr, "Error: Malformed database file (value too large)\n");
+        if (valLen == 0 || valLen > MAX_VALUE_SIZE) {
+            fprintf(stderr, "ht_load: invalid value length %zu, aborting\n", valLen);
             goto clean;
         }
-
         char *val = malloc(valLen);
         if (!val) goto clean;
-
         if (fread(val, 1, valLen, f) == valLen)
             ht_set(table, key, keyLen, val, valLen);
-
-        free(key);
         free(val);
+        free(key);
         key = NULL;
     }
 
-    clean:
+clean:
     free(key);
     fclose(f);
     return 1;
 }
 
-static Entry *create_entry(void *key, size_t keySize, void *value, size_t valueSize, unsigned long hash) {
-    Entry *newEntry = malloc(sizeof(Entry));
-    if (!newEntry) return NULL;
+/**
+ * Iterates over every live entry in unspecified bucket order, invoking
+ * callback once per entry. The table is held under a read lock for the
+ * entire traversal: the callback must not call ht_set or ht_delete on
+ * the same table, as those attempt to acquire a write lock and will
+ * deadlock. Reading via ht_get is equally unsafe because pthread
+ * read-write locks are not reentrant on all platforms.
+ */
+void ht_foreach(Hash_Table *table, ht_foreach_cb callback, void *userdata) {
+    if (!table || !callback) return;
 
-    //prepare newEntry fields
-    newEntry->key = newEntry->value = NULL;
+    pthread_rwlock_rdlock(&table->lock);
+    for (size_t i = 0; i < table->capacity; i++) {
+        for (Entry *e = table->pool[i]; e; e = e->next)
+            callback(e->key, e->keySize, e->value, e->size, userdata);
+    }
+    pthread_rwlock_unlock(&table->lock);
+}
 
-    newEntry->key = malloc(keySize);
-    if (!newEntry->key) goto error;
-    memcpy(newEntry->key, key, keySize);
-    newEntry->keySize = keySize;
 
-    newEntry->value = malloc(valueSize);
-    if (!newEntry->value) goto error;
-    memcpy(newEntry->value, value, valueSize);
-    newEntry->size = valueSize;
-    newEntry->hash = hash;
-    newEntry->next = NULL;
+/* ── Static helpers ──────────────────────────────────────────────────── */
 
-    return newEntry;
+static inline void save_entry(Entry *e, FILE *f) {
+    fwrite(&e->keySize, sizeof(size_t), 1, f);
+    fwrite(e->key,       e->keySize,    1, f);
+    fwrite(&e->size,    sizeof(size_t), 1, f);
+    fwrite(e->value,     e->size,       1, f);
+}
 
-    error:
-        free(newEntry->key);
-        free(newEntry->value);
-        free(newEntry);
-        return NULL;
+static Entry *create_entry(void *key, size_t keySize,
+                            void *value, size_t valueSize,
+                            unsigned long hash) {
+    Entry *e = malloc(sizeof(Entry));
+    if (!e) return NULL;
+    e->key = e->value = NULL;
+
+    e->key = malloc(keySize);
+    if (!e->key) goto error;
+    memcpy(e->key, key, keySize);
+    e->keySize = keySize;
+
+    e->value = malloc(valueSize);
+    if (!e->value) goto error;
+    memcpy(e->value, value, valueSize);
+    e->size = valueSize;
+    e->hash = hash;
+    e->next = NULL;
+    return e;
+
+error:
+    free(e->key);
+    free(e->value);
+    free(e);
+    return NULL;
 }
 
 static int ht_resize(Hash_Table *table) {
-    size_t oldCapacity = table->capacity;
-    size_t newCapacity = next_prime(table->capacity * 2);
-
-    Entry **newPool = calloc(newCapacity, sizeof(Entry *));
+    size_t  newCap  = next_prime(table->capacity * 2);
+    Entry **newPool = calloc(newCap, sizeof(Entry *));
     if (!newPool) return 0;
 
-    // relink every existing entry into the new pool
-    for (unsigned int i = 0; i < oldCapacity; i++) {
-        Entry *current = table->pool[i];
-        while (current != NULL) {
-            Entry *next = current->next;
-            unsigned int newIndex = current->hash % newCapacity;
-
-            // prepend to the new bucket
-            current->next = newPool[newIndex];
-            newPool[newIndex] = current;
-
-            current = next;
+    for (size_t i = 0; i < table->capacity; i++) {
+        Entry *e = table->pool[i];
+        while (e) {
+            Entry       *next     = e->next;
+            unsigned int newIndex = e->hash % newCap;
+            e->next               = newPool[newIndex];
+            newPool[newIndex]     = e;
+            e                     = next;
         }
     }
-
     free(table->pool);
-    table->pool = newPool;
-    table->capacity = newCapacity;
+    table->pool     = newPool;
+    table->capacity = newCap;
     return 1;
 }
 
-static unsigned long generate_secure_seed(void) {
+static unsigned long generate_seed(void) {
     unsigned long seed;
     FILE *f = fopen("/dev/urandom", "rb");
     if (f) {
         fread(&seed, sizeof(seed), 1, f);
         fclose(f);
     } else {
-        // fallback
         seed = (unsigned long)time(NULL);
     }
     return seed;
 }
 
-static inline int keys_equal(const void *a, size_t aSize, const void *b, size_t bSize) {
+static inline int keys_equal(const void *a, size_t aSize,
+                              const void *b, size_t bSize) {
     return aSize == bSize && memcmp(a, b, aSize) == 0;
 }
 
@@ -353,17 +334,13 @@ static int is_prime(size_t n) {
     if (n < 2) return 0;
     if (n == 2 || n == 3) return 1;
     if (n % 2 == 0 || n % 3 == 0) return 0;
-
-    // test all integers of the form 6k ± 1
-    for (size_t i = 5; i * i <= n; i += 6) {
+    for (size_t i = 5; i * i <= n; i += 6)
         if (n % i == 0 || n % (i + 2) == 0) return 0;
-    }
     return 1;
 }
 
 static size_t next_prime(size_t n) {
     if (n < 2) return 2;
-    // Ensure we start from  an odd number
     if (n % 2 == 0) n++;
     while (!is_prime(n)) n += 2;
     return n;

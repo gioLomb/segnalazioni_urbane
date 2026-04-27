@@ -5,15 +5,18 @@
 #include <stdlib.h>
 
 // Funzione interna di hashing (DJB2 adattato)
+#include <stdint.h>
+
 static void hash_password(const char *plain, char *dest) {
-    unsigned long hash = 5381;
+    uint64_t hash = 5381;
     int c;
     while ((c = *plain++))
-        hash = ((hash << 5) + hash) + c;
-    
-    // Generiamo una stringa esadecimale fissa di 16 caratteri per semplicità esame
-    // In un sistema reale useresti SHA256 o bcrypt
-    snprintf(dest, PWD_HASH_LEN, "%016lx%016lx", hash, hash ^ 0xDEADBEEF);
+        hash = ((hash << 5) + hash) + (unsigned char)c;
+
+    /* Two fixed-width 64-bit halves → always 32 hex chars, independent of arch */
+    snprintf(dest, PWD_HASH_LEN, "%016llx%016llx",
+             (unsigned long long)hash,
+             (unsigned long long)(hash ^ 0xDEADBEEFDEADBEEFULL));
 }
 
 // Callback interna per mappare una riga SQLite sulla struct User

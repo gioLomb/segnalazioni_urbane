@@ -30,4 +30,11 @@ void db_close(void);
 // Ultimo errore (per logging)
 const char *db_errmsg(void);
 
+// Rowid dell'ultima INSERT eseguita con successo (wrapper su sqlite3_last_insert_rowid).
+sqlite3_int64 db_last_insert_id(void);
+
+// Numero di righe modificate dall'ultima istruzione DML (wrapper su sqlite3_changes).
+// Usato per rilevare UPDATE senza righe corrispondenti (es. claim già preso).
+int db_changes(void);
+
 #endif
