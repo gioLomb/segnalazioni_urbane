@@ -7,20 +7,15 @@
 #include <string.h>
 #include <unistd.h>
 #include <signal.h>
-#include <sys/socket.h>
-#include <sys/epoll.h>
-#include <sys/timerfd.h>
-#include <netinet/in.h>
-#include <fcntl.h>
 #include <stdarg.h>
 #include <time.h>
 #include <ctype.h>
 #include <errno.h>
-#include <netinet/tcp.h>
 #include <pthread.h>
-#include <arpa/inet.h>
-#include <sys/mman.h>
 #include <sys/stat.h>
+
+/* libuv — replaces epoll, timerfd, fcntl, raw socket calls */
+#include <uv.h>
 
 /* SERVER TUNING */
 #define KEEPALIVE_TIMEOUT    10
@@ -32,9 +27,9 @@
 #define DEBUG_RATE_LIMIT     1
 
 /* BUFFER SIZES
- * BUFFER_SIZE      – per-connection request buffer (holds HTTP headers + POST body).
- * RESPONSE_BUFFER_SIZE – heap-allocated per-request response buffer;
- *                   must be large enough for the biggest HTML page (operator map). */
+ * BUFFER_SIZE           - per-connection request accumulation buffer.
+ * RESPONSE_BUFFER_SIZE  - heap-allocated per-request response buffer;
+ *                         must fit the largest HTML page (operator map). */
 #define BUFFER_SIZE          (1 << 13)   /* 8 KB  */
 #define RESPONSE_BUFFER_SIZE (1 << 16)   /* 64 KB */
 #define URL_BUFFER_SIZE      (1 << 10)
