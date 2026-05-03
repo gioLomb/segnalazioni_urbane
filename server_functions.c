@@ -115,7 +115,7 @@ static int  rate_limit_check(const char *ip);
 static void send_response(ClientCtx *ctx,
                           int statusCode, const char *body, size_t bodyLen,
                           const char *setCookie, const char *location,
-                          int keepAlive);
+                          int keepAlive, const char *content_type);
 
 /* ══════════════════════════════════════════════════════════════════════
    SECTION 1 — Utility
@@ -166,7 +166,7 @@ void config_signal_context(void) {
 static void send_response(ClientCtx *ctx,
                           int statusCode, const char *body, size_t bodyLen,
                           const char *setCookie, const char *location,
-                          int keepAlive) {
+                          int keepAlive, const char *content_type) {
     /* Map status code to reason phrase. */
     const char *statusMsg;
     switch (statusCode) {
@@ -182,9 +182,13 @@ static void send_response(ClientCtx *ctx,
         default:  statusMsg = "OK";                    break;
     }
 
-    /* Infer Content-Type from the first character of the body. */
+    /*
+     * Use explicit content_type if provided; otherwise infer from the first
+     * character of the body (handles HTML, JSON, and plain text).
+     */
     const char *ct;
-    if      (body && body[0] == '<')                     ct = "text/html; charset=utf-8";
+    if      (content_type)                               ct = content_type;
+    else if (body && body[0] == '<')                     ct = "text/html; charset=utf-8";
     else if (body && (body[0] == '{' || body[0] == '[')) ct = "application/json";
     else                                                 ct = "text/plain; charset=utf-8";
 
@@ -322,7 +326,7 @@ static void read_cb(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf) {
         uv_inet_ntop(AF_INET, &peer.sin_addr, ip, sizeof(ip));
 
     if (DEBUG_RATE_LIMIT && !rate_limit_check(ip)) {
-        send_response(ctx, 429, "Too Many Requests\n", 18, NULL, NULL, 0);
+        send_response(ctx, 429, "Too Many Requests\n", 18, NULL, NULL, 0, NULL);
         return;
     }
 
@@ -339,9 +343,10 @@ static void read_cb(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf) {
 
     size_t bodyLen = (statusCode == 302) ? 0 : strlen(resp);
     send_response(ctx, statusCode, resp, bodyLen,
-                  extra.set_cookie[0] ? extra.set_cookie : NULL,
-                  extra.location[0]   ? extra.location   : NULL,
-                  keepAlive);
+                  extra.set_cookie[0]   ? extra.set_cookie   : NULL,
+                  extra.location[0]     ? extra.location      : NULL,
+                  keepAlive,
+                  extra.content_type[0] ? extra.content_type  : NULL);
     free(resp);
 }
 
@@ -625,8 +630,12 @@ int main(void) {
     printf("Database: %s\n", APP_DB_PATH);
 
     /* ── HTML templates ─────────────────────────────────────────────── */
-    if (tpl_load_all("templates", "templates/common.css") != 0) {
+    if (tpl_load_all("templates") != 0) {
         fprintf(stderr, "Fatal: failed to load HTML templates\n");
+        return EXIT_FAILURE;
+    }
+    if (tpl_load_file("templates/common.css", "common.css") != 0) {
+        fprintf(stderr, "Fatal: failed to load templates/common.css\n");
         return EXIT_FAILURE;
     }
 

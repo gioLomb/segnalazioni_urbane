@@ -13,3 +13,10 @@ temp/
 *.md
 *.html
 test_modules.c
+segnalacity.db
+segnalacity
+analisi/
+analisi
+*.o
+build/
+build

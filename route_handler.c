@@ -621,8 +621,32 @@ static int route_api_report_status(const char *req,
 }
 
 /* ══════════════════════════════════════════════════════════════════════
-   SECTION 8 — Dispatch table + handle_request
+   SECTION 7b — Static asset handler
    ══════════════════════════════════════════════════════════════════════ */
+
+/* GET /templates/common.css — serve the shared stylesheet from memory */
+static int route_static_css(const char *req,
+                             char *resp, size_t max, RouteExtra *extra) {
+    (void)req;
+
+    const Template *tpl = tpl_get("common.css");
+    if (!tpl) {
+        snprintf(resp, max, "/* CSS not found */");
+        return 404;
+    }
+
+    if (tpl_render(tpl, resp, max, NULL, 0) < 0) {
+        snprintf(resp, max, "/* CSS too large */");
+        return 500;
+    }
+
+    snprintf(extra->content_type, sizeof(extra->content_type),
+             "text/css; charset=utf-8");
+
+    return 200;
+}
+
+
 
 /*
  * Route table.  Matched top-to-bottom; the first row where both method
@@ -642,6 +666,7 @@ static const Route routes[] = {
     { "GET",  "/api/reports/archived",   route_api_reports_archived  },
     { "GET",  "/api/stats",              route_api_stats             },
     { "POST", "/api/report/status",      route_api_report_status     },
+    { "GET",  "/templates/common.css",      route_static_css            },
 };
 static const size_t NUM_ROUTES = sizeof(routes) / sizeof(routes[0]);
 

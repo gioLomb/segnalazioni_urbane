@@ -21,12 +21,15 @@
  * Out-of-band metadata a route handler may attach to a response.
  * server_functions.c inspects these after handle_request() returns.
  *
- *   set_cookie — non-empty → add "Set-Cookie: <value>" to the response header.
- *   location   — non-empty → send a 302 redirect; the body is ignored.
+ *   set_cookie   — non-empty → add "Set-Cookie: <value>" to the response header.
+ *   location     — non-empty → send a 302 redirect; the body is ignored.
+ *   content_type — non-empty → override the inferred Content-Type header.
+ *                  Use for responses whose body does not start with '<', '{', '['.
  */
 typedef struct {
     char set_cookie[COOKIE_MAX];
     char location[256];
+    char content_type[64];
 } RouteExtra;
 
 /**
