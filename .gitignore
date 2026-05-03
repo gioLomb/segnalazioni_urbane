@@ -11,7 +11,6 @@ temp/
 *.lua
 *.py
 *.md
-*.html
 test_modules.c
 segnalacity.db
 segnalacity

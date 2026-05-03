@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Nuova segnalazione - SegnalaCity</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="/templates/common.css">
+  <style>
+    /* ── Map picker ──────────────────────────────────────────────────── */
+    #map-picker {
+      height: 280px;
+      border-radius: 8px;
+      border: 2px solid #d1d5db;
+      margin-bottom: .5rem;
+      cursor: crosshair;
+      transition: border-color .2s;
+    }
+    #map-picker.has-pin { border-color: #2563eb; }
+
+    #location-status {
+      font-size: .8rem;
+      color: #6b7280;
+      margin-bottom: .9rem;
+      min-height: 1.2em;
+    }
+    #location-status.ok  { color: #059669; }
+    #location-status.err { color: #dc2626; }
+  </style>
+</head>
+<body>
+
+  <nav class="navbar">
+    <h1>&#128205; SegnalaCity</h1>
+    <div class="nav-right">
+      <span>{{USERNAME}}</span>
+      <a href="/logout">Esci</a>
+    </div>
+  </nav>
+
+  <div class="page-content" style="max-width:640px">
+    <h2 style="margin-bottom:1.5rem">&#128204; Nuova segnalazione</h2>
+
+    {{ERROR_BLOCK}}
+
+    <div class="card">
+      <form method="POST" action="/submit" id="submit-form">
+        <div class="form-group">
+          <label>Categoria</label>
+          <select name="category">
+            <option>Buche stradali</option>
+            <option>Rifiuti abbandonati</option>
+            <option>Illuminazione</option>
+            <option>Vandalismi</option>
+            <option>Verde pubblico</option>
+            <option>Altro</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Descrizione</label>
+          <textarea name="description" rows="4" required
+            placeholder="Descrivi il problema..." maxlength="127"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Posizione
+            <span style="font-weight:400;color:#6b7280">
+              - tocca la mappa per scegliere il punto esatto
+            </span>
+          </label>
+          <div id="map-picker"></div>
+          <p id="location-status">Ricerca posizione in corso...</p>
+        </div>
+
+        <input type="hidden" name="lat" id="f-lat">
+        <input type="hidden" name="lon" id="f-lon">
+
+        <p class="help-text">Citta: <strong>{{CITY}}</strong></p>
+
+        <button class="btn btn-primary btn-full" type="submit">
+          Invia segnalazione
+        </button>
+      </form>
+    </div>
+
+    <p style="margin-top:1rem;text-align:center">
+      <a href="/home">&#8592; Torna alla home</a>
+    </p>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    var pinLat  = null;
+    var pinLon  = null;
+    var marker  = null;
+
+    var statusEl = document.getElementById('location-status');
+    var mapEl    = document.getElementById('map-picker');
+    var latInput = document.getElementById('f-lat');
+    var lonInput = document.getElementById('f-lon');
+    var form     = document.getElementById('submit-form');
+
+    var map = L.map('map-picker').setView([41.9, 12.5], 6);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors', maxZoom: 19
+    }).addTo(map);
+
+    function setPin(lat, lon, label) {
+      pinLat = lat; pinLon = lon;
+      latInput.value = lat.toFixed(7);
+      lonInput.value = lon.toFixed(7);
+      if (marker) { marker.setLatLng([lat, lon]); }
+      else        { marker = L.marker([lat, lon]).addTo(map); }
+      marker.bindPopup(label).openPopup();
+      mapEl.classList.add('has-pin');
+      statusEl.textContent = label;
+      statusEl.className   = 'ok';
+    }
+
+    /* Tap on map always sets/moves the pin */
+    map.on('click', function(e) {
+      setPin(e.latlng.lat, e.latlng.lng,
+        'Punto selezionato: ' +
+        e.latlng.lat.toFixed(5) + ', ' + e.latlng.lng.toFixed(5));
+    });
+
+    /* Automatic geolocation on page load */
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        function(pos) {
+          var lat = pos.coords.latitude;
+          var lon = pos.coords.longitude;
+          map.setView([lat, lon], 15);
+          setPin(lat, lon,
+            'Posizione attuale (' + lat.toFixed(5) + ', ' + lon.toFixed(5) + ')');
+        },
+        function(err) {
+          var msg = err.code === err.PERMISSION_DENIED
+            ? 'Accesso negato. Tocca la mappa per scegliere il punto.'
+            : 'Posizione non disponibile. Tocca la mappa per scegliere il punto.';
+          statusEl.textContent = msg;
+          statusEl.className   = 'err';
+        },
+        { timeout: 8000, enableHighAccuracy: true }
+      );
+    } else {
+      statusEl.textContent = 'GPS non supportato. Tocca la mappa per scegliere il punto.';
+      statusEl.className   = 'err';
+    }
+
+    /* Block submit if no pin placed */
+    form.addEventListener('submit', function(e) {
+      if (pinLat === null) {
+        e.preventDefault();
+        statusEl.textContent = 'Tocca la mappa per indicare il punto del problema.';
+        statusEl.className   = 'err';
+        mapEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+  </script>
+
+</body>
+</html>

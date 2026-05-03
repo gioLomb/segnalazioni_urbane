@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Home - SegnalaCity</title>
+  <link rel="stylesheet" href="/templates/common.css">
+</head>
+<body>
+
+  <nav class="navbar">
+    <h1>&#128205; SegnalaCity</h1>
+    <div class="nav-right">
+      <span>{{USERNAME}}</span>
+      <a href="/logout">Esci</a>
+    </div>
+  </nav>
+
+  <div class="page-content">
+
+    <div class="page-header">
+      <h2>Ciao, {{USERNAME}} &#128075;</h2>
+      <a href="/submit" class="btn btn-primary">&#43; Nuova segnalazione</a>
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="val" id="s-active">-</div>
+        <div class="lbl">Le mie segnalazioni attive</div>
+      </div>
+      <div class="stat-card">
+        <div class="val" id="s-archived">-</div>
+        <div class="lbl">Le mie archiviate</div>
+      </div>
+      <div class="stat-card">
+        <div class="val" id="s-uptime">-</div>
+        <div class="lbl">Uptime server (s)</div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:1.5rem">
+      <h3 style="margin-bottom:1rem">&#128204; Segnalazioni attive</h3>
+      <div id="active-table"><p class="placeholder-text">Caricamento...</p></div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-bottom:1rem">&#128190; Segnalazioni archiviate</h3>
+      <div id="archived-table"><p class="placeholder-text">Caricamento...</p></div>
+    </div>
+
+  </div>
+
+  <script>
+    var STATUS = ['Attivo', 'In lavorazione', 'Risolto'];
+
+    function esc(s) {
+      return String(s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    function renderTable(reports, containerId) {
+      var c = document.getElementById(containerId);
+      if (!reports || !reports.length) {
+        c.innerHTML = '<p class="placeholder-text">Nessuna segnalazione.</p>';
+        return;
+      }
+      var h = '<table><thead><tr>'
+        + '<th>ID</th><th>Categoria</th><th>Descrizione</th>'
+        + '<th>Citta</th><th>Stato</th><th>Data</th>'
+        + '</tr></thead><tbody>';
+      reports.forEach(function(r) {
+        var d = new Date(r.created_at * 1000).toLocaleDateString('it-IT');
+        h += '<tr>'
+          + '<td>#' + r.id + '</td>'
+          + '<td>' + esc(r.category)    + '</td>'
+          + '<td>' + esc(r.description) + '</td>'
+          + '<td>' + esc(r.city)        + '</td>'
+          + '<td><span class="badge badge-' + r.status + '">' + STATUS[r.status] + '</span></td>'
+          + '<td>' + d + '</td>'
+          + '</tr>';
+      });
+      h += '</tbody></table>';
+      c.innerHTML = h;
+    }
+
+    fetch('/api/reports/active')
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        renderTable(d, 'active-table');
+        document.getElementById('s-active').textContent = Array.isArray(d) ? d.length : '-';
+      })
+      .catch(function() {
+        document.getElementById('active-table').innerHTML =
+          '<p class="placeholder-text error-text">Errore di caricamento.</p>';
+      });
+
+    fetch('/api/reports/archived')
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        renderTable(d, 'archived-table');
+        document.getElementById('s-archived').textContent = Array.isArray(d) ? d.length : '-';
+      })
+      .catch(function() {
+        document.getElementById('archived-table').innerHTML =
+          '<p class="placeholder-text error-text">Errore di caricamento.</p>';
+      });
+
+    fetch('/api/stats')
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        document.getElementById('s-uptime').textContent = d.uptime || '-';
+      })
+      .catch(function() {});
+  </script>
+
+</body>
+</html>

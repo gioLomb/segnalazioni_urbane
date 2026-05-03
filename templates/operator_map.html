@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mappa operatore - SegnalaCity</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="/templates/common.css">
+  <style>
+ 
+
+    #map { height: 420px; border-radius: 10px; margin-bottom: 1.5rem; }
+    .loading { color: #9ca3af; font-style: italic; }
+  </style>
+</head>
+<body>
+
+  <nav class="navbar">
+    <h1>&#128205; SegnalaCity</h1>
+    <div class="nav-right">
+      <span>{{USERNAME}} (Operatore)</span>
+      <a href="/logout">Esci</a>
+    </div>
+  </nav>
+
+  <div class="page-content">
+
+    <div class="page-header">
+      <h2>&#128204; Segnalazioni - {{CITY}}</h2>
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="val" id="s-active">-</div>
+        <div class="lbl">Segnalazioni attive</div>
+      </div>
+      <div class="stat-card">
+        <div class="val" id="s-progress">-</div>
+        <div class="lbl">In lavorazione</div>
+      </div>
+      <div class="stat-card">
+        <div class="val" id="s-uptime">-</div>
+        <div class="lbl">Uptime server (s)</div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:1.5rem">
+      <div id="map"></div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-bottom:1rem">Segnalazioni attive - {{CITY}}</h3>
+      <div id="reports-table"><p class="loading">Caricamento...</p></div>
+    </div>
+
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    var STATUS       = ['Attivo', 'In lavorazione', 'Risolto'];
+    var STATUS_CLASS = ['badge-0', 'badge-1', 'badge-2'];
+
+    function esc(s) {
+      return String(s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    var map = L.map('map').setView([41.9, 12.5], 6);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+    var markers = [];
+
+    function clearMarkers() {
+      markers.forEach(function(m) { map.removeLayer(m); });
+      markers = [];
+    }
+
+    function updateStatus(reportId, newStatus) {
+      fetch('/api/report/status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'report_id=' + reportId + '&status=' + newStatus
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (d.ok) loadReports();
+        else      alert('Errore: ' + (d.error || 'sconosciuto'));
+      })
+      .catch(function() { alert('Errore di rete.'); });
+    }
+
+    function renderReports(reports) {
+      clearMarkers();
+      var activeCount = 0, progressCount = 0;
+      var c = document.getElementById('reports-table');
+
+      if (!reports || !reports.length) {
+        c.innerHTML = '<p class="loading">Nessuna segnalazione attiva.</p>';
+        return;
+      }
+
+      var h = '<table><thead><tr>'
+        + '<th>ID</th><th>Categoria</th><th>Descrizione</th>'
+        + '<th>Stato</th><th>Data</th><th>Azioni</th>'
+        + '</tr></thead><tbody>';
+
+      reports.forEach(function(r) {
+        var d    = new Date(r.created_at * 1000).toLocaleDateString('it-IT');
+        var acts = '';
+        if (r.status === 0) {
+          activeCount++;
+          acts = '<button class="btn btn-warning btn-sm" '
+               + 'onclick="updateStatus(' + r.id + ',1)">Prendi in carico</button>';
+        } else if (r.status === 1) {
+          progressCount++;
+          acts = '<button class="btn btn-success btn-sm" '
+               + 'onclick="updateStatus(' + r.id + ',2)">Segna risolto</button>';
+        }
+
+        h += '<tr>'
+          + '<td>#' + r.id + '</td>'
+          + '<td>' + esc(r.category)    + '</td>'
+          + '<td>' + esc(r.description) + '</td>'
+          + '<td><span class="badge ' + STATUS_CLASS[r.status] + '">'
+          +   STATUS[r.status] + '</span></td>'
+          + '<td>' + d + '</td>'
+          + '<td>' + acts + '</td>'
+          + '</tr>';
+
+        if (r.lat !== 0 || r.lon !== 0) {
+          var mk = L.marker([r.lat, r.lon]).addTo(map);
+          mk.bindPopup('<b>#' + r.id + ' - ' + esc(r.category) + '</b><br>'
+                       + esc(r.description));
+          markers.push(mk);
+        }
+      });
+
+      h += '</tbody></table>';
+      c.innerHTML = h;
+      document.getElementById('s-active').textContent   = activeCount;
+      document.getElementById('s-progress').textContent = progressCount;
+    }
+
+    function loadReports() {
+      fetch('/api/reports/active')
+        .then(function(r) { return r.json(); })
+        .then(renderReports)
+        .catch(function() {
+          document.getElementById('reports-table').innerHTML =
+            '<p class="loading">Errore di caricamento.</p>';
+        });
+    }
+
+    fetch('/api/stats')
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        document.getElementById('s-uptime').textContent = d.uptime || '-';
+      })
+      .catch(function() {});
+
+    loadReports();
+    setInterval(loadReports, 30000);
+  </script>
+
+</body>
+</html>
