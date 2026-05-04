@@ -59,6 +59,7 @@
 #include "template.h"
 #include "user.h"
 #include "report.h"
+#include "geo.h"
 #include "session.h"
 #include "db.h"
 
@@ -70,6 +71,7 @@
 volatile sig_atomic_t keepRunning    = 1;
 ServerStats           stats          = {0};
 Hash_Table           *g_sessions     = NULL;
+Hash_Table           *g_geo_table    = NULL;
 
 unsigned long g_stat_requests    = 0;
 unsigned long g_stat_connections = 0;
@@ -115,7 +117,7 @@ static int  rate_limit_check(const char *ip);
 static void send_response(ClientCtx *ctx,
                           int statusCode, const char *body, size_t bodyLen,
                           const char *setCookie, const char *location,
-                          int keepAlive, const char *content_type);
+                          int keepAlive,const char *content_type);
 
 /* ══════════════════════════════════════════════════════════════════════
    SECTION 1 — Utility
@@ -166,7 +168,7 @@ void config_signal_context(void) {
 static void send_response(ClientCtx *ctx,
                           int statusCode, const char *body, size_t bodyLen,
                           const char *setCookie, const char *location,
-                          int keepAlive, const char *content_type) {
+                          int keepAlive,const char *content_type) {
     /* Map status code to reason phrase. */
     const char *statusMsg;
     switch (statusCode) {
@@ -182,15 +184,18 @@ static void send_response(ClientCtx *ctx,
         default:  statusMsg = "OK";                    break;
     }
 
-    /*
-     * Use explicit content_type if provided; otherwise infer from the first
-     * character of the body (handles HTML, JSON, and plain text).
-     */
+    /* Infer Content-Type from the first character of the body. */
     const char *ct;
-    if      (content_type)                               ct = content_type;
-    else if (body && body[0] == '<')                     ct = "text/html; charset=utf-8";
-    else if (body && (body[0] == '{' || body[0] == '[')) ct = "application/json";
-    else                                                 ct = "text/plain; charset=utf-8";
+
+    if (content_type && content_type[0]) {
+        ct = content_type;   
+    } else if (body && body[0] == '<') {
+        ct = "text/html; charset=utf-8";
+    } else if (body && (body[0] == '{' || body[0] == '[')) {
+        ct = "application/json";
+    } else {
+        ct = "text/plain; charset=utf-8";
+    }
 
     /* Build the response header. */
     char hdr[1024];
@@ -326,7 +331,7 @@ static void read_cb(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf) {
         uv_inet_ntop(AF_INET, &peer.sin_addr, ip, sizeof(ip));
 
     if (DEBUG_RATE_LIMIT && !rate_limit_check(ip)) {
-        send_response(ctx, 429, "Too Many Requests\n", 18, NULL, NULL, 0, NULL);
+        send_response(ctx, 429, "Too Many Requests\n", 18, NULL, NULL, 0,NULL);
         return;
     }
 
@@ -343,10 +348,10 @@ static void read_cb(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf) {
 
     size_t bodyLen = (statusCode == 302) ? 0 : strlen(resp);
     send_response(ctx, statusCode, resp, bodyLen,
-                  extra.set_cookie[0]   ? extra.set_cookie   : NULL,
-                  extra.location[0]     ? extra.location      : NULL,
-                  keepAlive,
-                  extra.content_type[0] ? extra.content_type  : NULL);
+              extra.set_cookie[0] ? extra.set_cookie : NULL,
+              extra.location[0]   ? extra.location   : NULL,
+              keepAlive,
+              extra.content_type[0] ? extra.content_type : NULL);
     free(resp);
 }
 
@@ -639,6 +644,17 @@ int main(void) {
         return EXIT_FAILURE;
     }
 
+    /* ── City geometry table ────────────────────────────────────────── */
+    g_geo_table = ht_create(8192, hash_key);
+    if (!g_geo_table) {
+        fprintf(stderr, "Fatal: geo table allocation failed\n");
+        return EXIT_FAILURE;
+    }
+    if (geo_load(GEO_JSON_PATH, g_geo_table) < 0) {
+        fprintf(stderr, "Fatal: failed to load '%s'\n", GEO_JSON_PATH);
+        return EXIT_FAILURE;
+    }
+
     /* ── In-memory session table ────────────────────────────────────── */
     g_sessions = ht_create(0, hash_key);
     if (!g_sessions) {
@@ -661,7 +677,8 @@ int main(void) {
 
     /* ── Cleanup ────────────────────────────────────────────────────── */
     tpl_unload_all();
-    ht_destroy(g_sessions, "sessions.bin");
+    ht_destroy(g_sessions,  "sessions.bin");
+    ht_destroy(g_geo_table, NULL);
     ht_destroy(rate_limit,  NULL);
     client_pool_destroy();
     db_close();

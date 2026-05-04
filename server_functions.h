@@ -38,6 +38,13 @@ extern volatile sig_atomic_t keepRunning;
  */
 extern Hash_Table *g_sessions;
 
+/**
+ * In-memory city geometry table: maps comune name → CityGeo (bbox + centroid).
+ * Populated at startup by geo_load(); used by route handlers for coordinate
+ * validation and map centering.
+ */
+extern Hash_Table *g_geo_table;
+
 /* ── Server statistics ───────────────────────────────────────────────── */
 
 /**

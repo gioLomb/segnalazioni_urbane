@@ -21,6 +21,7 @@
 #include "user.h"
 #include "session.h"
 #include "report.h"
+#include "geo.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -339,15 +340,34 @@ static int route_get_submit(const char *req,
     html_escape(u.username, esc_user, sizeof(esc_user));
     html_escape(u.city,     esc_city, sizeof(esc_city));
 
+    /* Look up city geometry to center the map and set maxBounds. */
+    CityGeo geo = {0};
+    char lat_s[32], lon_s[32], bbox_s[128];
+    if (geo_lookup(g_geo_table, u.city, &geo)) {
+        snprintf(lat_s,  sizeof(lat_s),  "%.6f", geo.centroid_lat);
+        snprintf(lon_s,  sizeof(lon_s),  "%.6f", geo.centroid_lon);
+        snprintf(bbox_s, sizeof(bbox_s), "[[%.6f,%.6f],[%.6f,%.6f]]",
+                 geo.lat_min, geo.lon_min,
+                 geo.lat_max, geo.lon_max);
+    } else {
+        /* Fallback: centre of Italy, no bounds restriction. */
+        snprintf(lat_s,  sizeof(lat_s),  "41.9");
+        snprintf(lon_s,  sizeof(lon_s),  "12.5");
+        snprintf(bbox_s, sizeof(bbox_s), "null");
+    }
+
     const Template *tpl = tpl_get("submit");
     if (!tpl) { snprintf(resp, max, "<h1>500 Template missing</h1>"); return 500; }
 
     TplVar vars[] = {
         { "USERNAME",    esc_user },
         { "CITY",        esc_city },
-        { "ERROR_BLOCK", ""       }
+        { "ERROR_BLOCK", ""       },
+        { "MAP_LAT",     lat_s   },
+        { "MAP_LON",     lon_s   },
+        { "MAP_BOUNDS",  bbox_s  },
     };
-    tpl_render(tpl, resp, max, vars, 3);
+    tpl_render(tpl, resp, max, vars, 6);
     return 200;
 }
 
@@ -442,6 +462,11 @@ static int route_post_register(const char *req,
     if (strlen(password) < 6)
         REGISTER_ERROR("La password deve avere almeno 6 caratteri.");
 
+    /* Verify the city exists in the geometry table. */
+    CityGeo geo = {0};
+    if (!geo_lookup(g_geo_table, city, &geo))
+        REGISTER_ERROR("Comune non riconosciuto. Selezionalo dalla lista.");
+
     UserRole role = (role_str[0] == '1') ? ROLE_OPERATOR : ROLE_CITIZEN;
     if (user_register(username, password, city, role) != 0)
         REGISTER_ERROR("Username già in uso. Scegline un altro.");
@@ -493,6 +518,13 @@ static int route_post_submit(const char *req,
 
     double lat = lat_s[0] ? atof(lat_s) : 0.0;
     double lon = lon_s[0] ? atof(lon_s) : 0.0;
+
+    /* Server-side coordinate validation against the city bounding box. */
+    CityGeo geo = {0};
+    if (geo_lookup(g_geo_table, u.city, &geo)) {
+        if (!geo_contains(&geo, lat, lon))
+            SUBMIT_ERROR("Le coordinate non appartengono alla tua città.");
+    }
 
     uint64_t rid = report_insert(u.userId, lat, lon,
                                  u.city,
@@ -624,7 +656,7 @@ static int route_api_report_status(const char *req,
    SECTION 7b — Static asset handler
    ══════════════════════════════════════════════════════════════════════ */
 
-/* GET /templates/common.css — serve the shared stylesheet from memory */
+/* GET /static/common.css — serve the shared stylesheet from memory */
 static int route_static_css(const char *req,
                              char *resp, size_t max, RouteExtra *extra) {
     (void)req;
@@ -666,7 +698,7 @@ static const Route routes[] = {
     { "GET",  "/api/reports/archived",   route_api_reports_archived  },
     { "GET",  "/api/stats",              route_api_stats             },
     { "POST", "/api/report/status",      route_api_report_status     },
-    { "GET",  "/templates/common.css",      route_static_css            },
+    { "GET",  "/static/common.css",      route_static_css            },
 };
 static const size_t NUM_ROUTES = sizeof(routes) / sizeof(routes[0]);
 

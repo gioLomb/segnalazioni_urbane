@@ -5,8 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Nuova segnalazione - SegnalaCity</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="/templates/common.css">
+  <link rel="stylesheet" href="/static/common.css">
+
   <style>
+
     /* ── Map picker ──────────────────────────────────────────────────── */
     #map-picker {
       height: 280px;
@@ -101,7 +103,10 @@
     var lonInput = document.getElementById('f-lon');
     var form     = document.getElementById('submit-form');
 
-    var map = L.map('map-picker').setView([41.9, 12.5], 6);
+    var map = L.map('map-picker', {
+      maxBounds: {{MAP_BOUNDS}},
+      maxBoundsViscosity: 1.0
+    }).setView([{{MAP_LAT}}, {{MAP_LON}}], 13);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap contributors', maxZoom: 19
     }).addTo(map);
@@ -125,29 +130,10 @@
         e.latlng.lat.toFixed(5) + ', ' + e.latlng.lng.toFixed(5));
     });
 
-    /* Automatic geolocation on page load */
-    if ('geolocation' in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        function(pos) {
-          var lat = pos.coords.latitude;
-          var lon = pos.coords.longitude;
-          map.setView([lat, lon], 15);
-          setPin(lat, lon,
-            'Posizione attuale (' + lat.toFixed(5) + ', ' + lon.toFixed(5) + ')');
-        },
-        function(err) {
-          var msg = err.code === err.PERMISSION_DENIED
-            ? 'Accesso negato. Tocca la mappa per scegliere il punto.'
-            : 'Posizione non disponibile. Tocca la mappa per scegliere il punto.';
-          statusEl.textContent = msg;
-          statusEl.className   = 'err';
-        },
-        { timeout: 8000, enableHighAccuracy: true }
-      );
-    } else {
-      statusEl.textContent = 'GPS non supportato. Tocca la mappa per scegliere il punto.';
-      statusEl.className   = 'err';
-    }
+    /* Pin is placed only by tapping the map — no automatic geolocation.
+       The map is already centred on the user's city by the server. */
+    statusEl.textContent = 'Tocca la mappa per indicare il punto del problema.';
+    statusEl.className   = '';
 
     /* Block submit if no pin placed */
     form.addEventListener('submit', function(e) {

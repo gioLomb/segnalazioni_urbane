@@ -4,46 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Registrati - SegnalaCity</title>
-  <link rel="stylesheet" href="/templates/common.css">
-  <style>
+  <link rel="stylesheet" href="/static/common.css">
 
-    /* ── City autocomplete ───────────────────────────────────────────── */
-    .autocomplete-wrap { position: relative; }
-    .autocomplete-wrap input { margin-bottom: 0; }
-
-    #city-dropdown {
-      display: none;
-      position: absolute;
-      top: 100%;
-      left: 0;
-      right: 0;
-      background: #fff;
-      border: 1px solid #d1d5db;
-      border-top: none;
-      border-radius: 0 0 8px 8px;
-      box-shadow: 0 4px 12px rgba(0,0,0,.1);
-      max-height: 220px;
-      overflow-y: auto;
-      z-index: 100;
-    }
-    #city-dropdown.open { display: block; }
-
-    .city-option {
-      padding: .5rem .85rem;
-      cursor: pointer;
-      font-size: .9rem;
-    }
-    .city-option:hover,
-    .city-option.active { background: #eff6ff; color: #1d4ed8; }
-
-    #city-status {
-      font-size: .75rem;
-      margin-top: .2rem;
-      min-height: 1.1em;
-    }
-    #city-status.ok  { color: #059669; }
-    #city-status.err { color: #dc2626; }
-  </style>
 </head>
 <body>
   <div class="auth-wrapper">
@@ -53,7 +15,7 @@
 
       {{ERROR_BLOCK}}
 
-      <form method="POST" action="/register" id="reg-form">
+      <form method="POST" action="/register">
         <div class="form-group">
           <label>Username</label>
           <input name="username" required placeholder="Scegli un username" maxlength="30">
@@ -62,24 +24,10 @@
           <label>Password</label>
           <input name="password" type="password" required placeholder="Almeno 6 caratteri">
         </div>
-
         <div class="form-group">
-          <label>Comune</label>
-          <div class="autocomplete-wrap">
-            <input
-              id="city-input"
-              type="text"
-              autocomplete="off"
-              required
-              placeholder="Inizia a digitare il tuo comune..."
-              maxlength="80"
-            >
-            <div id="city-dropdown"></div>
-          </div>
-          <input type="hidden" name="city" id="city-hidden">
-          <p id="city-status"></p>
+          <label>Città</label>
+          <input name="city" required placeholder="Es: Roma" maxlength="30">
         </div>
-
         <div class="form-group">
           <label>Ruolo</label>
           <select name="role">
@@ -87,116 +35,13 @@
             <option value="1">Operatore municipale</option>
           </select>
         </div>
-
         <button class="btn btn-primary btn-full" type="submit">Registrati</button>
       </form>
 
       <p class="auth-footer">
-        Hai gia un account? <a href="/">Accedi</a>
+        Hai già un account? <a href="/">Accedi</a>
       </p>
     </div>
   </div>
-
-  <script>
-    var cityInput   = document.getElementById('city-input');
-    var cityHidden  = document.getElementById('city-hidden');
-    var cityStatus  = document.getElementById('city-status');
-    var dropdown    = document.getElementById('city-dropdown');
-    var form        = document.getElementById('reg-form');
-
-    var debounceTimer  = null;
-    var activeIndex    = -1;
-    var validSelection = false;
-
-    function fetchSuggestions(prefix) {
-      if (prefix.length < 2) { closeDropdown(); return; }
-      fetch('/api/cities?q=' + encodeURIComponent(prefix))
-        .then(function(r) { return r.json(); })
-        .then(renderDropdown)
-        .catch(closeDropdown);
-    }
-
-    function renderDropdown(names) {
-      dropdown.innerHTML = '';
-      activeIndex = -1;
-      if (!names || !names.length) { closeDropdown(); return; }
-      names.forEach(function(name) {
-        var div = document.createElement('div');
-        div.className   = 'city-option';
-        div.textContent = name;
-        div.addEventListener('mousedown', function(e) {
-          e.preventDefault();
-          selectCity(name);
-        });
-        dropdown.appendChild(div);
-      });
-      dropdown.classList.add('open');
-    }
-
-    function selectCity(name) {
-      cityInput.value  = name;
-      cityHidden.value = name;
-      validSelection   = true;
-      cityStatus.textContent = 'Comune selezionato.';
-      cityStatus.className   = 'ok';
-      closeDropdown();
-    }
-
-    function closeDropdown() {
-      dropdown.classList.remove('open');
-      dropdown.innerHTML = '';
-      activeIndex = -1;
-    }
-
-    cityInput.addEventListener('keydown', function(e) {
-      var items = dropdown.querySelectorAll('.city-option');
-      if (!items.length) return;
-      if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        activeIndex = Math.min(activeIndex + 1, items.length - 1);
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        activeIndex = Math.max(activeIndex - 1, 0);
-      } else if (e.key === 'Enter' && activeIndex >= 0) {
-        e.preventDefault();
-        selectCity(items[activeIndex].textContent);
-        return;
-      } else if (e.key === 'Escape') {
-        closeDropdown(); return;
-      }
-      items.forEach(function(el, i) {
-        el.classList.toggle('active', i === activeIndex);
-      });
-      if (activeIndex >= 0) items[activeIndex].scrollIntoView({ block: 'nearest' });
-    });
-
-    cityInput.addEventListener('input', function() {
-      cityHidden.value = '';
-      validSelection   = false;
-      cityStatus.textContent = '';
-      cityStatus.className   = '';
-      clearTimeout(debounceTimer);
-      debounceTimer = setTimeout(function() {
-        fetchSuggestions(cityInput.value.trim());
-      }, 220);
-    });
-
-    cityInput.addEventListener('blur', function() {
-      setTimeout(closeDropdown, 150);
-      if (cityInput.value && !validSelection) {
-        cityStatus.textContent = 'Seleziona un comune dalla lista.';
-        cityStatus.className   = 'err';
-      }
-    });
-
-    form.addEventListener('submit', function(e) {
-      if (!cityHidden.value) {
-        e.preventDefault();
-        cityStatus.textContent = 'Seleziona il tuo comune dalla lista prima di procedere.';
-        cityStatus.className   = 'err';
-        cityInput.focus();
-      }
-    });
-  </script>
 </body>
 </html>

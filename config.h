@@ -38,6 +38,7 @@
 
 /* APPLICATION */
 #define APP_DB_PATH         "segnalacity.db"
+#define GEO_JSON_PATH       "data/comuni.geojson"
 #define SESSION_COOKIE_NAME "sid"
 #define SESSION_MAX_AGE     86400        /* 24 h in seconds */
 
