@@ -503,13 +503,30 @@ static int route_post_submit(const char *req,
         char esc_user[64], esc_city[64]; \
         html_escape(u.username, esc_user, sizeof(esc_user)); \
         html_escape(u.city,     esc_city, sizeof(esc_city)); \
+        /* Ora includiamo anche i dati della mappa */ \
+        CityGeo _geo; \
+        char _lat_s[32], _lon_s[32], _bbox_s[128]; \
+        if (geo_lookup(g_geo_table, u.city, &_geo)) { \
+            snprintf(_lat_s,  sizeof(_lat_s),  "%.6f", _geo.centroid_lat); \
+            snprintf(_lon_s,  sizeof(_lon_s),  "%.6f", _geo.centroid_lon); \
+            snprintf(_bbox_s, sizeof(_bbox_s), "[[%.6f,%.6f],[%.6f,%.6f]]", \
+                     _geo.lat_min, _geo.lon_min, \
+                     _geo.lat_max, _geo.lon_max); \
+        } else { \
+            snprintf(_lat_s,  sizeof(_lat_s),  "41.9"); \
+            snprintf(_lon_s,  sizeof(_lon_s),  "12.5"); \
+            snprintf(_bbox_s, sizeof(_bbox_s), "null"); \
+        } \
         char _eb[256]; make_error_block((msg), _eb, sizeof(_eb)); \
         TplVar _v[] = { \
             { "USERNAME",    esc_user }, \
             { "CITY",        esc_city }, \
-            { "ERROR_BLOCK", _eb      } \
+            { "ERROR_BLOCK", _eb      }, \
+            { "MAP_LAT",     _lat_s   }, \
+            { "MAP_LON",     _lon_s   }, \
+            { "MAP_BOUNDS",  _bbox_s  } \
         }; \
-        tpl_render(_t, resp, max, _v, 3); \
+        tpl_render(_t, resp, max, _v, 6); \
         return 200; \
     } while (0)
 

@@ -40,7 +40,5 @@
 #define APP_DB_PATH         "segnalacity.db"
 #define GEO_JSON_PATH       "data/comuni.geojson"
 #define CITIES_JSON_PATH    "data/cities.json"
-#define SESSION_COOKIE_NAME "sid"
-#define SESSION_MAX_AGE     86400        /* 24 h in seconds */
 
 #endif /* CONFIG_H */

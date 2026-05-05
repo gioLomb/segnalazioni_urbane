@@ -111,7 +111,6 @@ static void read_cb     (uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf
 static void timer_cb    (uv_timer_t  *handle);
 static void write_cb    (uv_write_t  *req, int status);
 static void on_connection(uv_stream_t *server, int status);
-static void snapshot_cb (uv_timer_t  *handle);
 static void on_signal   (uv_signal_t *handle, int signum);
 static int  rate_limit_check(const char *ip);
 static void send_response(ClientCtx *ctx,
@@ -467,12 +466,6 @@ static void on_connection(uv_stream_t *server, int status) {
    SECTION 5 — Periodic snapshot & signal handler
    ══════════════════════════════════════════════════════════════════════ */
 
-/** Persists the in-memory session table to disk every 5 minutes. */
-static void snapshot_cb(uv_timer_t *handle) {
-    (void)handle;
-    ht_snapshot(g_sessions, "sessions.bin");
-}
-
 /**
  * SIGINT handler: sets keepRunning = 0 and stops the event loop cleanly.
  * The loop will fall through to the graceful-shutdown code in server_loop().
@@ -575,15 +568,9 @@ void server_loop(Hash_Table *rateLimitTable) {
     uv_signal_init(g_loop, &sig);
     uv_signal_start(&sig, on_signal, SIGINT);
 
-    /* ── Periodic session snapshot (every 5 minutes) ────────────────── */
-    uv_timer_t snap_timer;
-    uv_timer_init(g_loop, &snap_timer);
-    uv_timer_start(&snap_timer, snapshot_cb, 300000, 300000);
-
     /* ── Run ────────────────────────────────────────────────────────── */
     uv_run(g_loop, UV_RUN_DEFAULT);
 
-    /* ── Graceful shutdown ──────────────────────────────────────────── */
     /* Step 1: initiate close on all active client connections. */
     ClientCtx *cur = g_clients_head;
     while (cur) {
@@ -594,13 +581,15 @@ void server_loop(Hash_Table *rateLimitTable) {
     /* Step 2: drain client close callbacks. */
     uv_run(g_loop, UV_RUN_DEFAULT);
 
+    
+
     /* Step 3: close server-level handles, then drain their callbacks. */
     uv_close((uv_handle_t *)&sig,        NULL);
-    uv_close((uv_handle_t *)&snap_timer, NULL);
     uv_close((uv_handle_t *)&server,     NULL);
     uv_run(g_loop, UV_RUN_DEFAULT);
 
     uv_loop_close(g_loop);
+    fprintf(stderr, "Shutdown: event loop closed.\n");
 }
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -665,9 +654,6 @@ int main(void) {
         fprintf(stderr, "Fatal: session table allocation failed\n");
         return EXIT_FAILURE;
     }
-    if (ht_load(g_sessions, "sessions.bin"))
-        printf("Sessions: %zu session(s) restored from sessions.bin\n",
-               g_sessions->size);
 
     /* ── Rate-limit table ───────────────────────────────────────────── */
     Hash_Table *rate_limit = ht_create(1024, hash_key);
@@ -681,7 +667,7 @@ int main(void) {
 
     /* ── Cleanup ────────────────────────────────────────────────────── */
     tpl_unload_all();
-    ht_destroy(g_sessions,  "sessions.bin");
+    ht_destroy(g_sessions,  NULL);
     ht_destroy(g_geo_table, NULL);
     ht_destroy(rate_limit,  NULL);
     client_pool_destroy();
