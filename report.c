@@ -212,13 +212,19 @@ char *report_get_active_json(uint64_t userId, const char *city, bool isOperator)
     if (isOperator) {
         db_query(
             "SELECT " SELECT_COLS " FROM reports "
-            "WHERE city = ? AND status < 2 ORDER BY created_at DESC;",
-            json_row_cb, &j, 4, (char *)city, 0);
+            "WHERE city = ? AND (status = 0 OR (status = 1 AND assigned_to = ?)) "
+            "ORDER BY created_at DESC;",
+            json_row_cb, &j,
+            4, (char *)city,               // parametro 1: city (stringa)
+            2, (sqlite3_int64)userId,      // parametro 2: userId (int64)
+            0);
     } else {
         db_query(
             "SELECT " SELECT_COLS " FROM reports "
             "WHERE author_id = ? AND status < 2 ORDER BY created_at DESC;",
-            json_row_cb, &j, 2, (sqlite3_int64)userId, 0);
+            json_row_cb, &j,
+            2, (sqlite3_int64)userId,
+            0);
     }
 
     return jbuf_close(&j);
