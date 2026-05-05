@@ -650,8 +650,12 @@ int main(void) {
         fprintf(stderr, "Fatal: geo table allocation failed\n");
         return EXIT_FAILURE;
     }
-    if (geo_load(GEO_JSON_PATH, g_geo_table) < 0) {
+    if (geo_load(GEO_JSON_PATH, g_geo_table, CITIES_JSON_PATH) < 0) {
         fprintf(stderr, "Fatal: failed to load '%s'\n", GEO_JSON_PATH);
+        return EXIT_FAILURE;
+    }
+    if (tpl_load_file(CITIES_JSON_PATH, "cities.json") != 0) {
+        fprintf(stderr, "Fatal: failed to load '%s'\n", CITIES_JSON_PATH);
         return EXIT_FAILURE;
     }
 

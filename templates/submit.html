@@ -130,10 +130,38 @@
         e.latlng.lat.toFixed(5) + ', ' + e.latlng.lng.toFixed(5));
     });
 
-    /* Pin is placed only by tapping the map — no automatic geolocation.
-       The map is already centred on the user's city by the server. */
-    statusEl.textContent = 'Tocca la mappa per indicare il punto del problema.';
-    statusEl.className   = '';
+    /* ── Geolocalizzazione automatica all'avvio ─────────────────────── */
+    if (navigator.geolocation) {
+      statusEl.textContent = 'Ricerca posizione GPS in corso...';
+      navigator.geolocation.getCurrentPosition(
+        function(pos) {
+          var lat    = pos.coords.latitude;
+          var lon    = pos.coords.longitude;
+          var bounds = map.options.maxBounds;
+          /* Se il GPS restituisce coordinate fuori dal comune dell'utente
+             (es. telefono ancora agganciato alla citta precedente) ignoriamo
+             il fix e lasciamo che l'utente tocchi la mappa manualmente. */
+          if (bounds && !bounds.contains([lat, lon])) {
+            statusEl.textContent =
+              'Posizione GPS fuori dal comune. Tocca la mappa per indicare il punto.';
+            statusEl.className = '';
+            return;
+          }
+          setPin(lat, lon, 'Posizione attuale (GPS)');
+          map.setView([lat, lon], 16);
+        },
+        function() {
+          /* Permesso negato o timeout: nessun pin automatico */
+          statusEl.textContent =
+            'GPS non disponibile. Tocca la mappa per indicare il punto.';
+          statusEl.className = '';
+        },
+        { timeout: 8000, maximumAge: 60000, enableHighAccuracy: true }
+      );
+    } else {
+      statusEl.textContent = 'Tocca la mappa per indicare il punto del problema.';
+      statusEl.className   = '';
+    }
 
     /* Block submit if no pin placed */
     form.addEventListener('submit', function(e) {

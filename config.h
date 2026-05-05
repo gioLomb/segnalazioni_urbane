@@ -30,8 +30,8 @@
  * BUFFER_SIZE           - per-connection request accumulation buffer.
  * RESPONSE_BUFFER_SIZE  - heap-allocated per-request response buffer;
  *                         must fit the largest HTML page (operator map). */
-#define BUFFER_SIZE          (1 << 13)   /* 8 KB  */
-#define RESPONSE_BUFFER_SIZE (1 << 16)   /* 64 KB */
+#define BUFFER_SIZE          (1 << 13)   /* 8 KB   */
+#define RESPONSE_BUFFER_SIZE (1 << 18)   /* 256 KB */
 #define URL_BUFFER_SIZE      (1 << 10)
 #define PARAM_KEY_SIZE       (1 << 6)
 #define PARAM_VALUE_SIZE     (1 << 10)
@@ -39,6 +39,7 @@
 /* APPLICATION */
 #define APP_DB_PATH         "segnalacity.db"
 #define GEO_JSON_PATH       "data/comuni.geojson"
+#define CITIES_JSON_PATH    "data/cities.json"
 #define SESSION_COOKIE_NAME "sid"
 #define SESSION_MAX_AGE     86400        /* 24 h in seconds */
 

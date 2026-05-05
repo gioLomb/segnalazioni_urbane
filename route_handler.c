@@ -570,6 +570,25 @@ static int route_api_reports_archived(const char *req,
         resp, max);
 }
 
+/* GET /api/cities — serve il JSON dei nomi comuni costruito da geo_load() */
+static int route_api_cities(const char *req,
+                             char *resp, size_t max, RouteExtra *extra) {
+    (void)req;
+
+    const Template *tpl = tpl_get("cities.json");
+    if (!tpl) {
+        snprintf(resp, max, "[]");
+        return 404;
+    }
+    if (tpl_render(tpl, resp, max, NULL, 0) < 0) {
+        snprintf(resp, max, "[]");
+        return 500;
+    }
+    snprintf(extra->content_type, sizeof(extra->content_type),
+             "application/json");
+    return 200;
+}
+
 /* GET /api/stats */
 static int route_api_stats(const char *req,
                            char *resp, size_t max, RouteExtra *extra) {
@@ -694,6 +713,7 @@ static const Route routes[] = {
     { "POST", "/login",                  route_post_login            },
     { "POST", "/register",               route_post_register         },
     { "POST", "/submit",                 route_post_submit           },
+    { "GET",  "/api/cities",             route_api_cities            },
     { "GET",  "/api/reports/active",     route_api_reports_active    },
     { "GET",  "/api/reports/archived",   route_api_reports_archived  },
     { "GET",  "/api/stats",              route_api_stats             },

@@ -34,11 +34,13 @@ typedef struct {
 /*
  * Parses the GeoJSON file at path and inserts one CityGeo entry per comune
  * into ht.  Skips malformed features but continues parsing.
+ * If cities_out is non-NULL, writes a compact JSON array of city names to
+ * that path (created or overwritten) during the same parsing pass.
  *
  * Returns the number of comuni loaded, or -1 on fatal error (file not found,
  * allocation failure).
  */
-int geo_load(const char *path, Hash_Table *ht);
+int geo_load(const char *path, Hash_Table *ht, const char *cities_out);
 
 /*
  * Looks up a comune by name in ht and fills *out.

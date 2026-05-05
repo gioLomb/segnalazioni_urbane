@@ -24,7 +24,6 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-
 /* ── Scanner primitives ──────────────────────────────────────────────── */
 
 /*
@@ -132,7 +131,7 @@ static const char *parse_coordinates(const char *cur, const char *end,
 
 /* ── Public API ──────────────────────────────────────────────────────── */
 
-int geo_load(const char *path, Hash_Table *ht) {
+int geo_load(const char *path, Hash_Table *ht, const char *cities_out) {
     int fd = open(path, O_RDONLY);
     if (fd < 0) { perror(path); return -1; }
 
@@ -148,6 +147,18 @@ int geo_load(const char *path, Hash_Table *ht) {
     const char *end     = data + size;
     int         loaded  = 0;
     int         skipped = 0;
+
+    /*
+     * Open the cities JSON output file if requested.
+     * Failure is non-fatal: the server starts without the autocomplete asset
+     * and the error is reported via perror().
+     */
+    FILE *cf = NULL;
+    if (cities_out) {
+        cf = fopen(cities_out, "w");
+        if (!cf) perror(cities_out);
+        else     fputc('[', cf);
+    }
 
     /*
      * Key insight: search for "comune": " (with space and opening quote).
@@ -207,10 +218,25 @@ int geo_load(const char *path, Hash_Table *ht) {
 
         /* ── Step 4: insert into hash table ─────────────────────────── */
         ht_set(ht, (void *)name, strlen(name) + 1, &geo, sizeof(geo));
+
+        /* ── Step 5: append name to cities JSON ─────────────────────── */
+        if (cf) {
+            if (loaded > 0) fputc(',', cf);
+            fputc('"', cf);
+            for (const char *p = name; *p; p++) {
+                if (*p == '"' || *p == '\\') fputc('\\', cf);
+                fputc(*p, cf);
+            }
+            fputc('"', cf);
+        }
+
         loaded++;
     }
 
     munmap((void *)data, size);
+
+    if (cf) { fputc(']', cf); fclose(cf); }
+
     printf("geo: loaded %d comuni, skipped %d\n", loaded, skipped);
     return loaded;
 }
