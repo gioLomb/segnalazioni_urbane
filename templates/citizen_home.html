@@ -92,7 +92,7 @@
       })
       .catch(function() {
         document.getElementById('active-table').innerHTML =
-          '<p class="placeholder-text error-text">Errore di caricamento.</p>';
+          '<p class="placeholder-text error-text">Errore di caricamento(api/reports/active).</p>';
       });
 
     fetch('/api/reports/archived')
