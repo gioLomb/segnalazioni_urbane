@@ -99,37 +99,65 @@ static const char *lookup(const char *key, size_t klen,
     return "";
 }
 
-static size_t find_close(const char *s, size_t p, size_t len) {
-    while (p < len) {
-        if (s[p] == '}' && s[p + 1] == '}') return p;
-        p++;
+/* Trova il prossimo '{{' — i '{' singoli vengono ignorati naturalmente */
+static const char *find_open(const char *cur, const char *end) {
+    while (cur < end - 1) {
+        cur = memchr(cur, '{', end - cur);
+        if (!cur) return NULL;
+        if (cur[1] == '{') return cur;
+        cur++;
     }
-    return len;
+    return NULL;
 }
 
-int tpl_render(const Template *tpl, char *dest, size_t dsize,
-               const TplVar *vars, int nvars) {
-    if (!tpl || !dest || !dsize) return -1;
-
-    const char *s   = tpl->src;
-    size_t      slen = tpl->src_len;
-    size_t      w    = 0;
-
-    for (size_t i = 0; i < slen; ) {
-        if (s[i] == '{' && i + 1 < slen && s[i + 1] == '{') {
-            size_t ks = i + 2;
-            size_t ke = find_close(s, ks, slen);
-            const char *val = lookup(s + ks, ke - ks, vars, nvars);
-            size_t vlen = strlen(val);
-            if (w + vlen + 1 > dsize) { dest[w] = '\0'; return -1; }
-            memcpy(dest + w, val, vlen);
-            w += vlen;
-            i = ke + 2;
-        } else {
-            if (w + 2 > dsize) { dest[w] = '\0'; return -1; }
-            dest[w++] = s[i++];
-        }
+/* Trova il prossimo '}}' restituendo un puntatore al primo '}' */
+static const char *find_close(const char *cur, const char *end) {
+    while (cur < end - 1) {
+        cur = memchr(cur, '}', end - cur);
+        if (!cur) return end;
+        if (cur[1] == '}') return cur;
+        cur++;
     }
-    dest[w] = '\0';
-    return (int)w;
+    return end;
+}
+
+int tpl_render(const Template *tpl, char *dest, size_t dest_size,const TplVar *vars, int nvars) {
+    if (!tpl || !dest || !dest_size) return -1;
+
+    #define EMIT(ptr, len)  do {                                        \
+        if (written + (len) + 1 > dest_size) goto overflow;        \
+        memcpy(dest + written, (ptr), (len));                       \
+        written += (len);                                           \
+    } while (0)
+    
+    const char *cursor  = tpl->src;
+    const char *src_end = tpl->src + tpl->src_len;
+    size_t      written = 0;
+
+    while (cursor < src_end) {
+        const char *open = find_open(cursor, src_end);
+
+        /* Nessun placeholder: copia il resto e termina */
+        if (!open) { EMIT(cursor, src_end - cursor); break; }
+
+        /* Testo letterale prima di '{{' */
+        EMIT(cursor, open - cursor);
+
+        /* Chiave tra '{{' e '}}' */
+        const char *key_start = open + 2;
+        const char *key_end   = find_close(key_start, src_end);
+
+        const char *value     = lookup(key_start, key_end - key_start, vars, nvars);
+        EMIT(value, strlen(value));
+
+        cursor = key_end + 2;   /* salta '}}' */
+    }
+
+#undef EMIT
+    dest[written] = '\0';
+    return (int)written;
+
+overflow:
+    dest[written] = '\0';
+    return -1;
 }
