@@ -279,7 +279,7 @@ static int route_get_root(const char *req,
     if (get_session_user(req, &u))
         return redirect(extra, "/home", NULL);
 
-    const Template *tpl = tpl_get("login");
+    const Template *tpl = tpl_get("templates/login.html");
     if (!tpl) { snprintf(resp, max, "<h1>500 Template missing</h1>"); return 500; }
 
     TplVar vars[] = {
@@ -294,7 +294,7 @@ static int route_get_register(const char *req,
                                char *resp, size_t max, RouteExtra *extra) {
     (void)req; (void)extra;
 
-    const Template *tpl = tpl_get("register");
+    const Template *tpl = tpl_get("templates/register.html");
     if (!tpl) { snprintf(resp, max, "<h1>500 Template missing</h1>"); return 500; }
 
     TplVar vars[] = {
@@ -315,7 +315,7 @@ static int route_get_home(const char *req,
     html_escape(u.username, esc_user, sizeof(esc_user));
     html_escape(u.city,     esc_city, sizeof(esc_city));
 
-    const char *tpl_name = user_is_operator(&u) ? "operator_map" : "citizen_home";
+    const char *tpl_name = user_is_operator(&u) ? "templates/operator_map.html" : "templates/citizen_home.html";
     const Template *tpl  = tpl_get(tpl_name);
     if (!tpl) { snprintf(resp, max, "<h1>500 Template missing</h1>"); return 500; }
 
@@ -356,7 +356,7 @@ static int route_get_submit(const char *req,
         snprintf(bbox_s, sizeof(bbox_s), "null");
     }
 
-    const Template *tpl = tpl_get("submit");
+    const Template *tpl = tpl_get("templates/submit.html");
     if (!tpl) { snprintf(resp, max, "<h1>500 Template missing</h1>"); return 500; }
 
     TplVar vars[] = {
@@ -404,7 +404,7 @@ static int route_post_login(const char *req,
 
     User u = {0};
     if (!user_authenticate(username, password, &u)) {
-        const Template *tpl = tpl_get("login");
+        const Template *tpl = tpl_get("templates/login.html");
         if (!tpl) { snprintf(resp, max, "<h1>500</h1>"); return 500; }
         TplVar vars[] = {
             { "ERROR_BLOCK",
@@ -416,7 +416,7 @@ static int route_post_login(const char *req,
 
     char token[TOKEN_HEX_LEN + 2];
     if (!session_create(g_sessions, u.userId, token)) {
-        const Template *tpl = tpl_get("login");
+        const Template *tpl = tpl_get("templates/login.html");
         if (!tpl) { snprintf(resp, max, "<h1>500</h1>"); return 500; }
         TplVar vars[] = {
             { "ERROR_BLOCK",
@@ -449,7 +449,7 @@ static int route_post_register(const char *req,
     /* Re-render the register form with an error message. */
 #define REGISTER_ERROR(msg) \
     do { \
-        const Template *_t = tpl_get("register"); \
+        const Template *_t = tpl_get("templates/register.html"); \
         if (!_t) { snprintf(resp, max, "<h1>500</h1>"); return 500; } \
         char _eb[256]; make_error_block((msg), _eb, sizeof(_eb)); \
         TplVar _v[] = { { "ERROR_BLOCK", _eb } }; \
@@ -498,7 +498,7 @@ static int route_post_submit(const char *req,
     /* Re-render the submit form with an error message. */
 #define SUBMIT_ERROR(msg) \
     do { \
-        const Template *_t = tpl_get("submit"); \
+        const Template *_t = tpl_get("templates/submit.html"); \
         if (!_t) { snprintf(resp, max, "<h1>500</h1>"); return 500; } \
         char esc_user[64], esc_city[64]; \
         html_escape(u.username, esc_user, sizeof(esc_user)); \
@@ -592,7 +592,7 @@ static int route_api_cities(const char *req,
                              char *resp, size_t max, RouteExtra *extra) {
     (void)req;
 
-    const Template *tpl = tpl_get("cities.json");
+    const Template *tpl = tpl_get(CITIES_JSON_PATH);
     if (!tpl) {
         snprintf(resp, max, "[]");
         return 404;
@@ -697,7 +697,7 @@ static int route_static_css(const char *req,
                              char *resp, size_t max, RouteExtra *extra) {
     (void)req;
 
-    const Template *tpl = tpl_get("common.css");
+    const Template *tpl = tpl_get("templates/common.css");
     if (!tpl) {
         snprintf(resp, max, "/* CSS not found */");
         return 404;

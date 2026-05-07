@@ -624,14 +624,16 @@ int main(void) {
     printf("Database: %s\n", APP_DB_PATH);
 
     /* ── HTML templates ─────────────────────────────────────────────── */
-    if (tpl_load_all("templates") != 0) {
-        fprintf(stderr, "Fatal: failed to load HTML templates\n");
-        return EXIT_FAILURE;
-    }
-    if (tpl_load_file("templates/common.css", "common.css") != 0) {
-        fprintf(stderr, "Fatal: failed to load templates/common.css\n");
-        return EXIT_FAILURE;
-    }
+    if (tpl_load_files("templates/login.html",
+                   "templates/register.html",
+                   "templates/citizen_home.html",
+                   "templates/operator_map.html",
+                   "templates/submit.html",
+                   "templates/common.css",
+                   NULL) != 0) {
+    fprintf(stderr, "Fatal: failed to load core templates\n");
+    return EXIT_FAILURE;
+}
 
     /* ── City geometry table ────────────────────────────────────────── */
     g_geo_table = ht_create(8192, hash_key);
@@ -643,10 +645,10 @@ int main(void) {
         fprintf(stderr, "Fatal: failed to load '%s'\n", GEO_JSON_PATH);
         return EXIT_FAILURE;
     }
-    if (tpl_load_file(CITIES_JSON_PATH, "cities.json") != 0) {
-        fprintf(stderr, "Fatal: failed to load '%s'\n", CITIES_JSON_PATH);
-        return EXIT_FAILURE;
-    }
+    if (tpl_load_files(CITIES_JSON_PATH, NULL) != 0) {
+    fprintf(stderr, "Fatal: failed to load '%s'\n", CITIES_JSON_PATH);
+    return EXIT_FAILURE;
+}
 
     /* ── In-memory session table ────────────────────────────────────── */
     g_sessions = ht_create(0, hash_key);
