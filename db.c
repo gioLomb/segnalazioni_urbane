@@ -2,101 +2,108 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdarg.h>
 
 static sqlite3 *g_db = NULL;
-static const char *g_errmsg = NULL;
+
+/* ── Lifecycle ───────────────────────────────────────────────────────── */
 
 int db_init(const char *path) {
     if (g_db) sqlite3_close(g_db);
-    int rc = sqlite3_open(path, &g_db);
-    if (rc != SQLITE_OK) {
-        g_errmsg = sqlite3_errmsg(g_db);
-        return -1;
-    }
+    if (sqlite3_open(path, &g_db) != SQLITE_OK) return -1;
     return 0;
 }
 
-void db_close(void) {
-    if (g_db) sqlite3_close(g_db);
-    g_db = NULL;
-}
+void        db_close         (void) { if (g_db) { sqlite3_close(g_db); g_db = NULL; } }
+const char *db_errmsg        (void) { return g_db ? sqlite3_errmsg(g_db) : "no db"; }
+int64_t     db_last_insert_id(void) { return g_db ? sqlite3_last_insert_rowid(g_db) : 0; }
+int         db_changes       (void) { return g_db ? sqlite3_changes(g_db) : 0; }
 
-const char *db_errmsg(void) {
-    return g_errmsg ? g_errmsg : sqlite3_errmsg(g_db);
-}
+/* ── Binding ─────────────────────────────────────────────────────────── */
 
-sqlite3_int64 db_last_insert_id(void) {
-    return g_db ? sqlite3_last_insert_rowid(g_db) : 0;
-}
-
-int db_changes(void) {
-    return g_db ? sqlite3_changes(g_db) : 0;
-}
-
-static int bind_variadic(sqlite3_stmt *stmt, va_list args) {
-    int idx = 1;
-    while (1) {
-        int type = va_arg(args, int); // tipo: 0=fine, 1=int, 2=int64, 3=double, 4=string, 5=null
-        if (type == 0) break;
-        switch (type) {
-            case 1: { int v = va_arg(args, int); sqlite3_bind_int(stmt, idx++, v); break; }
-            case 2: { sqlite3_int64 v = va_arg(args, sqlite3_int64); sqlite3_bind_int64(stmt, idx++, v); break; }
-            case 3: { double v = va_arg(args, double); sqlite3_bind_double(stmt, idx++, v); break; }
-            case 4: { char *v = va_arg(args, char*); sqlite3_bind_text(stmt, idx++, v, -1, SQLITE_TRANSIENT); break; }
-            case 5: sqlite3_bind_null(stmt, idx++); break;
-            default: return -1;
+static int bind_fmt(sqlite3_stmt *stmt, const char *fmt, va_list ap) {
+    if (!fmt) return 0;
+    for (int i = 0; fmt[i]; i++) {
+        int col = i + 1;
+        switch (fmt[i]) {
+            case 's': sqlite3_bind_text  (stmt, col, va_arg(ap, const char *), -1, SQLITE_TRANSIENT); break;
+            case 'i': sqlite3_bind_int   (stmt, col, va_arg(ap, int));                                break;
+            case 'l': sqlite3_bind_int64 (stmt, col, va_arg(ap, int64_t));                            break;
+            case 'f': sqlite3_bind_double(stmt, col, va_arg(ap, double));                             break;
+            case 'n': sqlite3_bind_null  (stmt, col);                                                 break;
+            default:
+                fprintf(stderr, "db: unknown fmt char '%c'\n", fmt[i]);
+                return -1;
         }
     }
     return 0;
 }
 
-int db_execute(const char *sql, ...) {
-    if (!g_db) return -1;
+static sqlite3_stmt *prepare(const char *sql, const char *fmt, va_list ap) {
+    if (!g_db) return NULL;
     sqlite3_stmt *stmt;
-    int rc = sqlite3_prepare_v2(g_db, sql, -1, &stmt, NULL);
-    if (rc != SQLITE_OK) {
-        g_errmsg = (char*)sqlite3_errmsg(g_db);
-        return -1;
-    }
-    va_list args;
-    va_start(args, sql);
-    bind_variadic(stmt, args);
-    va_end(args);
-    rc = sqlite3_step(stmt);
-    sqlite3_finalize(stmt);
-    if (rc != SQLITE_DONE) {
-        g_errmsg = (char*)sqlite3_errmsg(g_db);
-        return -1;
-    }
-    return 0;
+    if (sqlite3_prepare_v2(g_db, sql, -1, &stmt, NULL) != SQLITE_OK) return NULL;
+    if (bind_fmt(stmt, fmt, ap) != 0) { sqlite3_finalize(stmt); return NULL; }
+    return stmt;
 }
 
-int db_query_va(const char *sql, db_row_callback callback, void *userdata, va_list args) {
-    if (!g_db || !callback) return -1;
-    sqlite3_stmt *stmt;
-    int rc = sqlite3_prepare_v2(g_db, sql, -1, &stmt, NULL);
-    if (rc != SQLITE_OK) {
-        g_errmsg = (char*)sqlite3_errmsg(g_db);
-        return -1;
-    }
-    bind_variadic(stmt, args);
-    int row_count = 0;
-    while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
-        if (callback(stmt, userdata) != 0) break; // callback può fermare
-        row_count++;
-    }
+/* ── db_exec ─────────────────────────────────────────────────────────── */
+
+int db_exec(const char *sql, const char *fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+    sqlite3_stmt *stmt = prepare(sql, fmt, ap);
+    va_end(ap);
+    if (!stmt) return -1;
+
+    int rc = sqlite3_step(stmt);
     sqlite3_finalize(stmt);
-    if (rc != SQLITE_DONE && rc != SQLITE_ROW) {
-        g_errmsg = (char*)sqlite3_errmsg(g_db);
-        return -1;
-    }
-    return row_count;
+    return (rc == SQLITE_DONE) ? 0 : -1;
 }
 
-int db_query(const char *sql, db_row_callback callback, void *userdata, ...) {
-    va_list args;
-    va_start(args, userdata);
-    int ret = db_query_va(sql, callback, userdata, args);
-    va_end(args);
-    return ret;
+/* ── Cursore ─────────────────────────────────────────────────────────── */
+
+struct DbCursor {
+    sqlite3_stmt *stmt;
+    bool          has_row;
+};
+
+DbCursor *db_cursor_open(const char *sql, const char *fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+    sqlite3_stmt *stmt = prepare(sql, fmt, ap);
+    va_end(ap);
+    if (!stmt) return NULL;
+
+    DbCursor *c = malloc(sizeof(*c));
+    if (!c) { sqlite3_finalize(stmt); return NULL; }
+    c->stmt    = stmt;
+    c->has_row = false;
+    return c;
+}
+
+bool db_cursor_next(DbCursor *c) {
+    if (!c) return false;
+    c->has_row = (sqlite3_step(c->stmt) == SQLITE_ROW);
+    return c->has_row;
+}
+
+const char *db_cursor_text(DbCursor *c, int col) {
+    if (!c || !c->has_row) return "";
+    const char *s = (const char *)sqlite3_column_text(c->stmt, col);
+    return s ? s : "";
+}
+
+int64_t db_cursor_int64(DbCursor *c, int col) {
+    return (c && c->has_row) ? sqlite3_column_int64(c->stmt, col) : 0;
+}
+
+double db_cursor_double(DbCursor *c, int col) {
+    return (c && c->has_row) ? sqlite3_column_double(c->stmt, col) : 0.0;
+}
+
+void db_cursor_close(DbCursor *c) {
+    if (!c) return;
+    sqlite3_finalize(c->stmt);
+    free(c);
 }

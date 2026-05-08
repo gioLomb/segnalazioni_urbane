@@ -1,40 +1,53 @@
 #ifndef DB_H
 #define DB_H
 
-#include <sqlite3.h>
+#include <stdint.h>
 #include <stdbool.h>
-#include <stdarg.h>
+#include <sqlite3.h>
 
-// Inizializza il database (crea/ apre il file)
-int db_init(const char *path);
+/* ── Cursore ─────────────────────────────────────────────────────────
+ *
+ * Itera le righe di una SELECT una alla volta, senza materializzare
+ * il result set in memoria.  Uso tipico:
+ *
+ *   DbCursor *c = db_cursor_open(
+ *       "SELECT id, name FROM users WHERE city = ?", "s", city);
+ *   while (db_cursor_next(c)) {
+ *       int64_t     id   = db_cursor_int64(c, 0);
+ *       const char *name = db_cursor_text (c, 1);
+ *   }
+ *   db_cursor_close(c);
+ *
+ * fmt descrive i parametri '?' nell'ordine:
+ *   's' = const char *     'i' = int
+ *   'l' = int64_t          'f' = double     'n' = NULL
+ * Passa NULL (o "") se la query non ha parametri.
+ * ──────────────────────────────────────────────────────────────────── */
 
-// Esegue una query senza risultati (CREATE, INSERT, UPDATE, DELETE)
-// sql: query con placeholder '?'
-// ...: valori da bindare (supporta: int, int64, double, string, NULL)
-// Esempio: db_execute("INSERT INTO users VALUES (?,?)", 1, "pippo");
-int db_execute(const char *sql, ...);
+typedef struct DbCursor DbCursor;
 
-// Esegue una query che restituisce righe, chiama row_callback per ogni riga.
-// row_callback: funzione utente che riceve sqlite3_stmt* e il userdata.
-// Ritorna il numero di righe processate o -1 in caso di errore.
-typedef int (*db_row_callback)(sqlite3_stmt *stmt, void *userdata);
-int db_query(const char *sql, db_row_callback callback, void *userdata, ...);
+DbCursor   *db_cursor_open  (const char *sql, const char *fmt, ...);
+bool        db_cursor_next  (DbCursor *c);
+const char *db_cursor_text  (DbCursor *c, int col);   /* "" se NULL  */
+int64_t     db_cursor_int64 (DbCursor *c, int col);   /*  0 se NULL  */
+double      db_cursor_double(DbCursor *c, int col);   /* 0.0 se NULL */
+void        db_cursor_close (DbCursor *c);
 
-// Prepara una statement, la esegue e chiama il callback per ogni riga.
-// Versione con va_list già inizializzata (per uso interno).
-int db_query_va(const char *sql, db_row_callback callback, void *userdata, va_list args);
+/* ── Execute ──────────────────────────────────────────────────────────
+ *
+ * INSERT / UPDATE / DELETE / CREATE — non restituisce righe.
+ * Stessa convenzione fmt del cursore.
+ * Restituisce 0 su successo, -1 su errore.
+ * ──────────────────────────────────────────────────────────────────── */
 
-// Chiude il database
-void db_close(void);
+int db_exec(const char *sql, const char *fmt, ...);
 
-// Ultimo errore (per logging)
-const char *db_errmsg(void);
+/* ── Lifecycle & utilità ─────────────────────────────────────────────*/
 
-// Rowid dell'ultima INSERT eseguita con successo (wrapper su sqlite3_last_insert_rowid).
-sqlite3_int64 db_last_insert_id(void);
+int         db_init          (const char *path);
+void        db_close         (void);
+const char *db_errmsg        (void);
+int64_t     db_last_insert_id(void);
+int         db_changes       (void);
 
-// Numero di righe modificate dall'ultima istruzione DML (wrapper su sqlite3_changes).
-// Usato per rilevare UPDATE senza righe corrispondenti (es. claim già preso).
-int db_changes(void);
-
-#endif
+#endif /* DB_H */
