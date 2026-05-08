@@ -6,10 +6,16 @@
  *
  * Quick reference
  * ───────────────
- *  client_pool_init()     — call once at startup
- *  client_pool_alloc()    — O(1) slot acquisition, call on new connection
- *  client_pool_release()  — O(1) slot return, call after BOTH uv handles closed
- *  client_pool_destroy()  — call at shutdown to free all chunks
+ *  client_pool_init()         — call once at startup
+ *  client_pool_alloc()        — O(1) slot acquisition, call on new connection
+ *  client_pool_release()      — O(1) slot return, call after BOTH uv handles closed
+ *  client_pool_destroy()      — call at shutdown to free all chunks
+ *
+ *  client_pool_link()         — register a slot as an active connection
+ *  client_pool_unlink()       — deregister a slot from the active list
+ *  client_pool_active_count() — number of currently active connections
+ *  client_pool_close_all()    — call a function on every active connection
+ *                               (used for graceful shutdown)
  */
 
 #ifndef CLIENT_POOL_H
@@ -35,33 +41,26 @@ struct MemoryChunk;
  * and timer) have fired their uv_close callback — tracked by pending_closes
  * counting down from 2 to 0 inside on_close() in server_functions.c.
  *
- * Handle initialisation
- * ─────────────────────
- * tcp and timer are embedded directly (no extra heap allocation per slot).
- * Their .data field always points back to the owning ClientCtx so every
- * libuv callback can recover context with a simple cast:
+ * Active list (next / prev)
+ * ─────────────────────────
+ * When a slot is in use, next/prev form a doubly-linked list of all live
+ * connections, owned by client_pool.c.  server_functions.c never touches
+ * these pointers directly; it uses client_pool_link() / client_pool_unlink()
+ * and client_pool_close_all() instead.
  *
- *     ClientCtx *ctx = (ClientCtx *)handle->data;
- *
- * The handles are NOT initialised by the pool; uv_tcp_init() and
- * uv_timer_init() must be called by setup_client() in server_functions.c.
+ * When a slot is FREE (between release and the next alloc), next is reused
+ * by the pool's internal free-list (singly-linked, no prev needed).
  *
  * Fields
  * ──────
  *  tcp            — libuv TCP handle for the accepted connection.
  *  timer          — libuv timer handle for the keepalive timeout.
- *  next / prev    — doubly-linked list of all live contexts, used for
- *                   O(n) traversal during graceful shutdown.
- *  parentChunk    — back-pointer to the owning MemoryChunk slab;
- *                   lets client_pool_release() locate the chunk in O(1).
- *  closing        — set to true by close_client() before the first
- *                   uv_close() call; prevents double-close races.
- *  pending_closes — initialised to 2 by close_client(); decremented once
- *                   per uv_close callback by on_close(); the pool slot is
- *                   released when it reaches 0.
- *  totalRead      — number of valid bytes currently in buffer.
- *  buffer         — accumulates raw HTTP request bytes as libuv delivers
- *                   them; always NUL-terminated at buffer[totalRead].
+ *  next / prev    — active connection list (managed by client_pool).
+ *  parentChunk    — back-pointer to the owning MemoryChunk slab.
+ *  closing        — set to true by close_client() before the first uv_close().
+ *  pending_closes — decremented by on_close(); pool slot released when 0.
+ *  totalRead      — valid bytes currently in buffer.
+ *  buffer         — raw HTTP request accumulation buffer (NUL-terminated).
  */
 typedef struct ClientCtx {
     uv_tcp_t            tcp;
@@ -77,46 +76,43 @@ typedef struct ClientCtx {
 
 /* ── Pool lifecycle ──────────────────────────────────────────────────── */
 
-/**
- * Allocates the first MemoryChunk slab.
- * Must be called once before any client_pool_alloc() or
- * client_pool_release() call.
- * Returns 0 on success, -1 on allocation failure.
- */
-int client_pool_init(void);
-
-/**
- * Frees every MemoryChunk unconditionally.
- * Must only be called at shutdown, after every connection has been fully
- * closed (i.e. all on_close() callbacks have fired).
- */
+int  client_pool_init   (void);
 void client_pool_destroy(void);
 
-/* ── Per-connection API ───────────────────────────────────────────────── */
+/* ── Per-connection alloc / release ─────────────────────────────────── */
+
+ClientCtx *client_pool_alloc  (void);
+void       client_pool_release(ClientCtx *ctx);
+
+/* ── Active connection list ──────────────────────────────────────────── */
 
 /**
- * Returns a ClientCtx slot from the pool (O(1) amortised).
- *
- * The slot has its scalar fields zeroed; buffer is cleared.
- * parentChunk is preserved across reuse — do not overwrite it.
- *
- * The caller MUST call uv_tcp_init() and uv_timer_init() before using
- * the embedded handles, then set handle.data = ctx on both.
- *
- * Returns NULL if a new chunk slab could not be allocated.
+ * Registers ctx as an active connection (prepends to the active list).
+ * Must be called by server_functions.c after a successful uv_accept().
  */
-ClientCtx *client_pool_alloc(void);
+void client_pool_link(ClientCtx *ctx);
 
 /**
- * Returns a ClientCtx slot to its owning chunk's free-list (O(1)).
- *
- * MUST be called only after both libuv handles are fully closed
- * (pending_closes == 0).  Calling this while a handle is still being
- * closed by libuv is undefined behaviour.
- *
- * If the owning chunk becomes empty AND there is at least one other chunk,
- * the chunk is freed to return memory to the OS.
+ * Removes ctx from the active list.
+ * Must be called by server_functions.c inside on_close() when
+ * pending_closes reaches 0 and before client_pool_release().
  */
-void client_pool_release(ClientCtx *ctx);
+void client_pool_unlink(ClientCtx *ctx);
+
+/**
+ * Returns the number of currently active connections.
+ */
+int client_pool_active_count(void);
+
+/**
+ * Calls fn(ctx) on every active connection in list order.
+ * Saves ctx->next before each call so fn() may modify the list safely
+ * (e.g. by calling close_client which sets ctx->closing but does NOT
+ * unlink immediately — unlinking happens later in on_close).
+ *
+ * Used by server_loop() for graceful shutdown:
+ *   client_pool_close_all(close_client);
+ */
+void client_pool_close_all(void (*fn)(ClientCtx *ctx));
 
 #endif /* CLIENT_POOL_H */

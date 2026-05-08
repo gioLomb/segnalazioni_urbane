@@ -5,12 +5,7 @@
 #include <string.h>
 #include <time.h>
 
-/* ── Column order used in every SELECT ──────────────────────────────────
- * 0  id          1  author_id    2  assigned_to
- * 3  lat         4  lon          5  city
- * 6  category    7  description  8  status
- * 9  created_at  10 assigned_at  11 resolved_at
- * ─────────────────────────────────────────────────────────────────────*/
+/* ── Column order used in every SELECT ────────────────────────────────── */
 #define SELECT_COLS \
     "id, author_id, assigned_to, lat, lon, city, category, description, " \
     "status, created_at, assigned_at, resolved_at"
@@ -35,7 +30,6 @@ int report_setup_table(void) {
             ");", NULL) != 0)
         return -1;
 
-    /* Non fatali: gli indici sono un'ottimizzazione delle performance. */
     db_exec("CREATE INDEX IF NOT EXISTS idx_reports_author ON reports(author_id);", NULL);
     db_exec("CREATE INDEX IF NOT EXISTS idx_reports_city   ON reports(city);",      NULL);
     db_exec("CREATE INDEX IF NOT EXISTS idx_reports_status ON reports(status);",    NULL);
@@ -44,30 +38,24 @@ int report_setup_table(void) {
 
 /* ── Row mapper ──────────────────────────────────────────────────────── */
 
-/* Legge la riga corrente del cursore in una struct ActiveReport. */
 static void cursor_to_report(DbCursor *c, ActiveReport *r) {
     memset(r, 0, sizeof(*r));
-    r->reportId   = (uint64_t)db_cursor_int64 (c, 0);
-    r->authorId   = (uint64_t)db_cursor_int64 (c, 1);
-    r->assignedTo = (uint64_t)db_cursor_int64 (c, 2);
-    r->lat        =           db_cursor_double(c, 3);
-    r->lon        =           db_cursor_double(c, 4);
-    strncpy(r->city,        db_cursor_text(c, 5), CITY_LEN - 1);
-    strncpy(r->category,    db_cursor_text(c, 6), CAT_LEN  - 1);
-    strncpy(r->description, db_cursor_text(c, 7), DESC_LEN - 1);
-    r->status     = (ReportStatus)db_cursor_int64(c,  8);
-    r->createdAt  = (time_t)      db_cursor_int64(c,  9);
-    r->assignedAt = (time_t)      db_cursor_int64(c, 10);
-    r->resolvedAt = (time_t)      db_cursor_int64(c, 11);
+    r->reportId   = (uint64_t)db_cursor_int64 (c, REP_COL_ID);
+    r->authorId   = (uint64_t)db_cursor_int64 (c, REP_COL_AUTHOR_ID);
+    r->assignedTo = (uint64_t)db_cursor_int64 (c, REP_COL_ASSIGNED_TO);
+    r->lat        =           db_cursor_double(c, REP_COL_LAT);
+    r->lon        =           db_cursor_double(c, REP_COL_LON);
+    strncpy(r->city,        db_cursor_text(c, REP_COL_CITY), CITY_LEN - 1);
+    strncpy(r->category,    db_cursor_text(c, REP_COL_CATEGORY), CAT_LEN  - 1);
+    strncpy(r->description, db_cursor_text(c, REP_COL_DESCRIPTION), DESC_LEN - 1);
+    r->status     = (ReportStatus)db_cursor_int64(c,  REP_COL_STATUS);
+    r->createdAt  = (time_t)      db_cursor_int64(c,  REP_COL_CREATED_AT);
+    r->assignedAt = (time_t)      db_cursor_int64(c,  REP_COL_ASSIGNED_AT);
+    r->resolvedAt = (time_t)      db_cursor_int64(c,  REP_COL_RESOLVED_AT);
 }
 
 /* ── JSON builder ────────────────────────────────────────────────────── */
 
-/*
- * Converte un ActiveReport in un oggetto cJSON.
- * cJSON_AddStringToObject gestisce automaticamente l'escaping di
- * \n, \r, \t, ", \ e tutti i caratteri di controllo JSON.
- */
 static cJSON *report_to_cjson(const ActiveReport *r) {
     cJSON *obj = cJSON_CreateObject();
     if (!obj) return NULL;
@@ -85,8 +73,6 @@ static cJSON *report_to_cjson(const ActiveReport *r) {
     return obj;
 }
 
-/* Helper: itera il cursore, aggiunge ogni riga all'array cJSON,
-   serializza e restituisce la stringa heap-allocated. */
 static char *cursor_to_json_array(DbCursor *c) {
     cJSON *array = cJSON_CreateArray();
     while (db_cursor_next(c)) {
@@ -116,11 +102,6 @@ uint64_t report_insert(uint64_t authorId, double lat, double lon,
 }
 
 int report_assign(uint64_t reportId, uint64_t operatorId) {
-    /*
-     * Claim atomico: la WHERE garantisce che nessun altro operatore abbia
-     * già preso la segnalazione. In caso di race condition vince un solo
-     * UPDATE; l'altro ottiene rowcount=0 e riceve 409 nel route handler.
-     */
     int rc = db_exec(
         "UPDATE reports "
         "SET status = 1, assigned_to = ?, assigned_at = ? "
@@ -132,10 +113,6 @@ int report_assign(uint64_t reportId, uint64_t operatorId) {
 }
 
 int report_resolve(uint64_t reportId, uint64_t operatorId) {
-    /*
-     * Solo l'operatore che ha preso in carico la segnalazione può risolverla:
-     * assigned_to = operatorId nella WHERE lo impone.
-     */
     int rc = db_exec(
         "UPDATE reports "
         "SET status = 2, resolved_at = ? "

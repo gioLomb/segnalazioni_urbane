@@ -25,15 +25,20 @@ static int bind_fmt(sqlite3_stmt *stmt, const char *fmt, va_list ap) {
     if (!fmt) return 0;
     for (int i = 0; fmt[i]; i++) {
         int col = i + 1;
+        int rc;
         switch (fmt[i]) {
-            case 's': sqlite3_bind_text  (stmt, col, va_arg(ap, const char *), -1, SQLITE_TRANSIENT); break;
-            case 'i': sqlite3_bind_int   (stmt, col, va_arg(ap, int));                                break;
-            case 'l': sqlite3_bind_int64 (stmt, col, va_arg(ap, int64_t));                            break;
-            case 'f': sqlite3_bind_double(stmt, col, va_arg(ap, double));                             break;
-            case 'n': sqlite3_bind_null  (stmt, col);                                                 break;
+            case 's': rc = sqlite3_bind_text  (stmt, col, va_arg(ap, const char *), -1, SQLITE_TRANSIENT); break;
+            case 'i': rc = sqlite3_bind_int   (stmt, col, va_arg(ap, int));                                break;
+            case 'l': rc = sqlite3_bind_int64 (stmt, col, va_arg(ap, int64_t));                            break;
+            case 'f': rc = sqlite3_bind_double(stmt, col, va_arg(ap, double));                             break;
+            case 'n': rc = sqlite3_bind_null  (stmt, col);                                                 break;
             default:
                 fprintf(stderr, "db: unknown fmt char '%c'\n", fmt[i]);
                 return -1;
+        }
+        if (rc != SQLITE_OK) {
+            fprintf(stderr, "db: bind failed at col %d: %s\n", col, sqlite3_errmsg(sqlite3_db_handle(stmt)));
+            return -1;
         }
     }
     return 0;

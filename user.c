@@ -6,12 +6,6 @@
 
 /* ── Password hashing ────────────────────────────────────────────────── */
 
-/*
- * Hash DJB2 adattato: produce sempre 32 caratteri hex (due metà a 64 bit)
- * indipendentemente dall'architettura.
- * NOTA: non è un hash crittografico — adeguato per un progetto didattico,
- * in produzione usare bcrypt / Argon2.
- */
 static void hash_password(const char *plain, char *dest) {
     uint64_t h = 5381;
     int c;
@@ -20,6 +14,18 @@ static void hash_password(const char *plain, char *dest) {
     snprintf(dest, PWD_HASH_LEN, "%016llx%016llx",
              (unsigned long long)h,
              (unsigned long long)(h ^ 0xDEADBEEFDEADBEEFULL));
+}
+
+/* ── Confronto a tempo costante ──────────────────────────────────────── */
+
+static int constant_time_compare(const char *a, const char *b) {
+    size_t len_a = strlen(a);
+    size_t len_b = strlen(b);
+    int result = (len_a != len_b);
+    for (size_t i = 0; i < len_a && i < len_b; i++) {
+        result |= (a[i] ^ b[i]);
+    }
+    return result == 0;
 }
 
 /* ── Setup ───────────────────────────────────────────────────────────── */
@@ -50,11 +56,11 @@ int user_register(const char *username, const char *plainPassword,
 
 static void cursor_to_user(DbCursor *c, User *u) {
     memset(u, 0, sizeof(*u));
-    u->userId = (uint64_t)db_cursor_int64(c, 0);
-    strncpy(u->username,     db_cursor_text(c, 1), USERNAME_LEN - 1);
-    strncpy(u->passwordHash, db_cursor_text(c, 2), PWD_HASH_LEN - 1);
-    u->role = (UserRole)db_cursor_int64(c, 3);
-    strncpy(u->city,         db_cursor_text(c, 4), CITY_LEN     - 1);
+    u->userId = (uint64_t)db_cursor_int64(c, USER_COL_ID);
+    strncpy(u->username,     db_cursor_text(c, USER_COL_USERNAME), USERNAME_LEN - 1);
+    strncpy(u->passwordHash, db_cursor_text(c, USER_COL_PASSWORD_HASH), PWD_HASH_LEN - 1);
+    u->role = (UserRole)db_cursor_int64(c, USER_COL_ROLE);
+    strncpy(u->city,         db_cursor_text(c, USER_COL_CITY), CITY_LEN     - 1);
 }
 
 /* ── Read operations ─────────────────────────────────────────────────── */
@@ -73,7 +79,7 @@ bool user_authenticate(const char *username, const char *plainPassword, User *ou
 
     char loginHash[PWD_HASH_LEN];
     hash_password(plainPassword, loginHash);
-    return strcmp(out->passwordHash, loginHash) == 0;
+    return constant_time_compare(out->passwordHash, loginHash);
 }
 
 bool user_get_by_id(uint64_t id, User *out) {

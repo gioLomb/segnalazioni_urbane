@@ -21,6 +21,7 @@ typedef struct Template Template;
 
 /* Carica più template (lista di percorsi terminata da NULL).
    Restituisce 0 se tutti i file sono stati caricati, -1 altrimenti. */
+__attribute__((sentinel))
 int tpl_load_files(const char *first_path, ...);
 
 /* Libera tutti i template. */

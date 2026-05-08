@@ -16,14 +16,13 @@ struct Template {
     size_t src_len;   /* strlen(src) */
 };
 
-#define MAX_TEMPLATES 16
+#define MAX_TEMPLATES 64
 
 static Template g_pool[MAX_TEMPLATES];
 static int      g_count = 0;
 
 /* ── Helpers ────────────────────────────────────────────────────────── */
 
-/* Carica un singolo file e lo registra usando 'path' come chiave */
 static int load_one(const char *path) {
     if (g_count >= MAX_TEMPLATES) {
         fprintf(stderr, "template: max %d templates reached\n", MAX_TEMPLATES);
@@ -67,7 +66,7 @@ int tpl_load_files(const char *first_path, ...) {
     int ret = 0;
     for (const char *p = first_path; p; p = va_arg(ap, const char *)) {
         if (load_one(p) != 0)
-            ret = -1;   /* continua a caricare gli altri */
+            ret = -1;
     }
     va_end(ap);
     return ret;
@@ -99,7 +98,6 @@ static const char *lookup(const char *key, size_t klen,
     return "";
 }
 
-/* Trova il prossimo '{{' — i '{' singoli vengono ignorati naturalmente */
 static const char *find_open(const char *cur, const char *end) {
     while (cur < end - 1) {
         cur = memchr(cur, '{', end - cur);
@@ -110,7 +108,6 @@ static const char *find_open(const char *cur, const char *end) {
     return NULL;
 }
 
-/* Trova il prossimo '}}' restituendo un puntatore al primo '}' */
 static const char *find_close(const char *cur, const char *end) {
     while (cur < end - 1) {
         cur = memchr(cur, '}', end - cur);
@@ -121,13 +118,14 @@ static const char *find_close(const char *cur, const char *end) {
     return end;
 }
 
-int tpl_render(const Template *tpl, char *dest, size_t dest_size,const TplVar *vars, int nvars) {
+int tpl_render(const Template *tpl, char *dest, size_t dest_size,
+               const TplVar *vars, int nvars) {
     if (!tpl || !dest || !dest_size) return -1;
 
     #define EMIT(ptr, len)  do {                                        \
-        if (written + (len) + 1 > dest_size) goto overflow;        \
-        memcpy(dest + written, (ptr), (len));                       \
-        written += (len);                                           \
+        if (written + (len) + 1 > dest_size) goto overflow;             \
+        memcpy(dest + written, (ptr), (len));                           \
+        written += (len);                                               \
     } while (0)
     
     const char *cursor  = tpl->src;
@@ -136,21 +134,17 @@ int tpl_render(const Template *tpl, char *dest, size_t dest_size,const TplVar *v
 
     while (cursor < src_end) {
         const char *open = find_open(cursor, src_end);
-
-        /* Nessun placeholder: copia il resto e termina */
         if (!open) { EMIT(cursor, src_end - cursor); break; }
 
-        /* Testo letterale prima di '{{' */
         EMIT(cursor, open - cursor);
 
-        /* Chiave tra '{{' e '}}' */
         const char *key_start = open + 2;
         const char *key_end   = find_close(key_start, src_end);
 
         const char *value     = lookup(key_start, key_end - key_start, vars, nvars);
         EMIT(value, strlen(value));
 
-        cursor = key_end + 2;   /* salta '}}' */
+        cursor = key_end + 2;
     }
 
 #undef EMIT
