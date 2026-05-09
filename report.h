@@ -37,16 +37,16 @@ typedef enum {
 typedef struct {
     uint64_t     reportId;
     uint64_t     authorId;
-    uint64_t     assignedTo;    /* 0 = unassigned */
+    uint64_t     assignedTo;
     double       lat;
     double       lon;
-    char         city[CITY_LEN];
-    char         category[CAT_LEN];
-    char         description[DESC_LEN];
-    ReportStatus status;
-    time_t       createdAt;
-    time_t       assignedAt;    /* 0 if not yet assigned */
-    time_t       resolvedAt;    /* 0 if not yet resolved */
+    time_t       createdAt;     // tutti i campi a 8 byte insieme
+    time_t       assignedAt;
+    time_t       resolvedAt;
+    char         city[32];
+    char         category[16];
+    ReportStatus status;        // 4 byte
+    char         description[128]; // 128 — il padding finale è assorbito
 } ActiveReport;
 
 /* ── Setup ───────────────────────────────────────────────────────────── */
