@@ -1,4 +1,5 @@
 #include "http_utils.h"
+#include "picohttpparser.h"
 #include <string.h>
 #include <ctype.h>
 #include <stdio.h>
@@ -51,32 +52,69 @@ const char *post_body(const char *req) {
 void parse_request_line(const char *req, char *method, size_t method_max,
                         char *path, size_t path_max) {
     method[0] = path[0] = '\0';
-    size_t i = 0;
-    while (*req && *req != ' ' && i < method_max - 1)
-        method[i++] = *req++;
-    method[i] = '\0';
-    while (*req == ' ') req++;
-    i = 0;
-    while (*req && *req != ' ' && *req != '?' && *req != '\r' && *req != '\n'
-           && i < path_max - 1)
-        path[i++] = *req++;
-    path[i] = '\0';
+
+    const char       *m, *p;
+    size_t            ml, pl;
+    int               minor_version;
+    struct phr_header headers[HTTP_MAX_HEADERS];
+    size_t            num_headers = HTTP_MAX_HEADERS;
+
+    if (phr_parse_request(req, strlen(req),
+                           &m, &ml, &p, &pl,
+                           &minor_version,
+                           headers, &num_headers, 0) < 0)
+        return;
+
+    size_t n = ml < method_max - 1 ? ml : method_max - 1;
+    memcpy(method, m, n);
+    method[n] = '\0';
+
+    /* Strip query string */
+    size_t pl_clean = pl;
+    for (size_t i = 0; i < pl; i++) {
+        if (p[i] == '?') { pl_clean = i; break; }
+    }
+    n = pl_clean < path_max - 1 ? pl_clean : path_max - 1;
+    memcpy(path, p, n);
+    path[n] = '\0';
 }
 
 void parse_cookie(const char *req, const char *name, char *dest, size_t max) {
     dest[0] = '\0';
-    const char *h = strstr(req, "Cookie:");
-    if (!h) return;
-    h += 7; /* skip "Cookie:" */
-    size_t nlen = strlen(name);
-    while (*h && *h != '\r' && *h != '\n') {
-        while (*h == ' ' || *h == ';') h++;
-        if (*h == '\r' || *h == '\n' || *h == '\0') break;
-        if (strncmp(h, name, nlen) == 0 && h[nlen] == '=') {
-            url_decode(h + nlen + 1, dest, max);
-            return;
+
+    const char       *m, *p;
+    size_t            ml, pl;
+    int               minor_version;
+    struct phr_header headers[HTTP_MAX_HEADERS];
+    size_t            num_headers = HTTP_MAX_HEADERS;
+
+    if (phr_parse_request(req, strlen(req),
+                           &m, &ml, &p, &pl,
+                           &minor_version,
+                           headers, &num_headers, 0) < 0)
+        return;
+
+    size_t name_len = strlen(name);
+
+    for (size_t i = 0; i < num_headers; i++) {
+        if (headers[i].name_len != 6) continue;
+        if (strncasecmp(headers[i].name, "cookie", 6) != 0) continue;
+
+        const char *h   = headers[i].value;
+        const char *end = h + headers[i].value_len;
+
+        while (h < end) {
+            while (h < end && (*h == ' ' || *h == ';')) h++;
+            if (h >= end) break;
+            if ((size_t)(end - h) > name_len
+                && memcmp(h, name, name_len) == 0
+                && h[name_len] == '=') {
+                url_decode(h + name_len + 1, dest, max);
+                return;
+            }
+            while (h < end && *h != ';') h++;
         }
-        while (*h && *h != ';' && *h != '\r' && *h != '\n') h++;
+        break;
     }
 }
 

@@ -28,6 +28,8 @@
 #include "session.h"
 #include "db.h"
 
+#include "picohttpparser.h"
+#include "http_utils.h"
 #include <stdio.h>
 #include <arpa/inet.h>
 
@@ -171,21 +173,47 @@ static void send_response(ClientCtx *ctx,
 
 /**
  * Returns true when buf contains a complete HTTP request.
- * For POST, waits until Content-Length body bytes have been received.
+ *
+ * Uses phr_parse_request for header detection:
+ *   -2 → headers not yet complete → wait for more data
+ *   -1 → malformed request       → pass to route handler for a 400
+ *   ≥0 → headers complete        → for POST: verify body has arrived
+ *
+ * Content-Length is read directly from the parsed header array —
+ * no manual strstr or atol on raw bytes.
  */
 static bool is_request_complete(const char *buf, size_t len) {
-    const char *hdr_end = memmem(buf, len, "\r\n\r\n", 4);
-    if (!hdr_end) return false;
+    struct phr_header headers[HTTP_MAX_HEADERS];
+    size_t            num_headers = HTTP_MAX_HEADERS;
+    const char       *method, *path;
+    size_t            method_len, path_len;
+    int               minor_version;
 
-    if (strncmp(buf, "POST", 4) == 0) {
-        const char *cl = strstr(buf, "Content-Length:");
-        if (cl) {
-            long   content_len   = atol(cl + 15);
-            size_t hdr_bytes     = (size_t)(hdr_end + 4 - buf);
-            size_t body_received = len - hdr_bytes;
-            if (content_len > 0 && body_received < (size_t)content_len)
-                return false;
-        }
+    int r = phr_parse_request(buf, len,
+                               &method, &method_len,
+                               &path,   &path_len,
+                               &minor_version,
+                               headers, &num_headers,
+                               0 /* last_len: always fresh parse */);
+
+    if (r == -2) return false;   /* headers incomplete — wait */
+    if (r == -1) return true;    /* malformed — let handler return 400 */
+
+    /* For POST requests verify the body has fully arrived. */
+    if (method_len != 4 || memcmp(method, "POST", 4) != 0) return true;
+
+    for (size_t i = 0; i < num_headers; i++) {
+        if (headers[i].name_len != 14) continue;
+        if (strncasecmp(headers[i].name, "content-length", 14) != 0) continue;
+
+        char   val[24] = {0};
+        size_t vlen    = headers[i].value_len < 23 ? headers[i].value_len : 23;
+        memcpy(val, headers[i].value, vlen);
+        long cl = strtol(val, NULL, 10);
+        if (cl <= 0) break;
+
+        size_t body_received = len - (size_t)r;
+        return body_received >= (size_t)cl;
     }
     return true;
 }

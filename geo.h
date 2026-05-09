@@ -1,18 +1,8 @@
 /**
- * geo.h — City geometry module
- *
- * Loads an ISTAT GeoJSON file at startup and indexes every comune by name
- * into the application's shared hash table.  After loading, all lookups
- * are O(1) with zero I/O.
- *
- * Each entry stores:
- *   - bounding box  (lat/lon min-max) for server-side coordinate validation
- *   - centroid      (average of polygon vertices) for map centering
- *
- * Usage:
- *   1. geo_load("data/comuni.geojson", ht)  — once at startup
- *   2. geo_lookup("Roma", &info)             — per request
- *   3. geo_contains(&info, lat, lon)         — coordinate validation
+ * @file geo.h
+ * @brief City geometry module for indexing and validating geographical data.
+ * * This module allows loading city boundaries (bounding boxes) and centroids
+ * from GeoJSON files into a hash table for fast O(1) lookups.
  */
 
 #ifndef GEO_H
@@ -21,36 +11,45 @@
 #include "hash_table.h"
 #include <stdbool.h>
 
-/*
- * Geometry data for one comune.
- * Stored as the value in the hash table, keyed by comune name.
+/**
+ * @brief Geometry data for a specific municipality (comune).
+ * * This structure stores the bounding box and the calculated centroid
+ * used for spatial validation and map centering.
  */
 typedef struct {
-    double lat_min, lat_max;
-    double lon_min, lon_max;
-    double centroid_lat, centroid_lon;
+    double lat_min, lat_max;    /**< Latitude boundaries */
+    double lon_min, lon_max;    /**< Longitude boundaries */
+    double centroid_lat, centroid_lon; /**< Calculated center point */
 } CityGeo;
 
-/*
- * Parses the GeoJSON file at path and inserts one CityGeo entry per comune
- * into ht.  Skips malformed features but continues parsing.
- * If cities_out is non-NULL, writes a compact JSON array of city names to
- * that path (created or overwritten) during the same parsing pass.
- *
- * Returns the number of comuni loaded, or -1 on fatal error (file not found,
- * allocation failure).
+/**
+ * @brief Parses a GeoJSON file and populates the hash table with city data.
+ * * @pre path points to a valid GeoJSON file, ht is an initialized Hash_Table.
+ * @post Every valid feature in the file is inserted into ht, keyed by city name.
+ * * @param path Path to the ISTAT GeoJSON file.
+ * @param ht Pointer to the destination hash table.
+ * @param cities_out Optional path to save a JSON list of loaded city names.
+ * @return Number of cities loaded on success, -1 on fatal error.
  */
 int geo_load(const char *path, Hash_Table *ht, const char *cities_out);
 
-/*
- * Looks up a comune by name in ht and fills *out.
- * Returns true if found, false otherwise.
+/**
+ * @brief Retrieves geometry information for a city by its name.
+ * * @pre ht is initialized, comune is a null-terminated string.
+ * @post if found, the out structure is populated with the city's geometry.
+ * * @param ht Pointer to the hash table.
+ * @param comune Name of the city to search for.
+ * @param out Pointer to a CityGeo structure where results will be stored.
+ * @return true if the city was found, false otherwise.
  */
 bool geo_lookup(Hash_Table *ht, const char *comune, CityGeo *out);
 
-/*
- * Returns true if (lat, lon) falls inside the bounding box of geo.
- * Used for server-side validation of report coordinates.
+/**
+ * @brief Performs a fast bounding box check for a coordinate.
+ * * @param geo Pointer to the city geometry.
+ * @param lat Latitude to check.
+ * @param lon Longitude to check.
+ * @return true if the coordinates fall within the city's bounding box.
  */
 bool geo_contains(const CityGeo *geo, double lat, double lon);
 

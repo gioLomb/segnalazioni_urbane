@@ -100,8 +100,10 @@ ClientCtx *client_pool_alloc(void) {
     chunk->localFreeList = ctx->next;
     chunk->usedCount++;
 
-    /* Reset all fields except parentChunk. */
-    memset(ctx->buffer, 0, BUFFER_SIZE);
+    /* Reset all fields except parentChunk.
+     * Only the first byte needs clearing — read_cb tracks valid data via
+     * totalRead and always NUL-terminates at buffer[totalRead]. */
+    ctx->buffer[0]      = '\0';
     ctx->closing        = false;
     ctx->pending_closes = 0;
     ctx->totalRead      = 0;

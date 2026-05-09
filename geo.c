@@ -10,7 +10,11 @@
 
 /* ── Geometry ────────────────────────────────────────────────────────── */
 
+/**
+ * Internal helper to extract bounding box and centroid from GeoJSON coordinates.
+ */
 static bool parse_geometry(cJSON *geometry, CityGeo *geo) {
+    // Initialize boundaries to extreme values for min/max comparison
     geo->lat_min = geo->lon_min =  1e9;
     geo->lat_max = geo->lon_max = -1e9;
     double lat_sum = 0, lon_sum = 0;
@@ -20,7 +24,8 @@ static bool parse_geometry(cJSON *geometry, CityGeo *geo) {
     cJSON      *coords = cJSON_GetObjectItem(geometry, "coordinates");
     if (!type || !coords) return false;
 
-    /* Outer ring: [[[lon,lat],...]] per Polygon, [[[[lon,lat],...]]] per MultiPolygon */
+    //GeoJSON structures differ between Polygon and MultiPolygon.
+    //We aim for the first outer ring (array of coordinates).
     cJSON *outer_ring = cJSON_GetArrayItem(coords, 0);
     if (strcmp(type, "MultiPolygon") == 0)
         outer_ring = cJSON_GetArrayItem(outer_ring, 0);
@@ -28,12 +33,17 @@ static bool parse_geometry(cJSON *geometry, CityGeo *geo) {
 
     cJSON *pair;
     cJSON_ArrayForEach(pair, outer_ring) {
+        // GeoJSON standard defines [longitude, latitude] order
         double lon = cJSON_GetArrayItem(pair, 0)->valuedouble;
         double lat = cJSON_GetArrayItem(pair, 1)->valuedouble;
+        
+        // Update Bounding Box boundaries
         if (lat < geo->lat_min) geo->lat_min = lat;
         if (lat > geo->lat_max) geo->lat_max = lat;
         if (lon < geo->lon_min) geo->lon_min = lon;
         if (lon > geo->lon_max) geo->lon_max = lon;
+        
+        // Accumulate values for centroid calculation (arithmetic mean)
         lat_sum += lat;
         lon_sum += lon;
         count++;
@@ -48,19 +58,22 @@ static bool parse_geometry(cJSON *geometry, CityGeo *geo) {
 /* ── Public API ──────────────────────────────────────────────────────── */
 
 int geo_load(const char *path, Hash_Table *ht, const char *cities_out) {
+    // Open file using low-level descriptor for mmap
     int fd = open(path, O_RDONLY);
     if (fd < 0) { perror(path); return -1; }
 
+    // Retrieve file size to allocate mapping
     struct stat st;
     if (fstat(fd, &st) < 0) { close(fd); return -1; }
     size_t size = (size_t)st.st_size;
 
     const char *data = mmap(NULL, size, PROT_READ, MAP_PRIVATE, fd, 0);
-    close(fd);
+    close(fd); // fd no longer needed after mapping
     if (data == MAP_FAILED) { perror("mmap"); return -1; }
 
+    // Parse the entire buffer into a JSON tree
     cJSON *root = cJSON_ParseWithLength(data, size);
-    munmap((void *)data, size);
+    munmap((void *)data, size); // Unmap as soon as parsing is done to free virtual memory
 
     if (!root) {
         fprintf(stderr, "geo: parse error near: %.20s\n", cJSON_GetErrorPtr());
@@ -72,6 +85,7 @@ int geo_load(const char *path, Hash_Table *ht, const char *cities_out) {
     int    loaded = 0, skipped = 0;
 
     cJSON *feature;
+    // Iterate through every city feature in the GeoJSON collection
     cJSON_ArrayForEach(feature, features) {
         cJSON      *props    = cJSON_GetObjectItem(feature, "properties");
         cJSON      *geometry = cJSON_GetObjectItem(feature, "geometry");
@@ -80,9 +94,13 @@ int geo_load(const char *path, Hash_Table *ht, const char *cities_out) {
         if (!name || !geometry) { skipped++; continue; }
 
         CityGeo geo = {0};
+        // Process geometry coordinates
         if (!parse_geometry(geometry, &geo)) { skipped++; continue; }
 
+        // Index the city by its name in the thread-safe hash table
         ht_set(ht, (void *)name, strlen(name) + 1, &geo, sizeof(geo));
+        
+        // Track the name for the optional output list
         if (cities_arr)
             cJSON_AddItemToArray(cities_arr, cJSON_CreateString(name));
         loaded++;
@@ -90,7 +108,8 @@ int geo_load(const char *path, Hash_Table *ht, const char *cities_out) {
 
     cJSON_Delete(root);
 
-    /* Scrive cities.json in un colpo solo da buffer in memoria */
+    // Write city names list to disk if requested. 
+
     if (cities_arr) {
         char *json = cJSON_PrintUnformatted(cities_arr);
         cJSON_Delete(cities_arr);
@@ -107,10 +126,12 @@ int geo_load(const char *path, Hash_Table *ht, const char *cities_out) {
 }
 
 bool geo_lookup(Hash_Table *ht, const char *comune, CityGeo *out) {
+    // Perform lookup including the null terminator in the key
     return ht_get(ht, (void *)comune, strlen(comune) + 1, out, sizeof(CityGeo));
 }
 
 bool geo_contains(const CityGeo *geo, double lat, double lon) {
+    // Basic rectangular inclusion check (Bounding Box)
     return lat >= geo->lat_min && lat <= geo->lat_max &&
            lon >= geo->lon_min && lon <= geo->lon_max;
 }
