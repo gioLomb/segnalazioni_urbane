@@ -17,7 +17,6 @@
 #define SERVER_FUNCTIONS_H
 
 #include "config.h"
-#include "client_pool.h"
 #include "hash_table.h"
 #include "route_handler.h"
 

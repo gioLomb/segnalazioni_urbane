@@ -28,8 +28,8 @@
 #include "session.h"
 #include "db.h"
 
-#include "picohttpparser.h"
 #include "http_utils.h"
+#include "connection_manager.h"
 #include <stdio.h>
 #include <arpa/inet.h>
 
@@ -95,76 +95,29 @@ void config_signal_context(void) {
    SECTION 4 — HTTP response builder
    ══════════════════════════════════════════════════════════════════════ */
 
-static const char *http_status_msg(int code) {
-    switch (code) {
-        case 200: return "OK";
-        case 302: return "Found";
-        case 400: return "Bad Request";
-        case 401: return "Unauthorized";
-        case 403: return "Forbidden";
-        case 404: return "Not Found";
-        case 405: return "Method Not Allowed";
-        case 429: return "Too Many Requests";
-        case 500: return "Internal Server Error";
-        default:  return "OK";
-    }
-}
-
-static const char *infer_content_type(const char *body, const char *override) {
-    if (override && override[0])                  return override;
-    if (body && body[0] == '<')                   return "text/html; charset=utf-8";
-    if (body && (body[0] == '{' || body[0] == '[')) return "application/json";
-    return "text/plain; charset=utf-8";
-}
-
-static int build_http_header(char *hdr, size_t hdr_max,
-                              int status_code, const char *content_type,
-                              size_t body_len, int keep_alive,
-                              const char *set_cookie, const char *location) {
-    int n = snprintf(hdr, hdr_max,
-        "HTTP/1.1 %d %s\r\n"
-        "Content-Type: %s\r\n"
-        "Content-Length: %zu\r\n"
-        "Connection: %s\r\n",
-        status_code, http_status_msg(status_code),
-        content_type, body_len,
-        keep_alive ? "keep-alive" : "close");
-
-    if (set_cookie && set_cookie[0])
-        n += snprintf(hdr + n, hdr_max - (size_t)n,
-                      "Set-Cookie: %s\r\n", set_cookie);
-    if (location && location[0])
-        n += snprintf(hdr + n, hdr_max - (size_t)n,
-                      "Location: %s\r\n", location);
-
-    n += snprintf(hdr + n, hdr_max - (size_t)n, "\r\n");
-    return n;
-}
+/* Section 4 (HTTP response helpers) lives in http_utils.c:
+ * http_response_render() handles status line, headers, body serialization. */
 
 /**
- * Allocates a WriteReq (header + body in one block) and submits it via
- * uv_write().  Freed in write_cb once libuv confirms delivery.
+ * Serializes an HttpResponse into a WriteReq and submits it via uv_write().
+ * http_response_render() handles header building and content-type inference.
+ * The WriteReq (rendered response in one block) is freed in write_cb.
  */
-static void send_response(ClientCtx *ctx,
-                          int status_code, const char *body, size_t body_len,
-                          const char *set_cookie, const char *location,
-                          int keep_alive, const char *content_type) {
-    char hdr[1024];
-    int  hdr_len = build_http_header(
-            hdr, sizeof(hdr), status_code,
-            infer_content_type(body, content_type),
-            body_len, keep_alive, set_cookie, location);
+static void send_response(ClientCtx *ctx, const HttpResponse *resp, bool keep_alive) {
+    /* Render into a temporary stack buffer to measure size */
+    char   tmp[RESPONSE_BUFFER_SIZE + 1024];
+    int    total = http_response_render(resp, keep_alive, tmp, sizeof(tmp));
+    if (total < 0) { close_client(ctx); return; }
 
-    WriteReq *wr = malloc(sizeof(WriteReq) + (size_t)hdr_len + body_len);
+    WriteReq *wr = malloc(sizeof(WriteReq) + (size_t)total);
     if (!wr) { close_client(ctx); return; }
 
     wr->ctx        = ctx;
     wr->keep_alive = keep_alive;
-    memcpy(wr->data,                 hdr,  (size_t)hdr_len);
-    if (body_len) memcpy(wr->data + hdr_len, body, body_len);
+    memcpy(wr->data, tmp, (size_t)total);
 
-    uv_buf_t buf = uv_buf_init(wr->data, (size_t)hdr_len + body_len);
-    uv_write(&wr->req, (uv_stream_t *)&ctx->tcp, &buf, 1, write_cb);
+    uv_buf_t buf = uv_buf_init(wr->data, (size_t)total);
+    uv_write(&wr->req, (uv_stream_t *)&ctx->handle, &buf, 1, write_cb);
 }
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -256,35 +209,43 @@ static void read_cb(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf) {
     uv_timer_stop(&ctx->timer);
 
     char ip[INET6_ADDRSTRLEN] = {0};
-    get_peer_ip(&ctx->tcp, ip, sizeof(ip));
+    get_peer_ip(&ctx->handle, ip, sizeof(ip));
     if (DEBUG_RATE_LIMIT && !rate_limit_check(ip)) {
-        send_response(ctx, 429, "Too Many Requests\n", 18, NULL, NULL, 0, NULL);
+        HttpResponse r429 = { .status_code = 429,
+                               .body        = "Too Many Requests\n",
+                               .body_len    = 18 };
+        send_response(ctx, &r429, false);
         return;
     }
 
-    char *resp = calloc(1, RESPONSE_BUFFER_SIZE);
-    if (!resp) { close_client(ctx); return; }
+    /* Parse request — already complete, so phr will not return -2 */
+    HttpRequest req = {0};
+    if (!http_request_parse(ctx->buffer, ctx->totalRead, &req)) {
+        HttpResponse bad = { .status_code = 400,
+                             .body        = "<h1>400 Bad Request</h1>",
+                             .body_len    = 24 };
+        send_response(ctx, &bad, false);
+        return;
+    }
 
-    RouteExtra extra      = {0};
-    int        keep_alive = 0;
-    int        status     = handle_request(ctx->buffer, resp,
-                                           RESPONSE_BUFFER_SIZE,
-                                           &extra, &keep_alive);
+    bool keep_alive = http_request_keep_alive(&req);
+
+    /* Allocate body buffer and dispatch */
+    char *body_buf = calloc(1, RESPONSE_BUFFER_SIZE);
+    if (!body_buf) { close_client(ctx); return; }
+
+    HttpResponse resp = { .status_code = 200, .body = body_buf };
+    handle_request(&req, &resp);
     stats.totalRequests++;
 
-    size_t body_len = (status == 302) ? 0 : strlen(resp);
-    send_response(ctx, status, resp, body_len,
-                  extra.set_cookie[0]   ? extra.set_cookie   : NULL,
-                  extra.location[0]     ? extra.location     : NULL,
-                  keep_alive,
-                  extra.content_type[0] ? extra.content_type : NULL);
-    free(resp);
+    send_response(ctx, &resp, keep_alive);
+    free(body_buf);
 }
 
 static void write_cb(uv_write_t *req, int status) {
     WriteReq  *wr         = (WriteReq *)req;
     ClientCtx *ctx        = wr->ctx;
-    int        keep_alive = wr->keep_alive;
+    bool       keep_alive = (bool)wr->keep_alive;
     free(wr);
 
     if (status < 0 || !keep_alive) { close_client(ctx); return; }
@@ -292,7 +253,7 @@ static void write_cb(uv_write_t *req, int status) {
     ctx->totalRead = 0;
     memset(ctx->buffer, 0, BUFFER_SIZE);
     uv_timer_start(&ctx->timer, timer_cb, KEEPALIVE_TIMEOUT * 1000, 0);
-    uv_read_start((uv_stream_t *)&ctx->tcp, alloc_cb, read_cb);
+    uv_read_start((uv_stream_t *)&ctx->handle, alloc_cb, read_cb);
 }
 
 static void timer_cb(uv_timer_t *handle) {
@@ -303,16 +264,16 @@ static void on_close(uv_handle_t *handle) {
     ClientCtx *ctx = (ClientCtx *)handle->data;
     if (--ctx->pending_closes > 0) return;
 
-    client_pool_unlink(ctx);
-    client_pool_release(ctx);
-    stats.activeClients = client_pool_active_count();
+    conn_manager_unlink(ctx);
+    conn_manager_release(ctx);
+    stats.activeClients = conn_manager_active_count();
 }
 
 static void close_client(ClientCtx *ctx) {
     if (ctx->closing) return;
     ctx->closing        = true;
     ctx->pending_closes = 2;
-    uv_close((uv_handle_t *)&ctx->tcp,   on_close);
+    uv_close((uv_handle_t *)&ctx->handle,   on_close);
     uv_close((uv_handle_t *)&ctx->timer, on_close);
 }
 
@@ -321,30 +282,30 @@ static void close_client(ClientCtx *ctx) {
    ══════════════════════════════════════════════════════════════════════ */
 
 static int setup_client(uv_stream_t *server) {
-    if (client_pool_active_count() >= MAX_CLIENTS) return 0;
+    if (conn_manager_active_count() >= MAX_CLIENTS) return 0;
 
-    ClientCtx *ctx = client_pool_alloc();
+    ClientCtx *ctx = conn_manager_alloc();
     if (!ctx) return 0;
 
     uv_loop_t *loop = uv_default_loop();
-    uv_tcp_init(loop, &ctx->tcp);
+    uv_tcp_init(loop, &ctx->handle);
     uv_timer_init(loop, &ctx->timer);
-    ctx->tcp.data   = ctx;
+    ctx->handle.data   = ctx;
     ctx->timer.data = ctx;
 
-    if (uv_accept(server, (uv_stream_t *)&ctx->tcp) != 0) {
+    if (uv_accept(server, (uv_stream_t *)&ctx->handle) != 0) {
         close_client(ctx);   /* handles are initialised: must close via pool */
         return 0;
     }
 
-    uv_tcp_nodelay(&ctx->tcp, 1);
+    uv_tcp_nodelay(&ctx->handle, 1);
     uv_timer_start(&ctx->timer, timer_cb, KEEPALIVE_TIMEOUT * 1000, 0);
 
-    client_pool_link(ctx);
+    conn_manager_link(ctx);
     stats.totalConnections++;
-    stats.activeClients = client_pool_active_count();
+    stats.activeClients = conn_manager_active_count();
 
-    uv_read_start((uv_stream_t *)&ctx->tcp, alloc_cb, read_cb);
+    uv_read_start((uv_stream_t *)&ctx->handle, alloc_cb, read_cb);
     return 1;
 }
 
@@ -414,7 +375,7 @@ static int server_bind(uv_tcp_t *server) {
 /** Graceful shutdown: close all clients, drain callbacks, close server handles. */
 static void server_shutdown(uv_loop_t *loop,
                              uv_tcp_t *server, uv_signal_t *sig) {
-    client_pool_close_all(close_client);
+    conn_manager_close_all(close_client);
     uv_run(loop, UV_RUN_DEFAULT);       /* drain client close callbacks */
 
     uv_close((uv_handle_t *)sig,    NULL);
@@ -504,7 +465,7 @@ int main(void) {
     stats.startTime = time(NULL);
     config_signal_context();
 
-    if (client_pool_init() != 0) {
+    if (conn_manager_init() != 0) {
         fprintf(stderr, "Fatal: client pool init failed\n");
         return EXIT_FAILURE;
     }
@@ -525,7 +486,7 @@ int main(void) {
     ht_destroy(g_sessions,  NULL);
     ht_destroy(g_geo_table, NULL);
     ht_destroy(rate_limit,  NULL);
-    client_pool_destroy();
+    conn_manager_destroy();
     db_close();
     printf("Shutdown complete.\n");
     return EXIT_SUCCESS;
