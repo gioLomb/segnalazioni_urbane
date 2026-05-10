@@ -145,30 +145,49 @@ int http_response_render(const HttpResponse *resp, bool keep_alive,
                           char *out, size_t out_max) {
     const char *ct = infer_content_type(resp->body, resp->content_type);
 
-    /* For redirects (302) we send no body */
+    /* For redirects (302) we send no body. */
     size_t body_len = (resp->status_code == 302) ? 0 : resp->body_len;
 
-    int n = snprintf(out, out_max,
-        "HTTP/1.1 %d %s\r\n"
-        "Content-Type: %s\r\n"
-        "Content-Length: %zu\r\n"
-        "Connection: %s\r\n",
-        resp->status_code, http_status_msg(resp->status_code),
-        ct, body_len,
-        keep_alive ? "keep-alive" : "close");
+    /*
+     * Build the header block with a monotonically increasing write position
+     * (pos, size_t) instead of an int accumulator.
+     *
+     * The previous code used `int n` and passed `out_max - (size_t)n` to
+     * each successive snprintf.  If n ever approached out_max, the subtraction
+     * would wrap to a huge value (size_t underflow) and snprintf would happily
+     * write past the buffer.  Here we check after every append and return -1
+     * immediately if the buffer is full, keeping pos always valid.
+     */
+    size_t pos = 0;
+
+#define HDR_APPEND(...) do {                                            \
+        int _w = snprintf(out + pos, out_max - pos, __VA_ARGS__);       \
+        if (_w < 0 || (size_t)_w >= out_max - pos) return -1;          \
+        pos += (size_t)_w;                                              \
+    } while (0)
+
+    HDR_APPEND("HTTP/1.1 %d %s\r\n"
+               "Content-Type: %s\r\n"
+               "Content-Length: %zu\r\n"
+               "Connection: %s\r\n",
+               resp->status_code, http_status_msg(resp->status_code),
+               ct, body_len,
+               keep_alive ? "keep-alive" : "close");
 
     if (resp->set_cookie[0])
-        n += snprintf(out + n, out_max - (size_t)n,
-                      "Set-Cookie: %s\r\n", resp->set_cookie);
+        HDR_APPEND("Set-Cookie: %s\r\n", resp->set_cookie);
     if (resp->location[0])
-        n += snprintf(out + n, out_max - (size_t)n,
-                      "Location: %s\r\n", resp->location);
+        HDR_APPEND("Location: %s\r\n", resp->location);
 
-    n += snprintf(out + n, out_max - (size_t)n, "\r\n");
+    HDR_APPEND("\r\n");
 
-    if ((size_t)n + body_len >= out_max) return -1;
-    if (body_len) memcpy(out + n, resp->body, body_len);
-    return n + (int)body_len;
+#undef HDR_APPEND
+
+    /* Verify the body fits before copying it. */
+    if (pos + body_len >= out_max) return -1;
+    if (body_len) memcpy(out + pos, resp->body, body_len);
+
+    return (int)(pos + body_len);
 }
 
 /* ── Body / HTML helpers ─────────────────────────────────────────────── */

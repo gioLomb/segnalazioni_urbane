@@ -122,12 +122,20 @@ int tpl_render(const Template *tpl, char *dest, size_t dest_size,
                const TplVar *vars, int nvars) {
     if (!tpl || !dest || !dest_size) return -1;
 
-    #define EMIT(ptr, len)  do {                                        \
-        if (written + (len) + 1 > dest_size) goto overflow;             \
-        memcpy(dest + written, (ptr), (len));                           \
-        written += (len);                                               \
+    /*
+     * EMIT writes a block of bytes into dest.
+     * The length expression (len) is captured in a local variable to avoid
+     * evaluating it three times (check, memcpy, increment) — which would be
+     * wrong if the expression had side effects (e.g. strlen on a moving pointer)
+     * and wasteful even when side-effect-free.
+     */
+    #define EMIT(ptr, len) do {                         \
+        size_t _n = (len);                              \
+        if (written + _n + 1 > dest_size) goto overflow; \
+        memcpy(dest + written, (ptr), _n);              \
+        written += _n;                                  \
     } while (0)
-    
+
     const char *cursor  = tpl->src;
     const char *src_end = tpl->src + tpl->src_len;
     size_t      written = 0;
@@ -136,12 +144,14 @@ int tpl_render(const Template *tpl, char *dest, size_t dest_size,
         const char *open = find_open(cursor, src_end);
         if (!open) { EMIT(cursor, src_end - cursor); break; }
 
+        /* Literal text before the placeholder */
         EMIT(cursor, open - cursor);
 
         const char *key_start = open + 2;
         const char *key_end   = find_close(key_start, src_end);
 
-        const char *value     = lookup(key_start, key_end - key_start, vars, nvars);
+        /* strlen called once, stored in _n by the macro */
+        const char *value = lookup(key_start, key_end - key_start, vars, nvars);
         EMIT(value, strlen(value));
 
         cursor = key_end + 2;
