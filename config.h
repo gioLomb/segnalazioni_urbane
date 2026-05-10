@@ -23,8 +23,8 @@
 #define MAX_EVENTS           4096
 #define MAX_CLIENTS          16384
 #define LISTEN_BACKLOG       65535
-#define RATE_LIMIT_RPS       100
-#define DEBUG_RATE_LIMIT     1
+#define RATE_LIMIT_RPS       1000
+#define DEBUG_RATE_LIMIT     0
 
 /* BUFFER SIZES
  * BUFFER_SIZE           - per-connection request accumulation buffer.

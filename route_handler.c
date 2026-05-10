@@ -7,7 +7,8 @@
  * File layout
  * ───────────
  *   Section 1 — Session helper
- *   Section 2 — Response helpers   (redirect, json_response)
+ *   Section 2 — Response helpers   (redirect, resp_json_error,
+ *                                    resp_html_error, json_response)
  *   Section 3 — Submit map vars    (build_map_vars)
  *   Section 4 — Page handlers      (GET)
  *   Section 5 — Form handlers      (POST)
@@ -36,9 +37,7 @@ static bool get_session_user(const HttpRequest *req, User *u) {
     char token[TOKEN_HEX_LEN + 2];
     http_request_cookie(req, SESSION_COOKIE_NAME, token, sizeof(token));
     if (!token[0]) return false;
-    uint64_t user_id;
-    if (!session_verify(g_sessions, token, &user_id)) return false;
-    return user_get_by_id(user_id, u);
+    return session_verify(g_sessions, token, u); 
 }
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -52,6 +51,20 @@ static void redirect(HttpResponse *resp, const char *url, const char *cookie) {
         snprintf(resp->set_cookie, sizeof(resp->set_cookie), "%s", cookie);
 }
 
+/* Writes {"error":"<msg>"} into resp with the given status code. */
+static void resp_json_error(HttpResponse *resp, int status, const char *msg) {
+    resp->status_code = status;
+    snprintf(resp->body, RESPONSE_BUFFER_SIZE, "{\"error\":\"%s\"}", msg);
+    resp->body_len    = strlen(resp->body);
+}
+
+/* Writes <h1><msg></h1> into resp with the given status code. */
+static void resp_html_error(HttpResponse *resp, int status, const char *msg) {
+    resp->status_code = status;
+    snprintf(resp->body, RESPONSE_BUFFER_SIZE, "<h1>%s</h1>", msg);
+    resp->body_len    = strlen(resp->body);
+}
+
 static void json_response(HttpResponse *resp, char *json) {
     if (!json) {
         snprintf(resp->body, RESPONSE_BUFFER_SIZE, "[]");
@@ -61,9 +74,7 @@ static void json_response(HttpResponse *resp, char *json) {
     }
     size_t jlen = strlen(json);
     if (jlen >= RESPONSE_BUFFER_SIZE) {
-        snprintf(resp->body, RESPONSE_BUFFER_SIZE, "{\"error\":\"response too large\"}");
-        resp->body_len    = strlen(resp->body);
-        resp->status_code = 500;
+        resp_json_error(resp, 500, "response too large");
     } else {
         memcpy(resp->body, json, jlen + 1);
         resp->body_len    = jlen;
@@ -101,23 +112,21 @@ static void route_get_root(const HttpRequest *req, HttpResponse *resp) {
     User u = {0};
     if (get_session_user(req, &u)) { redirect(resp, "/home", NULL); return; }
     const Template *tpl = tpl_get("templates/login.html");
-    if (!tpl) { resp->status_code = 500; snprintf(resp->body, RESPONSE_BUFFER_SIZE, "<h1>500</h1>"); goto done; }
+    if (!tpl) { resp_html_error(resp, 500, "500"); return; }
     TplVar vars[] = { { "ERROR_BLOCK", "" } };
     tpl_render(tpl, resp->body, RESPONSE_BUFFER_SIZE, vars, 1);
     resp->status_code = 200;
-done:
-    resp->body_len = strlen(resp->body);
+    resp->body_len    = strlen(resp->body);
 }
 
 static void route_get_register(const HttpRequest *req, HttpResponse *resp) {
     (void)req;
     const Template *tpl = tpl_get("templates/register.html");
-    if (!tpl) { resp->status_code = 500; snprintf(resp->body, RESPONSE_BUFFER_SIZE, "<h1>500</h1>"); goto done; }
+    if (!tpl) { resp_html_error(resp, 500, "500"); return; }
     TplVar vars[] = { { "ERROR_BLOCK", "" } };
     tpl_render(tpl, resp->body, RESPONSE_BUFFER_SIZE, vars, 1);
     resp->status_code = 200;
-done:
-    resp->body_len = strlen(resp->body);
+    resp->body_len    = strlen(resp->body);
 }
 
 static void route_get_home(const HttpRequest *req, HttpResponse *resp) {
@@ -130,12 +139,11 @@ static void route_get_home(const HttpRequest *req, HttpResponse *resp) {
                          ? "templates/operator_map.html"
                          : "templates/citizen_home.html";
     const Template *tpl = tpl_get(tpl_name);
-    if (!tpl) { resp->status_code = 500; snprintf(resp->body, RESPONSE_BUFFER_SIZE, "<h1>500</h1>"); goto done; }
+    if (!tpl) { resp_html_error(resp, 500, "500"); return; }
     TplVar vars[] = { { "USERNAME", esc_user }, { "CITY", esc_city } };
     tpl_render(tpl, resp->body, RESPONSE_BUFFER_SIZE, vars, 2);
     resp->status_code = 200;
-done:
-    resp->body_len = strlen(resp->body);
+    resp->body_len    = strlen(resp->body);
 }
 
 static void route_get_submit(const HttpRequest *req, HttpResponse *resp) {
@@ -147,7 +155,7 @@ static void route_get_submit(const HttpRequest *req, HttpResponse *resp) {
     html_escape(u.city,     esc_city, sizeof(esc_city));
     MapVars mv; build_map_vars(u.city, &mv);
     const Template *tpl = tpl_get("templates/submit.html");
-    if (!tpl) { resp->status_code = 500; snprintf(resp->body, RESPONSE_BUFFER_SIZE, "<h1>500</h1>"); goto done; }
+    if (!tpl) { resp_html_error(resp, 500, "500"); return; }
     TplVar vars[] = {
         { "USERNAME",    esc_user  }, { "CITY",       esc_city  },
         { "ERROR_BLOCK", ""        }, { "MAP_LAT",    mv.lat    },
@@ -155,8 +163,7 @@ static void route_get_submit(const HttpRequest *req, HttpResponse *resp) {
     };
     tpl_render(tpl, resp->body, RESPONSE_BUFFER_SIZE, vars, 6);
     resp->status_code = 200;
-done:
-    resp->body_len = strlen(resp->body);
+    resp->body_len    = strlen(resp->body);
 }
 
 static void route_get_logout(const HttpRequest *req, HttpResponse *resp) {
@@ -181,7 +188,7 @@ static void route_post_login(const HttpRequest *req, HttpResponse *resp) {
     get_field(req->body, "password=", password, sizeof(password));
 
     const Template *tpl = tpl_get("templates/login.html");
-    if (!tpl) { resp->status_code = 500; snprintf(resp->body, RESPONSE_BUFFER_SIZE, "<h1>500</h1>"); goto done; }
+    if (!tpl) { resp_html_error(resp, 500, "500"); return; }
 
     User u = {0};
     if (!user_authenticate(username, password, &u)) {
@@ -189,16 +196,18 @@ static void route_post_login(const HttpRequest *req, HttpResponse *resp) {
         TplVar vars[] = { { "ERROR_BLOCK", eb } };
         tpl_render(tpl, resp->body, RESPONSE_BUFFER_SIZE, vars, 1);
         resp->status_code = 200;
-        goto done;
+        resp->body_len    = strlen(resp->body);
+        return;
     }
 
     char token[TOKEN_HEX_LEN + 2];
-    if (!session_create(g_sessions, u.userId, token)) {
+    if (!session_create(g_sessions, &u, token)) {
         char eb[256]; make_error_block("Errore interno. Riprova.", eb, sizeof(eb));
         TplVar vars[] = { { "ERROR_BLOCK", eb } };
         tpl_render(tpl, resp->body, RESPONSE_BUFFER_SIZE, vars, 1);
         resp->status_code = 200;
-        goto done;
+        resp->body_len    = strlen(resp->body);
+        return;
     }
 
     char cookie[COOKIE_MAX];
@@ -206,21 +215,16 @@ static void route_post_login(const HttpRequest *req, HttpResponse *resp) {
              "%s=%s; Path=/; HttpOnly; Max-Age=%d; SameSite=Lax",
              SESSION_COOKIE_NAME, token, SESSION_MAX_AGE);
     redirect(resp, "/home", cookie);
-    return;
-
-done:
-    resp->body_len = strlen(resp->body);
 }
 
 static void register_error(HttpResponse *resp, const char *msg) {
     const Template *tpl = tpl_get("templates/register.html");
-    if (!tpl) { resp->status_code = 500; snprintf(resp->body, RESPONSE_BUFFER_SIZE, "<h1>500</h1>"); goto done; }
+    if (!tpl) { resp_html_error(resp, 500, "500"); return; }
     char eb[256]; make_error_block(msg, eb, sizeof(eb));
     TplVar vars[] = { { "ERROR_BLOCK", eb } };
     tpl_render(tpl, resp->body, RESPONSE_BUFFER_SIZE, vars, 1);
     resp->status_code = 200;
-done:
-    resp->body_len = strlen(resp->body);
+    resp->body_len    = strlen(resp->body);
 }
 
 static void route_post_register(const HttpRequest *req, HttpResponse *resp) {
@@ -251,7 +255,7 @@ static void route_post_register(const HttpRequest *req, HttpResponse *resp) {
 
 static void submit_error(HttpResponse *resp, const User *u, const char *msg) {
     const Template *tpl = tpl_get("templates/submit.html");
-    if (!tpl) { resp->status_code = 500; snprintf(resp->body, RESPONSE_BUFFER_SIZE, "<h1>500</h1>"); goto done; }
+    if (!tpl) { resp_html_error(resp, 500, "500"); return; }
     char esc_user[64], esc_city[64];
     html_escape(u->username, esc_user, sizeof(esc_user));
     html_escape(u->city,     esc_city, sizeof(esc_city));
@@ -264,8 +268,7 @@ static void submit_error(HttpResponse *resp, const User *u, const char *msg) {
     };
     tpl_render(tpl, resp->body, RESPONSE_BUFFER_SIZE, vars, 6);
     resp->status_code = 200;
-done:
-    resp->body_len = strlen(resp->body);
+    resp->body_len    = strlen(resp->body);
 }
 
 static void route_post_submit(const HttpRequest *req, HttpResponse *resp) {
@@ -305,36 +308,23 @@ static void route_post_submit(const HttpRequest *req, HttpResponse *resp) {
 
 static void route_api_reports_active(const HttpRequest *req, HttpResponse *resp) {
     User u = {0};
-    if (!get_session_user(req, &u)) {
-        resp->status_code = 401;
-        snprintf(resp->body, RESPONSE_BUFFER_SIZE, "{\"error\":\"unauthorized\"}");
-        resp->body_len = strlen(resp->body);
-        return;
-    }
+    if (!get_session_user(req, &u)) { resp_json_error(resp, 401, "unauthorized"); return; }
     json_response(resp, report_get_active_json(u.userId, u.city, user_is_operator(&u)));
 }
 
 static void route_api_reports_archived(const HttpRequest *req, HttpResponse *resp) {
     User u = {0};
-    if (!get_session_user(req, &u)) {
-        resp->status_code = 401;
-        snprintf(resp->body, RESPONSE_BUFFER_SIZE, "{\"error\":\"unauthorized\"}");
-        resp->body_len = strlen(resp->body);
-        return;
-    }
+    if (!get_session_user(req, &u)) { resp_json_error(resp, 401, "unauthorized"); return; }
     json_response(resp, report_get_archived_json(u.userId, u.city, user_is_operator(&u)));
 }
 
 static void route_api_cities(const HttpRequest *req, HttpResponse *resp) {
     (void)req;
     const Template *tpl = tpl_get(CITIES_JSON_PATH);
-    if (!tpl) {
-        snprintf(resp->body, RESPONSE_BUFFER_SIZE, "[]");
-        resp->body_len = 2; resp->status_code = 404; return;
-    }
+    if (!tpl) { resp_json_error(resp, 404, "cities not found"); return; }
     tpl_render(tpl, resp->body, RESPONSE_BUFFER_SIZE, NULL, 0);
-    resp->body_len    = strlen(resp->body);
-    resp->status_code = 200;
+    resp->body_len     = strlen(resp->body);
+    resp->status_code  = 200;
     resp->content_type = "application/json";
 }
 
@@ -353,9 +343,7 @@ static void route_api_stats(const HttpRequest *req, HttpResponse *resp) {
 static void route_api_report_status(const HttpRequest *req, HttpResponse *resp) {
     User u = {0};
     if (!get_session_user(req, &u) || !user_is_operator(&u)) {
-        resp->status_code = 403;
-        snprintf(resp->body, RESPONSE_BUFFER_SIZE, "{\"error\":\"forbidden\"}");
-        resp->body_len = strlen(resp->body); return;
+        resp_json_error(resp, 403, "forbidden"); return;
     }
 
     char rid_s[24] = {0}, stat_s[4] = {0};
@@ -363,9 +351,7 @@ static void route_api_report_status(const HttpRequest *req, HttpResponse *resp) 
     get_field(req->body, "status=",    stat_s, sizeof(stat_s));
 
     if (!rid_s[0] || !stat_s[0]) {
-        resp->status_code = 400;
-        snprintf(resp->body, RESPONSE_BUFFER_SIZE, "{\"error\":\"missing params\"}");
-        resp->body_len = strlen(resp->body); return;
+        resp_json_error(resp, 400, "missing params"); return;
     }
 
     uint64_t     report_id  = (uint64_t)strtoull(rid_s, NULL, 10);
@@ -373,46 +359,28 @@ static void route_api_report_status(const HttpRequest *req, HttpResponse *resp) 
     ActiveReport r;
 
     if (!report_get_by_id(report_id, &r)) {
-        resp->status_code = 404;
-        snprintf(resp->body, RESPONSE_BUFFER_SIZE, "{\"error\":\"not found\"}");
-        resp->body_len = strlen(resp->body); return;
+        resp_json_error(resp, 404, "not found"); return;
     }
     if (strncmp(r.city, u.city, CITY_LEN) != 0) {
-        resp->status_code = 403;
-        snprintf(resp->body, RESPONSE_BUFFER_SIZE, "{\"error\":\"forbidden\"}");
-        resp->body_len = strlen(resp->body); return;
+        resp_json_error(resp, 403, "forbidden"); return;
     }
 
     int rc;
     if (new_status == STATUS_IN_PROGRESS) {
         rc = report_assign(report_id, u.userId);
-        if (rc == 0) {
-            resp->status_code = 409;
-            snprintf(resp->body, RESPONSE_BUFFER_SIZE, "{\"error\":\"report already taken\"}");
-            resp->body_len = strlen(resp->body); return;
-        }
+        if (rc == 0) { resp_json_error(resp, 409, "report already taken"); return; }
     } else if (new_status == STATUS_RESOLVED) {
         rc = report_resolve(report_id, u.userId);
-        if (rc == 0) {
-            resp->status_code = 403;
-            snprintf(resp->body, RESPONSE_BUFFER_SIZE, "{\"error\":\"not authorized or already resolved\"}");
-            resp->body_len = strlen(resp->body); return;
-        }
+        if (rc == 0) { resp_json_error(resp, 403, "not authorized or already resolved"); return; }
     } else {
-        resp->status_code = 400;
-        snprintf(resp->body, RESPONSE_BUFFER_SIZE, "{\"error\":\"invalid status\"}");
-        resp->body_len = strlen(resp->body); return;
+        resp_json_error(resp, 400, "invalid status"); return;
     }
 
-    if (rc < 0) {
-        resp->status_code = 500;
-        snprintf(resp->body, RESPONSE_BUFFER_SIZE, "{\"error\":\"db error\"}");
-        resp->body_len = strlen(resp->body); return;
-    }
+    if (rc < 0) { resp_json_error(resp, 500, "db error"); return; }
 
-    resp->status_code = 200;
     snprintf(resp->body, RESPONSE_BUFFER_SIZE, "{\"ok\":true}");
-    resp->body_len = strlen(resp->body);
+    resp->body_len    = strlen(resp->body);
+    resp->status_code = 200;
 }
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -422,11 +390,7 @@ static void route_api_report_status(const HttpRequest *req, HttpResponse *resp) 
 static void route_static_css(const HttpRequest *req, HttpResponse *resp) {
     (void)req;
     const Template *tpl = tpl_get("templates/common.css");
-    if (!tpl) {
-        resp->status_code = 404;
-        snprintf(resp->body, RESPONSE_BUFFER_SIZE, "/* CSS not found */");
-        resp->body_len = strlen(resp->body); return;
-    }
+    if (!tpl) { resp_html_error(resp, 404, "CSS not found"); return; }
     tpl_render(tpl, resp->body, RESPONSE_BUFFER_SIZE, NULL, 0);
     resp->body_len     = strlen(resp->body);
     resp->status_code  = 200;
@@ -468,16 +432,14 @@ void handle_request(const HttpRequest *req, HttpResponse *resp) {
     }
 
     if (path_found) {
-        resp->status_code = 405;
-        snprintf(resp->body, RESPONSE_BUFFER_SIZE, "<h1>405 Method Not Allowed</h1>");
+        resp_html_error(resp, 405, "405 Method Not Allowed");
     } else {
-        /* Build a NUL-terminated copy of path for the error message */
         char path[URL_BUFFER_SIZE];
         size_t n = req->path_len < URL_BUFFER_SIZE - 1 ? req->path_len : URL_BUFFER_SIZE - 1;
         memcpy(path, req->path, n); path[n] = '\0';
-        resp->status_code = 404;
         snprintf(resp->body, RESPONSE_BUFFER_SIZE,
                  "<h1>404 Not Found</h1><p><code>%s</code> non esiste.</p>", path);
+        resp->status_code = 404;
+        resp->body_len    = strlen(resp->body);
     }
-    resp->body_len = strlen(resp->body);
 }

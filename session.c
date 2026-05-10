@@ -47,51 +47,45 @@ static void generate_token(char *out, size_t len) {
     out[len] = '\0';
 }
 
-bool session_create(Hash_Table *sessionTable, uint64_t userId, char *outToken) {
-    if (!sessionTable || !outToken) return false;
+bool session_create(Hash_Table *sessionTable, const User *user, char *outToken) {
+    if (!sessionTable || !user || !outToken) return false;
 
-    char    token[TOKEN_HEX_LEN + 1];
-    uint64_t dummy;
-    int      max_tries = 100;
+    char token[TOKEN_HEX_LEN + 1];
+    User dummy;
+    int  max_tries = 100;
 
-    // Collision avoidance loop: ensure the new token isn't already assigned to a live session
+    /* Collision avoidance: ensure the token is not already in use. */
     do {
         generate_token(token, TOKEN_HEX_LEN);
-        // Safety break to prevent infinite loops if the table is full or failing
         if (--max_tries <= 0) return false;
     } while (session_verify(sessionTable, token, &dummy));
 
     Session s;
-    s.userId     = userId;
+    s.user       = *user;          /* copy the full User struct into the session */
     s.created_at = time(NULL);
 
-    // Store the session record keyed by the token string (including null terminator for exact match)
     if (!ht_set(sessionTable, token, strlen(token) + 1, &s, sizeof(s)))
         return false;
 
-    // Copy the generated token string to the caller's output buffer
     strcpy(outToken, token);
     return true;
 }
 
-bool session_verify(Hash_Table *sessionTable, const char *token, uint64_t *outUserId) {
+bool session_verify(Hash_Table *sessionTable, const char *token, User *outUser) {
     if (!sessionTable || !token) return false;
 
     Session s;
-    // Attempt to retrieve the session object from the table
     if (!ht_get(sessionTable, (void *)token, strlen(token) + 1, &s, sizeof(s)))
         return false;
 
-    // Expiration check: calculate the difference between current time and creation time
+    /* Lazy eviction: delete expired sessions on first access. */
     if (difftime(time(NULL), s.created_at) > SESSION_MAX_AGE) {
-        // Lazy Eviction: Token has expired, delete it from the table immediately and deny access
-        printf("sessione expired");
         ht_delete(sessionTable, (void *)token, strlen(token) + 1);
         return false;
     }
 
-    // Session is valid; assign the userId back to the caller
-    if (outUserId) *outUserId = s.userId;
+    /* Copy the cached User to the caller — no DB round-trip needed. */
+    if (outUser) *outUser = s.user;
     return true;
 }
 

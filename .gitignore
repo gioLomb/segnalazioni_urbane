@@ -13,6 +13,8 @@ temp/
 *.md
 test_modules.c
 segnalacity.db
+segnalacity.db-shm
+segnalacity.db-wal
 segnalacity
 analisi/
 analisi

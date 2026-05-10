@@ -415,9 +415,22 @@ static int init_db(void) {
                 APP_DB_PATH, db_errmsg());
         return -1;
     }
+
+    /*
+     * WAL mode: allows concurrent readers without blocking each other.
+     * Without WAL, SQLite uses exclusive locks per write and shared locks
+     * per read — under 100 concurrent connections this serializes everything.
+     * NORMAL synchronous is safe with WAL (no data loss on crash, only on
+     * power failure mid-checkpoint, acceptable for this use case).
+     */
+    db_exec("PRAGMA journal_mode=WAL;",      NULL);
+    db_exec("PRAGMA synchronous=NORMAL;",    NULL);
+    db_exec("PRAGMA cache_size=-8000;",      NULL); /* 8 MB page cache     */
+    db_exec("PRAGMA busy_timeout=5000;",     NULL); /* 5 s instead of fail */
+
     if (user_setup_table()   != 0) { fprintf(stderr, "Fatal: user_setup_table\n");   return -1; }
     if (report_setup_table() != 0) { fprintf(stderr, "Fatal: report_setup_table\n"); return -1; }
-    printf("Database: %s\n", APP_DB_PATH);
+    printf("Database: %s (WAL mode)\n", APP_DB_PATH);
     return 0;
 }
 
