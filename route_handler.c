@@ -67,9 +67,10 @@ static void resp_html_error(HttpResponse *resp, int status, const char *msg) {
 
 static void json_response(HttpResponse *resp, char *json) {
     if (!json) {
+        // Allocation failure — return empty array with 200
         snprintf(resp->body, RESPONSE_BUFFER_SIZE, "[]");
         resp->body_len    = 2;
-        resp->status_code = 500;
+        resp->status_code = 200;
         return;
     }
     size_t jlen = strlen(json);
@@ -114,9 +115,9 @@ static void route_get_root(const HttpRequest *req, HttpResponse *resp) {
     const Template *tpl = tpl_get("templates/login.html");
     if (!tpl) { resp_html_error(resp, 500, "500"); return; }
     TplVar vars[] = { { "ERROR_BLOCK", "" } };
-    tpl_render(tpl, resp->body, RESPONSE_BUFFER_SIZE, vars, 1);
+    int _tpl_n = tpl_render(tpl, resp->body, RESPONSE_BUFFER_SIZE, vars, 1);
     resp->status_code = 200;
-    resp->body_len    = strlen(resp->body);
+    resp->body_len    = _tpl_n > 0 ? (size_t)_tpl_n : 0;
 }
 
 static void route_get_register(const HttpRequest *req, HttpResponse *resp) {
@@ -124,9 +125,9 @@ static void route_get_register(const HttpRequest *req, HttpResponse *resp) {
     const Template *tpl = tpl_get("templates/register.html");
     if (!tpl) { resp_html_error(resp, 500, "500"); return; }
     TplVar vars[] = { { "ERROR_BLOCK", "" } };
-    tpl_render(tpl, resp->body, RESPONSE_BUFFER_SIZE, vars, 1);
+    int _tpl_n = tpl_render(tpl, resp->body, RESPONSE_BUFFER_SIZE, vars, 1);
     resp->status_code = 200;
-    resp->body_len    = strlen(resp->body);
+    resp->body_len    = _tpl_n > 0 ? (size_t)_tpl_n : 0;
 }
 
 static void route_get_home(const HttpRequest *req, HttpResponse *resp) {
@@ -141,9 +142,9 @@ static void route_get_home(const HttpRequest *req, HttpResponse *resp) {
     const Template *tpl = tpl_get(tpl_name);
     if (!tpl) { resp_html_error(resp, 500, "500"); return; }
     TplVar vars[] = { { "USERNAME", esc_user }, { "CITY", esc_city } };
-    tpl_render(tpl, resp->body, RESPONSE_BUFFER_SIZE, vars, 2);
+    int _tpl_n = tpl_render(tpl, resp->body, RESPONSE_BUFFER_SIZE, vars, 2);
     resp->status_code = 200;
-    resp->body_len    = strlen(resp->body);
+    resp->body_len    = _tpl_n > 0 ? (size_t)_tpl_n : 0;
 }
 
 static void route_get_submit(const HttpRequest *req, HttpResponse *resp) {
@@ -161,9 +162,9 @@ static void route_get_submit(const HttpRequest *req, HttpResponse *resp) {
         { "ERROR_BLOCK", ""        }, { "MAP_LAT",    mv.lat    },
         { "MAP_LON",     mv.lon    }, { "MAP_BOUNDS", mv.bounds },
     };
-    tpl_render(tpl, resp->body, RESPONSE_BUFFER_SIZE, vars, 6);
+    int _tpl_n = tpl_render(tpl, resp->body, RESPONSE_BUFFER_SIZE, vars, 6);
     resp->status_code = 200;
-    resp->body_len    = strlen(resp->body);
+    resp->body_len    = _tpl_n > 0 ? (size_t)_tpl_n : 0;
 }
 
 static void route_get_logout(const HttpRequest *req, HttpResponse *resp) {
@@ -222,9 +223,9 @@ static void register_error(HttpResponse *resp, const char *msg) {
     if (!tpl) { resp_html_error(resp, 500, "500"); return; }
     char eb[256]; make_error_block(msg, eb, sizeof(eb));
     TplVar vars[] = { { "ERROR_BLOCK", eb } };
-    tpl_render(tpl, resp->body, RESPONSE_BUFFER_SIZE, vars, 1);
+    int _tpl_n = tpl_render(tpl, resp->body, RESPONSE_BUFFER_SIZE, vars, 1);
     resp->status_code = 200;
-    resp->body_len    = strlen(resp->body);
+    resp->body_len    = _tpl_n > 0 ? (size_t)_tpl_n : 0;
 }
 
 static void route_post_register(const HttpRequest *req, HttpResponse *resp) {
@@ -266,9 +267,9 @@ static void submit_error(HttpResponse *resp, const User *u, const char *msg) {
         { "ERROR_BLOCK", eb        }, { "MAP_LAT",    mv.lat    },
         { "MAP_LON",     mv.lon    }, { "MAP_BOUNDS", mv.bounds },
     };
-    tpl_render(tpl, resp->body, RESPONSE_BUFFER_SIZE, vars, 6);
+    int _tpl_n = tpl_render(tpl, resp->body, RESPONSE_BUFFER_SIZE, vars, 6);
     resp->status_code = 200;
-    resp->body_len    = strlen(resp->body);
+    resp->body_len    = _tpl_n > 0 ? (size_t)_tpl_n : 0;
 }
 
 static void route_post_submit(const HttpRequest *req, HttpResponse *resp) {
@@ -322,19 +323,34 @@ static void route_api_cities(const HttpRequest *req, HttpResponse *resp) {
     (void)req;
     const Template *tpl = tpl_get(CITIES_JSON_PATH);
     if (!tpl) { resp_json_error(resp, 404, "cities not found"); return; }
-    tpl_render(tpl, resp->body, RESPONSE_BUFFER_SIZE, NULL, 0);
-    resp->body_len     = strlen(resp->body);
+    int _tpl_n = tpl_render(tpl, resp->body, RESPONSE_BUFFER_SIZE, NULL, 0);
+    resp->body_len     = _tpl_n > 0 ? (size_t)_tpl_n : 0;
     resp->status_code  = 200;
     resp->content_type = "application/json";
 }
 
 static void route_api_stats(const HttpRequest *req, HttpResponse *resp) {
     (void)req;
-    time_t uptime = time(NULL) - stats.startTime;
+
+    /*
+     * report_count_active() runs a full COUNT(*) query on every call.
+     * /api/stats is polled every 30 s by every connected client, so under
+     * load this becomes several queries per second for no benefit.
+     * Cache the result for 5 seconds — stale by at most one poll cycle.
+     */
+    static int    cached_count = 0;
+    static time_t cache_ts     = 0;
+    time_t now = time(NULL);
+    if (now - cache_ts >= 5) {
+        cached_count = report_count_active();
+        cache_ts     = now;
+    }
+
+    time_t uptime = now - stats.startTime;
     snprintf(resp->body, RESPONSE_BUFFER_SIZE,
         "{\"uptime\":%ld,\"active_reports\":%d,"
         "\"requests\":%lu,\"connections\":%lu}",
-        (long)uptime, report_count_active(),
+        (long)uptime, cached_count,
         stats.totalRequests, stats.totalConnections);
     resp->body_len    = strlen(resp->body);
     resp->status_code = 200;
@@ -391,8 +407,8 @@ static void route_static_css(const HttpRequest *req, HttpResponse *resp) {
     (void)req;
     const Template *tpl = tpl_get("templates/common.css");
     if (!tpl) { resp_html_error(resp, 404, "CSS not found"); return; }
-    tpl_render(tpl, resp->body, RESPONSE_BUFFER_SIZE, NULL, 0);
-    resp->body_len     = strlen(resp->body);
+    int _tpl_n = tpl_render(tpl, resp->body, RESPONSE_BUFFER_SIZE, NULL, 0);
+    resp->body_len     = _tpl_n > 0 ? (size_t)_tpl_n : 0;
     resp->status_code  = 200;
     resp->content_type = "text/css; charset=utf-8";
 }

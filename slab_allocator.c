@@ -92,13 +92,18 @@ void *slab_pool_alloc(SlabPool *pool) {
         pool->chunks_head = chunk;
     }
 
-    // Pop the first available block from this chunk's local free-list
+    /* Pop the first available block from this chunk's local free-list. */
     void *user_ptr    = chunk->local_free;
     chunk->local_free = *(void **)user_ptr;
     chunk->used_count++;
 
-    // Safety: zero the user memory before returning to prevent data leakage
-    memset(user_ptr, 0, pool->block_size);
+    /*
+     * Do NOT zero the block here.  conn_manager_alloc() already resets
+     * every field of ClientCtx explicitly after allocation, so a full
+     * memset of 8 KB per connection is pure waste.  If this pool is ever
+     * reused for a different type that requires zeroing, add the memset
+     * in that allocator's wrapper, not here.
+     */
     return user_ptr;
 }
 
