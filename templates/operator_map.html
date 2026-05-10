@@ -153,12 +153,12 @@
         });
     }
 
-    fetch('/api/stats')
-      .then(function(r) { return r.json(); })
-      .then(function(d) {
-        document.getElementById('s-uptime').textContent = d.uptime || '-';
-      })
-      .catch(function() {});
+    // fetch('/api/stats')
+    //   .then(function(r) { return r.json(); })
+    //   .then(function(d) {
+    //     document.getElementById('s-uptime').textContent = d.uptime || '-';
+    //   })
+    //   .catch(function() {});
 
     loadReports();
     setInterval(loadReports, 30000);

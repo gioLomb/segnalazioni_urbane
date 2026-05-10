@@ -329,32 +329,32 @@ static void route_api_cities(const HttpRequest *req, HttpResponse *resp) {
     resp->content_type = "application/json";
 }
 
-static void route_api_stats(const HttpRequest *req, HttpResponse *resp) {
-    (void)req;
+// static void route_api_stats(const HttpRequest *req, HttpResponse *resp) {
+//     (void)req;
 
-    /*
-     * report_count_active() runs a full COUNT(*) query on every call.
-     * /api/stats is polled every 30 s by every connected client, so under
-     * load this becomes several queries per second for no benefit.
-     * Cache the result for 5 seconds — stale by at most one poll cycle.
-     */
-    static int    cached_count = 0;
-    static time_t cache_ts     = 0;
-    time_t now = time(NULL);
-    if (now - cache_ts >= 5) {
-        cached_count = report_count_active();
-        cache_ts     = now;
-    }
+//     /*
+//      * report_count_active() runs a full COUNT(*) query on every call.
+//      * /api/stats is polled every 30 s by every connected client, so under
+//      * load this becomes several queries per second for no benefit.
+//      * Cache the result for 5 seconds — stale by at most one poll cycle.
+//      */
+//     static int    cached_count = 0;
+//     static time_t cache_ts     = 0;
+//     time_t now = time(NULL);
+//     if (now - cache_ts >= 5) {
+//         cached_count = report_count_active();
+//         cache_ts     = now;
+//     }
 
-    time_t uptime = now - stats.startTime;
-    snprintf(resp->body, RESPONSE_BUFFER_SIZE,
-        "{\"uptime\":%ld,\"active_reports\":%d,"
-        "\"requests\":%lu,\"connections\":%lu}",
-        (long)uptime, cached_count,
-        stats.totalRequests, stats.totalConnections);
-    resp->body_len    = strlen(resp->body);
-    resp->status_code = 200;
-}
+//     time_t uptime = now - stats.startTime;
+//     snprintf(resp->body, RESPONSE_BUFFER_SIZE,
+//         "{\"uptime\":%ld,\"active_reports\":%d,"
+//         "\"requests\":%lu,\"connections\":%lu}",
+//         (long)uptime, cached_count,
+//         stats.totalRequests, stats.totalConnections);
+//     resp->body_len    = strlen(resp->body);
+//     resp->status_code = 200;
+// }
 
 static void route_api_report_status(const HttpRequest *req, HttpResponse *resp) {
     User u = {0};
@@ -429,7 +429,7 @@ static const Route routes[] = {
     { "GET",  "/api/cities",           route_api_cities           },
     { "GET",  "/api/reports/active",   route_api_reports_active   },
     { "GET",  "/api/reports/archived", route_api_reports_archived },
-    { "GET",  "/api/stats",            route_api_stats            },
+    //{ "GET",  "/api/stats",            route_api_stats            },
     { "POST", "/api/report/status",    route_api_report_status    },
     { "GET",  "/static/common.css",    route_static_css           },
 };

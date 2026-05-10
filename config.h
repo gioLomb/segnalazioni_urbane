@@ -23,7 +23,7 @@
 #define MAX_EVENTS           4096
 #define MAX_CLIENTS          16384
 #define LISTEN_BACKLOG       65535
-#define RATE_LIMIT_RPS       1000
+#define RATE_LIMIT_RPS       10000 //TODO
 #define DEBUG_RATE_LIMIT     0
 
 /* BUFFER SIZES

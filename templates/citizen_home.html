@@ -106,12 +106,12 @@
           '<p class="placeholder-text error-text">Errore di caricamento.</p>';
       });
 
-    fetch('/api/stats')
-      .then(function(r) { return r.json(); })
-      .then(function(d) {
-        document.getElementById('s-uptime').textContent = d.uptime || '-';
-      })
-      .catch(function() {});
+    // fetch('/api/stats')
+    //   .then(function(r) { return r.json(); })
+    //   .then(function(d) {
+    //     document.getElementById('s-uptime').textContent = d.uptime || '-';
+    //   })
+    //   .catch(function() {});
   </script>
 
 </body>

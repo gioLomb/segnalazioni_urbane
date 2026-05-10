@@ -166,13 +166,13 @@ bool report_get_by_id(uint64_t reportId, ActiveReport *out) {
     return found;
 }
 
-int report_count_active(void) {
-    DbCursor *c = db_cursor_open(
-        "SELECT COUNT(*) FROM reports WHERE status < 2;", NULL);
-    int count = db_cursor_next(c) ? (int)db_cursor_int64(c, 0) : 0;
-    db_cursor_close(c);
-    return count;
-}
+// int report_count_active(void) {
+//     DbCursor *c = db_cursor_open(
+//         "SELECT COUNT(*) FROM reports WHERE status < 2;", NULL);
+//     int count = db_cursor_next(c) ? (int)db_cursor_int64(c, 0) : 0;
+//     db_cursor_close(c);
+//     return count;
+// }
 
 /* ── Utility ─────────────────────────────────────────────────────────── */
 
