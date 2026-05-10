@@ -36,8 +36,6 @@
 /* ══════════════════════════════════════════════════════════════════════
    SECTION 1 — Exported globals
    ══════════════════════════════════════════════════════════════════════ */
-
-ServerStats  stats      = {0};
 Hash_Table  *g_sessions  = NULL;
 Hash_Table  *g_geo_table = NULL;
 
@@ -236,7 +234,6 @@ static void read_cb(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf) {
 
     HttpResponse resp = { .status_code = 200, .body = body_buf };
     handle_request(&req, &resp);
-    stats.totalRequests++;
 
     send_response(ctx, &resp, keep_alive);
     free(body_buf);
@@ -266,7 +263,6 @@ static void on_close(uv_handle_t *handle) {
 
     conn_manager_unlink(ctx);
     conn_manager_release(ctx);
-    stats.activeClients = conn_manager_active_count();
 }
 
 static void close_client(ClientCtx *ctx) {
@@ -302,8 +298,6 @@ static int setup_client(uv_stream_t *server) {
     uv_timer_start(&ctx->timer, timer_cb, KEEPALIVE_TIMEOUT * 1000, 0);
 
     conn_manager_link(ctx);
-    stats.totalConnections++;
-    stats.activeClients = conn_manager_active_count();
 
     uv_read_start((uv_stream_t *)&ctx->handle, alloc_cb, read_cb);
     return 1;
@@ -416,21 +410,9 @@ static int init_db(void) {
         return -1;
     }
 
-    /*
-     * WAL mode: allows concurrent readers without blocking each other.
-     * Without WAL, SQLite uses exclusive locks per write and shared locks
-     * per read — under 100 concurrent connections this serializes everything.
-     * NORMAL synchronous is safe with WAL (no data loss on crash, only on
-     * power failure mid-checkpoint, acceptable for this use case).
-     */
-    db_exec("PRAGMA journal_mode=WAL;",      NULL);
-    db_exec("PRAGMA synchronous=NORMAL;",    NULL);
-    db_exec("PRAGMA cache_size=-8000;",      NULL); /* 8 MB page cache     */
-    db_exec("PRAGMA busy_timeout=5000;",     NULL); /* 5 s instead of fail */
-
     if (user_setup_table()   != 0) { fprintf(stderr, "Fatal: user_setup_table\n");   return -1; }
     if (report_setup_table() != 0) { fprintf(stderr, "Fatal: report_setup_table\n"); return -1; }
-    printf("Database: %s (WAL mode)\n", APP_DB_PATH);
+    printf("Database: %s\n", APP_DB_PATH);
     return 0;
 }
 
@@ -475,7 +457,6 @@ static int init_sessions(void) {
 }
 
 int main(void) {
-    stats.startTime = time(NULL);
     config_signal_context();
 
     if (conn_manager_init() != 0) {

@@ -30,9 +30,10 @@ int report_setup_table(void) {
             ");", NULL) != 0)
         return -1;
 
-    db_exec("CREATE INDEX IF NOT EXISTS idx_reports_author ON reports(author_id);", NULL);
-    db_exec("CREATE INDEX IF NOT EXISTS idx_reports_city   ON reports(city);",      NULL);
-    db_exec("CREATE INDEX IF NOT EXISTS idx_reports_status ON reports(status);",    NULL);
+    db_exec("CREATE INDEX IF NOT EXISTS idx_reports_citizen "
+            "ON reports(author_id, status, created_at DESC, resolved_at DESC);", NULL);
+    db_exec("CREATE INDEX IF NOT EXISTS idx_reports_operator "
+            "ON reports(city, status, created_at DESC, resolved_at DESC);", NULL);
     return 0;
 }
 

@@ -3,7 +3,6 @@
  *
  * Exposes only what route_handler.c and other translation units need:
  *   - g_sessions, g_geo_table  — shared in-memory tables
- *   - stats                    — aggregate server counters
  *   - RateEntry                — type used by the rate-limiter hash table
  *   - hash_key()               — hash function shared by every Hash_Table
  *   - config_signal_context()  — SIGPIPE suppression
@@ -34,21 +33,6 @@ extern Hash_Table *g_sessions;
  */
 extern Hash_Table *g_geo_table;
 
-/* ── Server statistics ───────────────────────────────────────────────── */
-
-/**
- * Aggregate counters updated on every connection and request.
- * Single source of truth — no separate g_stat_* mirrors.
- * Exposed to route_handler.c for the /api/stats endpoint.
- */
-typedef struct {
-    int           activeClients;
-    unsigned long totalRequests;
-    unsigned long totalConnections;
-    time_t        startTime;
-} ServerStats;
-
-extern ServerStats stats;
 
 /* ── Rate-limiter entry ──────────────────────────────────────────────── */
 

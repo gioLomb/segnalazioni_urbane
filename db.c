@@ -13,6 +13,11 @@ int db_init(const char *path) {
     // If a connection is already open, close it before re-opening
     if (g_db) sqlite3_close(g_db);
     if (sqlite3_open(path, &g_db) != SQLITE_OK) return -1;
+
+    sqlite3_exec(g_db, "PRAGMA journal_mode=WAL;",       NULL, NULL, NULL);
+    sqlite3_exec(g_db, "PRAGMA synchronous=NORMAL;",     NULL, NULL, NULL);
+    sqlite3_exec(g_db, "PRAGMA cache_size=-8192;",       NULL, NULL, NULL);
+
     return 0;
 }
 
