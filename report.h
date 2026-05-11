@@ -51,7 +51,7 @@ typedef struct {
 
 /* ── Cache ───────────────────────────────────────────────────────────── */
 
-void report_cache_invalidate_city(const char *city);
+void report_cache_invalidate_city(const char *city, uint64_t authorId);
 
 /* ── Setup ───────────────────────────────────────────────────────────── */
 

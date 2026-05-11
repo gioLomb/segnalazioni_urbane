@@ -227,15 +227,22 @@ static void cache_store(const char *city, uint64_t user_id,
 }
 
 /*
- * Invalidates all cache entries for a given city.
- * Called after any write operation (assign, resolve) so the next read
- * sees fresh data instead of a stale cached response.
+ * Targeted invalidation after a status change on a single report.
+ * Only two slots can contain stale data:
+ *   1. The operator slot for the city  (user_id=0, is_operator=true)
+ *   2. The author's citizen slot       (user_id=authorId, is_operator=false)
+ * All other citizen slots are keyed by their own author_id and are
+ * unaffected by changes to another user's report.
  */
-void report_cache_invalidate_city(const char *city) {
+void report_cache_invalidate_city(const char *city, uint64_t authorId) {
     for (int i = 0; i < CACHE_MAX_ENTRIES; i++) {
-        if (g_cache[i].cached_at
-                && strncmp(g_cache[i].city, city, CITY_LEN) == 0)
-            g_cache[i].cached_at = 0;
+        CacheEntry *e = &g_cache[i];
+        if (!e->cached_at) continue;
+        if (strncmp(e->city, city, CITY_LEN) != 0) continue;
+
+        if (e->is_operator                       /* operator slot */
+                || e->user_id == authorId)       /* report author slot */
+            e->cached_at = 0;
     }
 }
 
