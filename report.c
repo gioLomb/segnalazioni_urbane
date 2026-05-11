@@ -226,6 +226,19 @@ static void cache_store(const char *city, uint64_t user_id,
     e->cached_at   = time(NULL);
 }
 
+/*
+ * Invalidates all cache entries for a given city.
+ * Called after any write operation (assign, resolve) so the next read
+ * sees fresh data instead of a stale cached response.
+ */
+void report_cache_invalidate_city(const char *city) {
+    for (int i = 0; i < CACHE_MAX_ENTRIES; i++) {
+        if (g_cache[i].cached_at
+                && strncmp(g_cache[i].city, city, CITY_LEN) == 0)
+            g_cache[i].cached_at = 0;
+    }
+}
+
 /* ── Write operations ────────────────────────────────────────────────── */
 
 uint64_t report_insert(uint64_t authorId, double lat, double lon,

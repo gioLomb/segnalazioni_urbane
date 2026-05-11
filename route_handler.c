@@ -352,6 +352,8 @@ static void route_api_report_status(const HttpRequest *req, HttpResponse *resp) 
 
     if (rc < 0) { resp_json_error(resp, 500, "db error"); return; }
 
+    report_cache_invalidate_city(r.city);
+
     snprintf(resp->body, RESPONSE_BUFFER_SIZE, "{\"ok\":true}");
     resp->body_len    = strlen(resp->body);
     resp->status_code = 200;

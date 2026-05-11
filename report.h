@@ -49,6 +49,10 @@ typedef struct {
     char         description[128]; // 128 — il padding finale è assorbito
 } ActiveReport;
 
+/* ── Cache ───────────────────────────────────────────────────────────── */
+
+void report_cache_invalidate_city(const char *city);
+
 /* ── Setup ───────────────────────────────────────────────────────────── */
 
 int report_setup_table(void);
