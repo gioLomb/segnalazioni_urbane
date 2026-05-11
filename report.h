@@ -64,9 +64,11 @@ int report_resolve(uint64_t reportId, uint64_t operatorId);
 
 /* ── Read operations ─────────────────────────────────────────────────── */
 
-char *report_get_active_json(uint64_t userId, const char *city, bool isOperator);
+size_t report_get_active_json  (char *buf, size_t max,
+                                uint64_t userId, const char *city, bool isOperator);
 
-char *report_get_archived_json(uint64_t userId, const char *city, bool isOperator);
+size_t report_get_archived_json(char *buf, size_t max,
+                                uint64_t userId, const char *city, bool isOperator);
 
 bool report_get_by_id(uint64_t reportId, ActiveReport *out);
 

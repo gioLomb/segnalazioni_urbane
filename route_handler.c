@@ -8,7 +8,7 @@
  * ───────────
  *   Section 1 — Session helper
  *   Section 2 — Response helpers   (redirect, resp_json_error,
- *                                    resp_html_error, json_response)
+ *                                    resp_html_error)
  *   Section 3 — Submit map vars    (build_map_vars)
  *   Section 4 — Page handlers      (GET)
  *   Section 5 — Form handlers      (POST)
@@ -63,25 +63,6 @@ static void resp_html_error(HttpResponse *resp, int status, const char *msg) {
     resp->status_code = status;
     snprintf(resp->body, RESPONSE_BUFFER_SIZE, "<h1>%s</h1>", msg);
     resp->body_len    = strlen(resp->body);
-}
-
-static void json_response(HttpResponse *resp, char *json) {
-    if (!json) {
-        // Allocation failure — return empty array with 200
-        snprintf(resp->body, RESPONSE_BUFFER_SIZE, "[]");
-        resp->body_len    = 2;
-        resp->status_code = 200;
-        return;
-    }
-    size_t jlen = strlen(json);
-    if (jlen >= RESPONSE_BUFFER_SIZE) {
-        resp_json_error(resp, 500, "response too large");
-    } else {
-        memcpy(resp->body, json, jlen + 1);
-        resp->body_len    = jlen;
-        resp->status_code = 200;
-    }
-    free(json);
 }
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -310,13 +291,17 @@ static void route_post_submit(const HttpRequest *req, HttpResponse *resp) {
 static void route_api_reports_active(const HttpRequest *req, HttpResponse *resp) {
     User u = {0};
     if (!get_session_user(req, &u)) { resp_json_error(resp, 401, "unauthorized"); return; }
-    json_response(resp, report_get_active_json(u.userId, u.city, user_is_operator(&u)));
+    resp->body_len    = report_get_active_json(resp->body, RESPONSE_BUFFER_SIZE,
+                                               u.userId, u.city, user_is_operator(&u));
+    resp->status_code = 200;
 }
 
 static void route_api_reports_archived(const HttpRequest *req, HttpResponse *resp) {
     User u = {0};
     if (!get_session_user(req, &u)) { resp_json_error(resp, 401, "unauthorized"); return; }
-    json_response(resp, report_get_archived_json(u.userId, u.city, user_is_operator(&u)));
+    resp->body_len    = report_get_archived_json(resp->body, RESPONSE_BUFFER_SIZE,
+                                                 u.userId, u.city, user_is_operator(&u));
+    resp->status_code = 200;
 }
 
 static void route_api_cities(const HttpRequest *req, HttpResponse *resp) {
