@@ -145,7 +145,7 @@ static size_t cursor_to_json_array(DbCursor *c, char *buf, size_t max) {
  * cache entry so that neither cache_store() nor cache_find() need to call
  * malloc/strdup — zero heap traffic on a hit.
  *
- * occupied == false signals an empty slot (replaces the old NULL json check).
+ * cached_at == 0 signals an empty slot (g_cache is static, zero-initialised).
  */
 #include "http_types.h"   /* pulls in RESPONSE_BUFFER_SIZE */
 
@@ -156,8 +156,7 @@ typedef struct {
     bool     is_operator;
     bool     is_archived;
     /* Value */
-    bool     occupied;
-    time_t   cached_at;
+    time_t   cached_at;     /* 0 = empty slot */
     char     json[RESPONSE_BUFFER_SIZE];   /* inline buffer — no heap */
 } CacheEntry;
 
@@ -165,18 +164,18 @@ static CacheEntry g_cache[CACHE_MAX_ENTRIES];
 
 /*
  * Returns the index of a matching live entry, or -1 on miss/expiry.
- * An expired entry is evicted (json freed, slot cleared) on lookup.
+ * An expired entry is cleared (cached_at reset to 0) on lookup.
  */
 static int cache_find(const char *city, uint64_t user_id,
                       bool is_operator, bool is_archived) {
     time_t now = time(NULL);
     for (int i = 0; i < CACHE_MAX_ENTRIES; i++) {
         CacheEntry *e = &g_cache[i];
-        if (!e->occupied) continue;
+        if (!e->cached_at) continue;   /* empty slot */
 
         /* Evict expired entries on the fly */
         if (now - e->cached_at > CACHE_TTL_SECONDS) {
-            e->occupied = false;
+            e->cached_at = 0;
             continue;
         }
 
@@ -201,25 +200,21 @@ static void cache_store(const char *city, uint64_t user_id,
     /* Silently drop if the serialised JSON is too large for the inline buf. */
     if (json_len >= RESPONSE_BUFFER_SIZE) return;
 
-    /* Find an empty slot first */
-    int slot = -1;
-    time_t oldest_time = 0;
-    int oldest_idx = 0;
+    /* Find an empty slot; track oldest in parallel for eviction fallback */
+    int    slot        = -1;
+    int    oldest_idx  = 0;
+    time_t oldest_time = g_cache[0].cached_at;   /* initialise to first element */
 
     for (int i = 0; i < CACHE_MAX_ENTRIES; i++) {
-        if (!g_cache[i].occupied) { slot = i; break; }
-        /* Track oldest for eviction fallback */
-        if (slot == -1 || g_cache[i].cached_at < oldest_time) {
+        if (!g_cache[i].cached_at) { slot = i; break; }
+        if (g_cache[i].cached_at < oldest_time) {
             oldest_time = g_cache[i].cached_at;
             oldest_idx  = i;
         }
     }
 
     /* All slots full — evict the oldest */
-    if (slot == -1) {
-        g_cache[oldest_idx].occupied = false;
-        slot = oldest_idx;
-    }
+    if (slot == -1) slot = oldest_idx;
 
     CacheEntry *e  = &g_cache[slot];
     strncpy(e->city, city, CITY_LEN - 1);
@@ -229,7 +224,6 @@ static void cache_store(const char *city, uint64_t user_id,
     e->is_archived = is_archived;
     memcpy(e->json, json, json_len + 1);   /* include NUL */
     e->cached_at   = time(NULL);
-    e->occupied    = true;
 }
 
 /* ── Write operations ────────────────────────────────────────────────── */
