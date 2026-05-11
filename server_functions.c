@@ -102,18 +102,16 @@ void config_signal_context(void) {
  * The WriteReq (rendered response in one block) is freed in write_cb.
  */
 static void send_response(ClientCtx *ctx, const HttpResponse *resp, bool keep_alive) {
-    /* Render into a temporary stack buffer to measure size */
-    char   tmp[RESPONSE_BUFFER_SIZE + 1024];
-    int    total = http_response_render(resp, keep_alive, tmp, sizeof(tmp));
-    if (total < 0) { close_client(ctx); return; }
-
-    WriteReq *wr = malloc(sizeof(WriteReq) + (size_t)total);
+    /* Stima dimensione header (mai oltre 512 byte) */
+    size_t total_max = 512 + resp->body_len;
+    WriteReq *wr = malloc(sizeof(WriteReq) + total_max);
     if (!wr) { close_client(ctx); return; }
+
+    int total = http_response_render(resp, keep_alive, wr->data, total_max);
+    if (total < 0) { free(wr); close_client(ctx); return; }
 
     wr->ctx        = ctx;
     wr->keep_alive = keep_alive;
-    memcpy(wr->data, tmp, (size_t)total);
-
     uv_buf_t buf = uv_buf_init(wr->data, (size_t)total);
     uv_write(&wr->req, (uv_stream_t *)&ctx->handle, &buf, 1, write_cb);
 }
