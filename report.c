@@ -73,18 +73,6 @@ static cJSON *report_to_cjson(const ActiveReport *r) {
     return obj;
 }
 
-// static char *cursor_to_json_array(DbCursor *c) {
-//     cJSON *array = cJSON_CreateArray();
-//     while (db_cursor_next(c)) {
-//         ActiveReport r;
-//         cursor_to_report(c, &r);
-//         cJSON_AddItemToArray(array, report_to_cjson(&r));
-//     }
-//     db_cursor_close(c);
-//     char *out = cJSON_PrintUnformatted(array);
-//     cJSON_Delete(array);
-//     return out;
-// }
 static size_t cursor_to_json_array(DbCursor *c, char *buf, size_t max) {
     cJSON *array = cJSON_CreateArray();
     if (!array) {

@@ -378,19 +378,19 @@ static void route_static_css(const HttpRequest *req, HttpResponse *resp) {
    ══════════════════════════════════════════════════════════════════════ */
 
 static const Route routes[] = {
-    { "GET",  "/",                     route_get_root             },
-    { "GET",  "/home",                 route_get_home             },
-    { "GET",  "/register",             route_get_register         },
-    { "GET",  "/submit",               route_get_submit           },
-    { "GET",  "/logout",               route_get_logout           },
-    { "POST", "/login",                route_post_login           },
-    { "POST", "/register",             route_post_register        },
-    { "POST", "/submit",               route_post_submit          },
-    { "GET",  "/api/cities",           route_api_cities           },
-    { "GET",  "/api/reports/active",   route_api_reports_active   },
-    { "GET",  "/api/reports/archived", route_api_reports_archived },
-    { "POST", "/api/report/status",    route_api_report_status    },
-    { "GET",  "/static/common.css",    route_static_css           },
+    { .method = "GET",  .path = "/",                     .handler = route_get_root           },
+    { .method = "GET",  .path = "/home",                 .handler = route_get_home           },
+    { .method = "GET",  .path = "/register",             .handler = route_get_register       },
+    { .method = "GET",  .path = "/submit",               .handler = route_get_submit         },
+    { .method = "GET",  .path = "/logout",               .handler = route_get_logout         },
+    { .method = "POST", .path = "/login",                .handler = route_post_login         },
+    { .method = "POST", .path = "/register",             .handler = route_post_register      },
+    { .method = "POST", .path = "/submit",               .handler = route_post_submit        },
+    { .method = "GET",  .path = "/api/cities",           .handler = route_api_cities         },
+    { .method = "GET",  .path = "/api/reports/active",   .handler = route_api_reports_active  },
+    { .method = "GET",  .path = "/api/reports/archived", .handler = route_api_reports_archived},
+    { .method = "POST", .path = "/api/report/status",    .handler = route_api_report_status   },
+    { .method = "GET",  .path = "/static/common.css",    .handler = route_static_css         },
 };
 static const size_t NUM_ROUTES = sizeof(routes) / sizeof(routes[0]);
 
