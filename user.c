@@ -51,7 +51,7 @@ static void hash_password(const char *salt, const char *plain, char *dest) {
     /* Hash salt first, then password — same as hash(salt || plain). */
     for (const char *p = salt;  *p; p++) h = ((h << 5) + h) + (unsigned char)*p;
     for (const char *p = plain; *p; p++) h = ((h << 5) + h) + (unsigned char)*p;
-    snprintf(dest, PWD_HASH_LEN, "%016llx%016llx",
+    snprintf(dest, PWD_HASH_LEN + 1, "%016llx%016llx",
              (unsigned long long)h,
              (unsigned long long)(h ^ 0xDEADBEEFDEADBEEFULL));
 }
@@ -59,14 +59,13 @@ static void hash_password(const char *salt, const char *plain, char *dest) {
 /* ── Constant-time comparison ────────────────────────────────────────── */
 
 static int constant_time_compare(const char *a, const char *b) {
-    size_t len_a = strlen(a);
-    size_t len_b = strlen(b);
-    int result = (len_a != len_b);
-    for (size_t i = 0; i < len_a && i < len_b; i++)
-        result |= (a[i] ^ b[i]);
+    volatile int result = 0;
+
+    for (size_t i = 0; i < PWD_HASH_LEN; i++) {
+        result |= ((unsigned char)a[i] ^ (unsigned char)b[i]);
+    }
     return result == 0;
 }
-
 /* ── Setup ───────────────────────────────────────────────────────────── */
 
 int user_setup_table(void) {
@@ -85,10 +84,10 @@ int user_setup_table(void) {
 
 int user_register(const char *username, const char *plainPassword,
                   const char *city, UserRole role) {
-    char salt[SALT_HEX_LEN];
+    char salt[SALT_HEX_LEN + 1];
     generate_salt(salt);
 
-    char hash[PWD_HASH_LEN];
+    char hash[PWD_HASH_LEN+1];
     hash_password(salt, plainPassword, hash);
 
     return db_exec(
@@ -109,11 +108,11 @@ static void cursor_to_user(DbCursor *c, User *u) {
     strncpy(u->username,     db_cursor_text(c, USER_COL_USERNAME),
             USERNAME_LEN - 1);
     strncpy(u->passwordHash, db_cursor_text(c, USER_COL_PASSWORD_HASH),
-            PWD_HASH_LEN - 1);
+            PWD_HASH_LEN);
     u->role = (UserRole)db_cursor_int64(c, USER_COL_ROLE);
     strncpy(u->city, db_cursor_text(c, USER_COL_CITY), CITY_LEN - 1);
     /* salt may be NULL in legacy rows — db_cursor_text returns "" in that case */
-    strncpy(u->salt, db_cursor_text(c, USER_COL_SALT), SALT_HEX_LEN - 1);
+    strncpy(u->salt, db_cursor_text(c, USER_COL_SALT), SALT_HEX_LEN);
 }
 
 /* ── Read operations ─────────────────────────────────────────────────── */
@@ -132,7 +131,7 @@ bool user_authenticate(const char *username, const char *plainPassword,
 
     if (!found) return false;
 
-    char login_hash[PWD_HASH_LEN];
+    char login_hash[PWD_HASH_LEN + 1];
 
     if (out->salt[0] != '\0') {
         /* New path: salted hash */

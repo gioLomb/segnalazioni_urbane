@@ -5,8 +5,8 @@
 #include <stdbool.h>
 
 #define USERNAME_LEN  32
-#define PWD_HASH_LEN  65   /* 64 hex chars + NUL */
-#define SALT_HEX_LEN  33   /* 32 hex chars + NUL  (16 random bytes → 32 hex) */
+#define PWD_HASH_LEN  32   /* 64 hex chars + NUL */
+#define SALT_HEX_LEN  32   /* 32 hex chars + NUL  (16 random bytes → 32 hex) */
 #define CITY_LEN      32
 
 typedef enum {
@@ -31,8 +31,8 @@ typedef enum {
 typedef struct {
     uint64_t userId;
     char     username[USERNAME_LEN];
-    char     passwordHash[PWD_HASH_LEN];
-    char     salt[SALT_HEX_LEN];   /* empty string = legacy row, no salt */
+    char     passwordHash[PWD_HASH_LEN + 1];
+    char     salt[SALT_HEX_LEN + 1];   /* empty string = legacy row, no salt */
     char     city[CITY_LEN];
     UserRole role;
 } User;
