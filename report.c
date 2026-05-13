@@ -73,6 +73,7 @@ static cJSON *report_to_cjson(const ActiveReport *r) {
     return obj;
 }
 
+
 static size_t cursor_to_json_array(DbCursor *c, char *buf, size_t max) {
     cJSON *array = cJSON_CreateArray();
     if (!array) {
