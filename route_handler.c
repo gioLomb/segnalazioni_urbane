@@ -94,7 +94,7 @@ static void route_get_root(const HttpRequest *req, HttpResponse *resp) {
     User u = {0};
     if (get_session_user(req, &u)) { redirect(resp, "/home", NULL); return; }
     const Template *tpl = tpl_get("templates/login.html");
-    if (!tpl) { resp_html_error(resp, 500, "500"); return; }
+    if (unlikely(!tpl)) { resp_html_error(resp, 500, "Server Error"); return; }
     TplVar vars[] = { { "ERROR_BLOCK", "" } };
     int _tpl_n = tpl_render(tpl, resp->body, RESPONSE_BUFFER_SIZE, vars, 1);
     resp->status_code = 200;
@@ -104,7 +104,7 @@ static void route_get_root(const HttpRequest *req, HttpResponse *resp) {
 static void route_get_register(const HttpRequest *req, HttpResponse *resp) {
     (void)req;
     const Template *tpl = tpl_get("templates/register.html");
-    if (!tpl) { resp_html_error(resp, 500, "500"); return; }
+    if (unlikely(!tpl)) { resp_html_error(resp, 500, "Server Error"); return; }
     TplVar vars[] = { { "ERROR_BLOCK", "" } };
     int _tpl_n = tpl_render(tpl, resp->body, RESPONSE_BUFFER_SIZE, vars, 1);
     resp->status_code = 200;
@@ -125,7 +125,7 @@ static void route_get_home(const HttpRequest *req, HttpResponse *resp) {
     else
         tpl_name = "templates/citizen_home.html";
     const Template *tpl = tpl_get(tpl_name);
-    if (!tpl) { resp_html_error(resp, 500, "500"); return; }
+    if (unlikely(!tpl)) { resp_html_error(resp, 500, "Server Error"); return; }
     TplVar vars[] = { { "USERNAME", esc_user }, { "CITY", esc_city } };
     int _tpl_n = tpl_render(tpl, resp->body, RESPONSE_BUFFER_SIZE, vars, 2);
     resp->status_code = 200;
@@ -141,7 +141,7 @@ static void route_get_submit(const HttpRequest *req, HttpResponse *resp) {
     html_escape(u.city,     esc_city, sizeof(esc_city));
     MapVars mv; build_map_vars(u.city, &mv);
     const Template *tpl = tpl_get("templates/submit.html");
-    if (!tpl) { resp_html_error(resp, 500, "500"); return; }
+    if (unlikely(!tpl)) { resp_html_error(resp, 500, "Server Error"); return; }
     TplVar vars[] = {
         { "USERNAME",    esc_user  }, { "CITY",       esc_city  },
         { "ERROR_BLOCK", ""        }, { "MAP_LAT",    mv.lat    },
@@ -174,11 +174,11 @@ static void route_post_login(const HttpRequest *req, HttpResponse *resp) {
     get_field(req->body, "password=", password, sizeof(password));
 
     const Template *tpl = tpl_get("templates/login.html");
-    if (!tpl) { resp_html_error(resp, 500, "500"); return; }
+    if (unlikely(!tpl)) { resp_html_error(resp, 500, "Server Error"); return; }
 
     User u = {0};
     if (!user_authenticate(username, password, &u)) {
-        char eb[256]; make_error_block("Username o password errati.", eb, sizeof(eb));
+        char eb[128]; make_error_block("Username o password errati.", eb, sizeof(eb));
         TplVar vars[] = { { "ERROR_BLOCK", eb } };
         tpl_render(tpl, resp->body, RESPONSE_BUFFER_SIZE, vars, 1);
         resp->status_code = 200;
@@ -188,7 +188,7 @@ static void route_post_login(const HttpRequest *req, HttpResponse *resp) {
 
     char token[TOKEN_HEX_LEN + 2];
     if (!session_create(g_sessions, &u, token)) {
-        char eb[256]; make_error_block("Errore interno. Riprova.", eb, sizeof(eb));
+        char eb[128]; make_error_block("Errore interno. Riprova.", eb, sizeof(eb));
         TplVar vars[] = { { "ERROR_BLOCK", eb } };
         tpl_render(tpl, resp->body, RESPONSE_BUFFER_SIZE, vars, 1);
         resp->status_code = 200;
@@ -205,8 +205,8 @@ static void route_post_login(const HttpRequest *req, HttpResponse *resp) {
 
 static void register_error(HttpResponse *resp, const char *msg) {
     const Template *tpl = tpl_get("templates/register.html");
-    if (!tpl) { resp_html_error(resp, 500, "500"); return; }
-    char eb[256]; make_error_block(msg, eb, sizeof(eb));
+    if (unlikely(!tpl)) { resp_html_error(resp, 500, "Server Error"); return; }
+    char eb[128]; make_error_block(msg, eb, sizeof(eb));
     TplVar vars[] = { { "ERROR_BLOCK", eb } };
     int _tpl_n = tpl_render(tpl, resp->body, RESPONSE_BUFFER_SIZE, vars, 1);
     resp->status_code = 200;
@@ -253,12 +253,12 @@ static void route_post_register(const HttpRequest *req, HttpResponse *resp) {
 
 static void submit_error(HttpResponse *resp, const User *u, const char *msg) {
     const Template *tpl = tpl_get("templates/submit.html");
-    if (!tpl) { resp_html_error(resp, 500, "500"); return; }
+    if (unlikely(!tpl)) { resp_html_error(resp, 500, "Server Error"); return; }
     char esc_user[64], esc_city[64];
     html_escape(u->username, esc_user, sizeof(esc_user));
     html_escape(u->city,     esc_city, sizeof(esc_city));
     MapVars mv; build_map_vars(u->city, &mv);
-    char eb[256]; make_error_block(msg, eb, sizeof(eb));
+    char eb[128]; make_error_block(msg, eb, sizeof(eb));
     TplVar vars[] = {
         { "USERNAME",    esc_user  }, { "CITY",       esc_city  },
         { "ERROR_BLOCK", eb        }, { "MAP_LAT",    mv.lat    },
@@ -323,7 +323,7 @@ static void route_api_reports_archived(const HttpRequest *req, HttpResponse *res
 static void route_api_cities(const HttpRequest *req, HttpResponse *resp) {
     (void)req;
     const Template *tpl = tpl_get(CITIES_JSON_PATH);
-    if (!tpl) { resp_json_error(resp, 404, "cities not found"); return; }
+    if (unlikely(!tpl)) { resp_json_error(resp, 404, "cities not found"); return; }
     int _tpl_n = tpl_render(tpl, resp->body, RESPONSE_BUFFER_SIZE, NULL, 0);
     resp->body_len     = _tpl_n > 0 ? (size_t)_tpl_n : 0;
     resp->status_code  = 200;
@@ -366,7 +366,7 @@ static void route_api_report_status(const HttpRequest *req, HttpResponse *resp) 
         resp_json_error(resp, 400, "invalid status"); return;
     }
 
-    if (rc < 0) { resp_json_error(resp, 500, "db error"); return; }
+    if (unlikely(rc < 0)) { resp_json_error(resp, 500, "db error"); return; }
 
     report_cache_invalidate_city(r.city, r.authorId);
 
@@ -413,7 +413,7 @@ static void route_api_admin_assign(const HttpRequest *req, HttpResponse *resp) {
     uint64_t operator_id = (uint64_t)strtoull(op_s,  NULL, 10);
 
     ActiveReport r;
-    if (!report_get_by_id(report_id, &r)) { resp_json_error(resp, 404, "not found"); return; }
+    if (unlikely(!report_get_by_id(report_id, &r))) { resp_json_error(resp, 404, "not found"); return; }
     if (strncmp(r.city, u.city, CITY_LEN) != 0) { resp_json_error(resp, 403, "forbidden"); return; }
 
     User op = {0};
@@ -424,7 +424,7 @@ static void route_api_admin_assign(const HttpRequest *req, HttpResponse *resp) {
 
     int rc = report_assign(report_id, operator_id);
     if (rc == 0) { resp_json_error(resp, 409, "report already taken"); return; }
-    if (rc < 0)  { resp_json_error(resp, 500, "db error"); return; }
+    if (unlikely(rc < 0))  { resp_json_error(resp, 500, "db error"); return; }
 
     report_cache_invalidate_city(r.city, r.authorId);
 
@@ -439,7 +439,7 @@ static void route_api_admin_assign(const HttpRequest *req, HttpResponse *resp) {
 static void route_static_css(const HttpRequest *req, HttpResponse *resp) {
     (void)req;
     const Template *tpl = tpl_get("templates/common.css");
-    if (!tpl) { resp_html_error(resp, 404, "CSS not found"); return; }
+    if (unlikely(!tpl)) { resp_html_error(resp, 404, "CSS not found"); return; }
     int _tpl_n = tpl_render(tpl, resp->body, RESPONSE_BUFFER_SIZE, NULL, 0);
     resp->body_len     = _tpl_n > 0 ? (size_t)_tpl_n : 0;
     resp->status_code  = 200;
@@ -485,8 +485,8 @@ void handle_request(const HttpRequest *req, HttpResponse *resp) {
     if (path_found) {
         resp_html_error(resp, 405, "405 Method Not Allowed");
     } else {
-        char path[URL_BUFFER_SIZE];
-        size_t n = req->path_len < URL_BUFFER_SIZE - 1 ? req->path_len : URL_BUFFER_SIZE - 1;
+        char path[URL_BUFFER_SIZE+1];
+        size_t n = req->path_len < URL_BUFFER_SIZE ? req->path_len : URL_BUFFER_SIZE;
         memcpy(path, req->path, n); path[n] = '\0';
         snprintf(resp->body, RESPONSE_BUFFER_SIZE,
                  "<h1>404 Not Found</h1><p><code>%s</code> non esiste.</p>", path);

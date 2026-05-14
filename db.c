@@ -52,7 +52,7 @@ static int count_placeholders(const char *sql) {
 
 // Internal engine to prepare and bind parameters to a statement
 static sqlite3_stmt *prepare(const char *sql, const char *fmt, va_list ap) {
-    if (!g_db) return NULL;
+    if (unlikely(!g_db)) return NULL;
 
     sqlite3_stmt *stmt;
     // Compile SQL into a prepared statement
@@ -129,7 +129,7 @@ DbCursor *db_cursor_open(const char *sql, const char *fmt, ...) {
     if (!stmt) return NULL;
 
     DbCursor *c = malloc(sizeof(*c));
-    if (!c) { 
+    if (unlikely(!c)) { 
         sqlite3_finalize(stmt); 
         return NULL; 
     }

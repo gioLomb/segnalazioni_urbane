@@ -20,6 +20,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <sqlite3.h>
+#include "config.h"
 
 /* ── Cursor types ────────────────────────────────────────────────────── */
 

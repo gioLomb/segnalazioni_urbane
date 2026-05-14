@@ -208,7 +208,7 @@ const char *post_body(const char *req) {
 
 void get_field(const char *src, const char *param_name, char *dest, size_t max) {
     dest[0] = '\0';
-    if (!src || !param_name) return;
+    if (unlikely(!src || !param_name)) return;
     size_t      plen = strlen(param_name);
     const char *p    = src;
     while ((p = strstr(p, param_name)) != NULL) {
@@ -237,6 +237,6 @@ void html_escape(const char *src, char *dest, size_t max) {
 }
 
 void make_error_block(const char *msg, char *dest, size_t max) {
-    if (!msg || !msg[0]) { dest[0] = '\0'; return; }
+    if (unlikely(!msg || !msg[0])) { dest[0] = '\0'; return; }
     snprintf(dest, max, "<div class='alert alert-err'>%s</div>", msg);
 }

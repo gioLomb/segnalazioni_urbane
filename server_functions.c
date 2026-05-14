@@ -85,9 +85,9 @@ unsigned long hash_key(const void *key, size_t keySize, unsigned long seed) {
     return h;
 }
 
-void config_signal_context(void) {
-    signal(SIGPIPE, SIG_IGN);
-}
+// void config_signal_context(void) {
+//     signal(SIGPIPE, SIG_IGN);
+// }
 
 /* ══════════════════════════════════════════════════════════════════════
    SECTION 4 — HTTP response builder
@@ -317,9 +317,9 @@ static void on_connection(uv_stream_t *server, int status) {
  * Recycles the hash table when it exceeds 10 000 entries to bound memory.
  */
 static int rate_limit_check(const char *ip) {
-    if (!ip || !ip[0] || !g_rate_table) return 1;
+    if (unlikely(!ip || !ip[0] || !g_rate_table)) return 1;
 
-    if (g_rate_table->size > 10000) {
+    if (unlikely(g_rate_table->size > 10000)) {
         ht_destroy(g_rate_table, NULL);
         g_rate_table = ht_create(1024, hash_key);
         if (!g_rate_table) return 1;
@@ -329,7 +329,7 @@ static int rate_limit_check(const char *ip) {
     time_t    now = time(NULL);
     ht_get(g_rate_table, (void *)ip, strlen(ip) + 1, &e, sizeof(e));
 
-    if (now - e.windowStartTime >= 1) {
+    if (unlikely(now - e.windowStartTime >= 1)) {
         e.countPrev       = e.countCurr;
         e.countCurr       = 0;
         e.windowStartTime = now;
@@ -337,7 +337,7 @@ static int rate_limit_check(const char *ip) {
 
     double elapsed   = difftime(now, e.windowStartTime);
     double estimated = e.countPrev * (1.0 - elapsed) + e.countCurr;
-    int    allowed   = estimated < RATE_LIMIT_RPS;
+    int    allowed   = likely(estimated < RATE_LIMIT_RPS);
 
     if (allowed) e.countCurr++;
     ht_set(g_rate_table, (void *)ip, strlen(ip) + 1, &e, sizeof(e));
@@ -456,8 +456,9 @@ static int init_sessions(void) {
 }
 
 int main(void) {
-    config_signal_context();
+    signal(SIGPIPE, SIG_IGN);
 
+    //TODO: migliora gestione errori
     if (conn_manager_init() != 0) {
         fprintf(stderr, "Fatal: client pool init failed\n");
         return EXIT_FAILURE;
@@ -467,15 +468,12 @@ int main(void) {
     if (init_geo_table() != 0) return EXIT_FAILURE;
     if (init_sessions()  != 0) return EXIT_FAILURE;
 
-    // Hash_Table *rate_limit = ht_create(1024, hash_key);
-    // if (!rate_limit) {
-    //     fprintf(stderr, "Fatal: rate-limit table allocation failed\n");
-    //     return EXIT_FAILURE;
-    // }
     g_rate_table = ht_create(1024,hash_key);
 
+    //scomponi server loop per schiarire l'algoritmo
     server_loop();
 
+    //todo: crea helper per shutdown
     tpl_unload_all();
     ht_destroy(g_sessions,  NULL);
     ht_destroy(g_geo_table, NULL);

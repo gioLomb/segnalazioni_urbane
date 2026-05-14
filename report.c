@@ -13,7 +13,7 @@
 /* ── Setup ───────────────────────────────────────────────────────────── */
 
 int report_setup_table(void) {
-    if (db_exec(
+    if (unlikely(db_exec(
             "CREATE TABLE IF NOT EXISTS reports ("
             "  id          INTEGER PRIMARY KEY AUTOINCREMENT,"
             "  author_id   INTEGER NOT NULL,"
@@ -27,7 +27,7 @@ int report_setup_table(void) {
             "  created_at  INTEGER NOT NULL,"
             "  assigned_at INTEGER,"
             "  resolved_at INTEGER"
-            ");", NULL) != 0)
+            ");", NULL) != 0))
         return -1;
 
     db_exec("CREATE INDEX IF NOT EXISTS idx_reports_author ON reports(author_id);", NULL);
@@ -58,7 +58,7 @@ static void cursor_to_report(DbCursor *c, ActiveReport *r) {
 
 static cJSON *report_to_cjson(const ActiveReport *r) {
     cJSON *obj = cJSON_CreateObject();
-    if (!obj) return NULL;
+    if (unlikely(!obj)) return NULL;
 
     cJSON_AddNumberToObject(obj, "id",          (double)r->reportId);
     cJSON_AddNumberToObject(obj, "author_id",   (double)r->authorId);
@@ -78,7 +78,7 @@ static cJSON *report_to_cjson(const ActiveReport *r) {
 
 static size_t cursor_to_json_array(DbCursor *c, char *buf, size_t max) {
     cJSON *array = cJSON_CreateArray();
-    if (!array) {
+    if (unlikely(!array)) {
         if (max > 0) buf[0] = '\0';
         return 0;
     }
@@ -125,7 +125,7 @@ static int cache_find(const char *city, uint64_t user_id,
     for (int i = 0; i < CACHE_MAX_ENTRIES; i++) {
         CacheEntry *e = &g_cache[i];
         if (!e->cached_at) continue;
-        if (now - e->cached_at > CACHE_TTL_SECONDS) {
+        if (unlikely(now - e->cached_at > CACHE_TTL_SECONDS)) {
             e->cached_at = 0;
             continue;
         }
@@ -286,7 +286,7 @@ size_t report_get_archived_json(char *buf, size_t max,
 
     size_t len = cursor_to_json_array(c, buf, max);
 
-    if (len > 0)
+    if (likely(len > 0))
         cache_store(city, cache_uid, isOperator, true, buf, len);
 
     return len;
@@ -306,7 +306,7 @@ bool report_get_by_id(uint64_t reportId, ActiveReport *out) {
         "SELECT " SELECT_COLS " FROM reports WHERE id = ? LIMIT 1;",
         "l", (int64_t)reportId);
     bool found = db_cursor_next(c);
-    if (found) cursor_to_report(c, out);
+    if (likely(found)) cursor_to_report(c, out);
     db_cursor_close(c);
     return found;
 }

@@ -36,6 +36,9 @@
 #define PARAM_KEY_SIZE       (1 << 6)
 #define PARAM_VALUE_SIZE     (1 << 10)
 
+#define likely(x)       __builtin_expect(!!(x), 1)
+#define unlikely(x)     __builtin_expect(!!(x), 0)
+
 /* APPLICATION */
 #define APP_DB_PATH         "segnalacity.db"
 #define GEO_JSON_PATH       "data/comuni.geojson"

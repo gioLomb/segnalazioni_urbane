@@ -1,6 +1,7 @@
 #ifndef REPORT_H
 #define REPORT_H
 
+#include "config.h"
 #include <time.h>
 #include <stdint.h>
 #include <stdbool.h>
