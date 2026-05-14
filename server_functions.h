@@ -55,6 +55,6 @@ unsigned long hash_key(const void *key, size_t keySize, unsigned long seed);
 void config_signal_context(void);
 
 /** Starts the libuv event loop and blocks until SIGINT. */
-void server_loop(Hash_Table *rate_limit_table);
+void server_loop();
 
 #endif /* SERVER_FUNCTIONS_H */

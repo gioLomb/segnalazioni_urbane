@@ -365,22 +365,22 @@ static int server_bind(uv_tcp_t *server) {
 }
 
 /** Graceful shutdown: close all clients, drain callbacks, close server handles. */
-static void server_shutdown(uv_loop_t *loop,
-                             uv_tcp_t *server, uv_signal_t *sig) {
+static void server_shutdown(uv_loop_t *loop, uv_tcp_t *server, uv_signal_t *sig) {
+    // 1. Inizia a chiudere tutto subito
     conn_manager_close_all(close_client);
-    uv_run(loop, UV_RUN_DEFAULT);       /* drain client close callbacks */
-
     uv_close((uv_handle_t *)sig,    NULL);
     uv_close((uv_handle_t *)server, NULL);
-    uv_run(loop, UV_RUN_DEFAULT);       /* drain server handle callbacks */
+
+    // 2. Ora che tutti gli handle sono in fase di chiusura (closing), 
+    //    esegui il loop un'ultima volta per processare i callback on_close.
+    //    Il loop finirà AUTOMATICAMENTE quando l'ultimo handle sarà chiuso.
+    uv_run(loop, UV_RUN_DEFAULT); 
 
     uv_loop_close(loop);
     fprintf(stderr, "Shutdown: event loop closed.\n");
 }
 
-void server_loop(Hash_Table *rate_limit_table) {
-    g_rate_table = rate_limit_table;
-
+void server_loop() {
     uv_loop_t  *loop = uv_default_loop();
     uv_tcp_t    server;
     uv_signal_t sig;
@@ -467,18 +467,19 @@ int main(void) {
     if (init_geo_table() != 0) return EXIT_FAILURE;
     if (init_sessions()  != 0) return EXIT_FAILURE;
 
-    Hash_Table *rate_limit = ht_create(1024, hash_key);
-    if (!rate_limit) {
-        fprintf(stderr, "Fatal: rate-limit table allocation failed\n");
-        return EXIT_FAILURE;
-    }
+    // Hash_Table *rate_limit = ht_create(1024, hash_key);
+    // if (!rate_limit) {
+    //     fprintf(stderr, "Fatal: rate-limit table allocation failed\n");
+    //     return EXIT_FAILURE;
+    // }
+    g_rate_table = ht_create(1024,hash_key);
 
-    server_loop(rate_limit);
+    server_loop();
 
     tpl_unload_all();
     ht_destroy(g_sessions,  NULL);
     ht_destroy(g_geo_table, NULL);
-    ht_destroy(rate_limit,  NULL);
+    ht_destroy(g_rate_table,  NULL);
     conn_manager_destroy();
     db_close();
     printf("Shutdown complete.\n");

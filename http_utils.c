@@ -70,10 +70,10 @@ bool http_request_parse(const char *raw, size_t raw_len, HttpRequest *req) {
     if (r < 0) return false;
 
     /* Strip query string from path */
-    for (size_t i = 0; i < req->path_len; i++) {
-        if (req->path[i] == '?') { req->path_len = i; break; }
+    const char *q = memchr(req->path, '?', req->path_len);
+    if (q) {
+        req->path_len = (size_t)(q - req->path);
     }
-
     /* Point body past the header block */
     if (raw_len > (size_t)r) {
         req->body     = raw + r;
@@ -97,29 +97,31 @@ const char *http_request_header(const HttpRequest *req,
     return NULL;
 }
 
-void http_request_cookie(const HttpRequest *req,
-                          const char        *name,
-                          char              *dest,
-                          size_t             max) {
+void http_request_cookie(const HttpRequest *req, const char *name, char *dest, size_t max) {
     dest[0] = '\0';
-    size_t      cookie_len = 0;
-    const char *cookie_val = http_request_header(req, "cookie", &cookie_len);
-    if (!cookie_val) return;
+    size_t cookie_len = 0;
+    const char *h = http_request_header(req, "cookie", &cookie_len);
+    if (!h) return;
 
-    size_t      name_len = strlen(name);
-    const char *h        = cookie_val;
-    const char *end      = h + cookie_len;
+    size_t name_len = strlen(name);
+    const char *end = h + cookie_len;
 
     while (h < end) {
-        while (h < end && (*h == ' ' || *h == ';')) h++;
-        if (h >= end) break;
-        if ((size_t)(end - h) > name_len
-            && memcmp(h, name, name_len) == 0
-            && h[name_len] == '=') {
+        // Cerca la prossima occorrenza del nome del cookie nel buffer rimanente
+        h = memmem(h, end - h, name, name_len);
+        if (!h) break;
+
+        // Controllo dei confini:
+        // 1. Deve essere preceduto da ';' o ' ' (o essere all'inizio)
+        // 2. Deve essere seguito da '='
+        bool prefix_ok = (h == req->headers[0].value || *(h - 1) == ' ' || *(h - 1) == ';');
+        if (prefix_ok && (h + name_len < end) && h[name_len] == '=') {
             url_decode(h + name_len + 1, dest, max);
             return;
         }
-        while (h < end && *h != ';') h++;
+        
+        // Se non era quello giusto, avanza di un byte e ricomincia la ricerca veloce
+        h++;
     }
 }
 
@@ -141,53 +143,60 @@ bool http_request_keep_alive(const HttpRequest *req) {
 
 /* ── Response rendering ──────────────────────────────────────────────── */
 
+static inline bool append_to_buffer(char *out, size_t out_max, size_t *pos, const char *fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+    
+    // Calcola lo spazio rimanente
+    size_t remaining = out_max - *pos;
+    int written = vsnprintf(out + *pos, remaining, fmt, ap);
+    
+    va_end(ap);
+
+    // Errore di scrittura o buffer insufficiente (vsnprintf restituisce i byte necessari)
+    if (written < 0 || (size_t)written >= remaining) {
+        return false;
+    }
+
+    *pos += (size_t)written;
+    return true;
+}
+
 int http_response_render(const HttpResponse *resp, bool keep_alive,
                           char *out, size_t out_max) {
     const char *ct = infer_content_type(resp->body, resp->content_type);
-
-    /* For redirects (302) we send no body. */
     size_t body_len = (resp->status_code == 302) ? 0 : resp->body_len;
-
-    /*
-     * Build the header block with a monotonically increasing write position
-     * (pos, size_t) instead of an int accumulator.
-     *
-     * The previous code used `int n` and passed `out_max - (size_t)n` to
-     * each successive snprintf.  If n ever approached out_max, the subtraction
-     * would wrap to a huge value (size_t underflow) and snprintf would happily
-     * write past the buffer.  Here we check after every append and return -1
-     * immediately if the buffer is full, keeping pos always valid.
-     */
     size_t pos = 0;
 
-#define HDR_APPEND(...) do {                                            \
-        int _w = snprintf(out + pos, out_max - pos, __VA_ARGS__);       \
-        if (_w < 0 || (size_t)_w >= out_max - pos) return -1;          \
-        pos += (size_t)_w;                                              \
-    } while (0)
+    // 1. Scrittura degli header principali
+    if (!append_to_buffer(out, out_max, &pos, 
+            "HTTP/1.1 %d %s\r\n"
+            "Content-Type: %s\r\n"
+            "Content-Length: %zu\r\n"
+            "Connection: %s\r\n",
+            resp->status_code, http_status_msg(resp->status_code),
+            ct, body_len, keep_alive ? "keep-alive" : "close")) return -1;
 
-    HDR_APPEND("HTTP/1.1 %d %s\r\n"
-               "Content-Type: %s\r\n"
-               "Content-Length: %zu\r\n"
-               "Connection: %s\r\n",
-               resp->status_code, http_status_msg(resp->status_code),
-               ct, body_len,
-               keep_alive ? "keep-alive" : "close");
+    // 2. Header opzionali
+    if (resp->set_cookie[0]) {
+        if (!append_to_buffer(out, out_max, &pos, "Set-Cookie: %s\r\n", resp->set_cookie)) return -1;
+    }
+    
+    if (resp->location[0]) {
+        if (!append_to_buffer(out, out_max, &pos, "Location: %s\r\n", resp->location)) return -1;
+    }
 
-    if (resp->set_cookie[0])
-        HDR_APPEND("Set-Cookie: %s\r\n", resp->set_cookie);
-    if (resp->location[0])
-        HDR_APPEND("Location: %s\r\n", resp->location);
+    // 3. Fine degli header
+    if (!append_to_buffer(out, out_max, &pos, "\r\n")) return -1;
 
-    HDR_APPEND("\r\n");
+    // 4. Copia del corpo
+    if (pos + body_len > out_max) return -1; // Nota: rimosso '=' perché memcpy non mette il \0
+    if (body_len) {
+        memcpy(out + pos, resp->body, body_len);
+        pos += body_len;
+    }
 
-#undef HDR_APPEND
-
-    /* Verify the body fits before copying it. */
-    if (pos + body_len >= out_max) return -1;
-    if (body_len) memcpy(out + pos, resp->body, body_len);
-
-    return (int)(pos + body_len);
+    return (int)pos;
 }
 
 /* ── Body / HTML helpers ─────────────────────────────────────────────── */
