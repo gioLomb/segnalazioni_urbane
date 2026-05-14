@@ -74,6 +74,9 @@ size_t report_get_active_json  (char *buf, size_t max,
 size_t report_get_archived_json(char *buf, size_t max,
                                 uint64_t userId, const char *city, bool isOperator);
 
+/** Admin: restituisce TUTTE le segnalazioni della città (attive + risolte). */
+size_t report_get_all_city_json(char *buf, size_t max, const char *city);
+
 bool report_get_by_id(uint64_t reportId, ActiveReport *out);
 
 int report_count_active(void);

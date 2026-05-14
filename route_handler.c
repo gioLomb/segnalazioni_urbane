@@ -117,9 +117,13 @@ static void route_get_home(const HttpRequest *req, HttpResponse *resp) {
     char esc_user[64], esc_city[64];
     html_escape(u.username, esc_user, sizeof(esc_user));
     html_escape(u.city,     esc_city, sizeof(esc_city));
-    const char *tpl_name = user_is_operator(&u)
-                         ? "templates/operator_map.html"
-                         : "templates/citizen_home.html";
+    const char *tpl_name;
+    if (user_is_admin(&u))
+        tpl_name = "templates/admin_map.html";
+    else if (user_is_operator(&u))
+        tpl_name = "templates/operator_map.html";
+    else
+        tpl_name = "templates/citizen_home.html";
     const Template *tpl = tpl_get(tpl_name);
     if (!tpl) { resp_html_error(resp, 500, "500"); return; }
     TplVar vars[] = { { "USERNAME", esc_user }, { "CITY", esc_city } };
@@ -131,7 +135,7 @@ static void route_get_home(const HttpRequest *req, HttpResponse *resp) {
 static void route_get_submit(const HttpRequest *req, HttpResponse *resp) {
     User u = {0};
     if (!get_session_user(req, &u)) { redirect(resp, "/",     NULL); return; }
-    if (user_is_operator(&u))       { redirect(resp, "/home", NULL); return; }
+    if (user_is_operator(&u) || user_is_admin(&u)) { redirect(resp, "/home", NULL); return; }
     char esc_user[64], esc_city[64];
     html_escape(u.username, esc_user, sizeof(esc_user));
     html_escape(u.city,     esc_city, sizeof(esc_city));
@@ -228,9 +232,21 @@ static void route_post_register(const HttpRequest *req, HttpResponse *resp) {
     if (!geo_lookup(g_geo_table, city, &geo))
         return register_error(resp, "Comune non riconosciuto. Selezionalo dalla lista.");
 
-    UserRole role = (role_str[0] == '1') ? ROLE_OPERATOR : ROLE_CITIZEN;
-    if (user_register(username, password, city, role) != 0)
-        return register_error(resp, "Username già in uso. Scegline un altro.");
+    int role_val = role_str[0] ? atoi(role_str) : 0;
+    UserRole role = (role_val == 2) ? ROLE_ADMIN
+                  : (role_val == 1) ? ROLE_OPERATOR
+                  : ROLE_CITIZEN;
+
+    if (role == ROLE_ADMIN) {
+        int rc = user_register_admin(username, password, city);
+        if (rc == -2)
+            return register_error(resp, "Esiste già un'amministrazione comunale per questa città.");
+        if (rc != 0)
+            return register_error(resp, "Username già in uso. Scegline un altro.");
+    } else {
+        if (user_register(username, password, city, role) != 0)
+            return register_error(resp, "Username già in uso. Scegline un altro.");
+    }
 
     redirect(resp, "/", NULL);
 }
@@ -256,7 +272,7 @@ static void submit_error(HttpResponse *resp, const User *u, const char *msg) {
 static void route_post_submit(const HttpRequest *req, HttpResponse *resp) {
     User u = {0};
     if (!get_session_user(req, &u)) { redirect(resp, "/",     NULL); return; }
-    if (user_is_operator(&u))       { redirect(resp, "/home", NULL); return; }
+    if (user_is_operator(&u) || user_is_admin(&u)) { redirect(resp, "/home", NULL); return; }
 
     char category[CAT_LEN] = {0};
     char desc[DESC_LEN]    = {0};
@@ -359,6 +375,63 @@ static void route_api_report_status(const HttpRequest *req, HttpResponse *resp) 
     resp->status_code = 200;
 }
 
+
+/* Admin: tutte le segnalazioni della città (attive + archiviate) */
+static void route_api_reports_all(const HttpRequest *req, HttpResponse *resp) {
+    User u = {0};
+    if (!get_session_user(req, &u) || !user_is_admin(&u)) {
+        resp_json_error(resp, 403, "forbidden"); return;
+    }
+    resp->body_len    = report_get_all_city_json(resp->body, RESPONSE_BUFFER_SIZE, u.city);
+    resp->status_code = 200;
+}
+
+/* Admin: lista operatori della propria città */
+static void route_api_operators(const HttpRequest *req, HttpResponse *resp) {
+    User u = {0};
+    if (!get_session_user(req, &u) || !user_is_admin(&u)) {
+        resp_json_error(resp, 403, "forbidden"); return;
+    }
+    resp->body_len    = user_get_operators_json(resp->body, RESPONSE_BUFFER_SIZE, u.city);
+    resp->status_code = 200;
+}
+
+/* Admin: assegna una segnalazione a un operatore (status -> IN_PROGRESS) */
+static void route_api_admin_assign(const HttpRequest *req, HttpResponse *resp) {
+    User u = {0};
+    if (!get_session_user(req, &u) || !user_is_admin(&u)) {
+        resp_json_error(resp, 403, "forbidden"); return;
+    }
+
+    char rid_s[24] = {0}, op_s[24] = {0};
+    get_field(req->body, "report_id=",   rid_s, sizeof(rid_s));
+    get_field(req->body, "operator_id=", op_s,  sizeof(op_s));
+
+    if (!rid_s[0] || !op_s[0]) { resp_json_error(resp, 400, "missing params"); return; }
+
+    uint64_t report_id   = (uint64_t)strtoull(rid_s, NULL, 10);
+    uint64_t operator_id = (uint64_t)strtoull(op_s,  NULL, 10);
+
+    ActiveReport r;
+    if (!report_get_by_id(report_id, &r)) { resp_json_error(resp, 404, "not found"); return; }
+    if (strncmp(r.city, u.city, CITY_LEN) != 0) { resp_json_error(resp, 403, "forbidden"); return; }
+
+    User op = {0};
+    if (!user_get_by_id(operator_id, &op) || !user_is_operator(&op)
+            || strncmp(op.city, u.city, CITY_LEN) != 0) {
+        resp_json_error(resp, 400, "invalid operator"); return;
+    }
+
+    int rc = report_assign(report_id, operator_id);
+    if (rc == 0) { resp_json_error(resp, 409, "report already taken"); return; }
+    if (rc < 0)  { resp_json_error(resp, 500, "db error"); return; }
+
+    report_cache_invalidate_city(r.city, r.authorId);
+
+    snprintf(resp->body, RESPONSE_BUFFER_SIZE, "{\"ok\":true}");
+    resp->body_len    = strlen(resp->body);
+    resp->status_code = 200;
+}
 /* ══════════════════════════════════════════════════════════════════════
    SECTION 7 — Static asset handler
    ══════════════════════════════════════════════════════════════════════ */
@@ -389,7 +462,10 @@ static const Route routes[] = {
     { .method = "GET",  .path = "/api/cities",           .handler = route_api_cities         },
     { .method = "GET",  .path = "/api/reports/active",   .handler = route_api_reports_active  },
     { .method = "GET",  .path = "/api/reports/archived", .handler = route_api_reports_archived},
+    { .method = "GET",  .path = "/api/reports/all",      .handler = route_api_reports_all     },
+    { .method = "GET",  .path = "/api/operators",        .handler = route_api_operators       },
     { .method = "POST", .path = "/api/report/status",    .handler = route_api_report_status   },
+    { .method = "POST", .path = "/api/admin/assign",     .handler = route_api_admin_assign    },
     { .method = "GET",  .path = "/static/common.css",    .handler = route_static_css         },
 };
 static const size_t NUM_ROUTES = sizeof(routes) / sizeof(routes[0]);

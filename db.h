@@ -3,7 +3,7 @@
  * @brief High-level wrapper for SQLite3 database operations.
  *
  * This module provides a simplified interface for executing SQL queries
- * and iterating through result sets using a cursor-based approach. 
+ * and iterating through result sets using a cursor-based approach.
  * It supports automated parameter binding using format strings.
  *
  * Format string (fmt) conventions:
@@ -20,6 +20,51 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <sqlite3.h>
+
+/* ── Cursor types ────────────────────────────────────────────────────── */
+
+/**
+ * @brief Opaque structure representing a database result set cursor.
+ */
+typedef struct DbCursor DbCursor;
+
+const char *db_cursor_text  (DbCursor *c, int col);
+int64_t     db_cursor_int64 (DbCursor *c, int col);
+double      db_cursor_double(DbCursor *c, int col);
+
+/* ── Generic cursor getter ───────────────────────────────────────────── */
+
+/**
+ * @brief Type-generic macro to read a column from the current cursor row.
+ *
+ * Dispatches to db_cursor_int64 / db_cursor_double / db_cursor_text
+ * based on the declared type of out_var.
+ *
+ * For enum fields, read into a plain int then cast:
+ *   int tmp; db_cursor_get(c, col, tmp); field = (MyEnum)tmp;
+ *
+ * Supported types:
+ *   int, long, long long, unsigned int, unsigned long, unsigned long long,
+ *   int64_t (= long / long long depending on platform), double,
+ *   const char *, char *.
+ *
+ * Example:
+ *   int64_t id;    db_cursor_get(c, 0, id);
+ *   double  lat;   db_cursor_get(c, 1, lat);
+ *   const char *s; db_cursor_get(c, 2, s);
+ */
+#define db_cursor_get(cursor, col, out_var) _Generic((out_var),         \
+    int:                (out_var) = (int)               db_cursor_int64 (cursor, col), \
+    long:               (out_var) = (long)              db_cursor_int64 (cursor, col), \
+    long long:          (out_var) = (long long)         db_cursor_int64 (cursor, col), \
+    unsigned int:       (out_var) = (unsigned int)      db_cursor_int64 (cursor, col), \
+    unsigned long:      (out_var) = (unsigned long)     db_cursor_int64 (cursor, col), \
+    unsigned long long: (out_var) = (unsigned long long)db_cursor_int64 (cursor, col), \
+    double:             (out_var) =                     db_cursor_double(cursor, col), \
+    const char *:       (out_var) =                     db_cursor_text  (cursor, col), \
+    char *:             (out_var) = (char *)            db_cursor_text  (cursor, col), \
+    default:            (void)0                                                         \
+)
 
 /* ── Lifecycle ───────────────────────────────────────────────────────── */
 
@@ -59,13 +104,8 @@ int db_changes(void);
 /* ── Cursor API (SELECT) ─────────────────────────────────────────────── */
 
 /**
- * @brief Opaque structure representing a database result set cursor.
- */
-typedef struct DbCursor DbCursor;
-
-/**
  * @brief Executes a SELECT query and returns a cursor to iterate rows.
- * @pre Database is initialized. sql contains placeholders '?'. 
+ * @pre Database is initialized. sql contains placeholders '?'.
  * @pre fmt matches the number of placeholders and types of trailing arguments.
  * @param sql The SQL statement string.
  * @param fmt Format string for parameters (e.g., "si" for string, int).

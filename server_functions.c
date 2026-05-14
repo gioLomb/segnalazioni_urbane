@@ -421,6 +421,7 @@ static int init_templates(void) {
                        "templates/operator_map.html",
                        "templates/submit.html",
                        "templates/common.css",
+                       "templates/admin_map.html",
                        NULL) != 0) {
         fprintf(stderr, "Fatal: failed to load core templates\n");
         return -1;

@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <stddef.h>
+
 
 #define USERNAME_LEN  32
 #define PWD_HASH_LEN  32   /* 64 hex chars + NUL */
@@ -11,7 +13,8 @@
 
 typedef enum {
     ROLE_CITIZEN  = 0,
-    ROLE_OPERATOR = 1
+    ROLE_OPERATOR = 1,
+    ROLE_ADMIN    = 2   /* Amministrazione comunale — unica per città */
 } UserRole;
 
 /*
@@ -66,5 +69,20 @@ bool user_get_by_id(uint64_t id, User *out);
 
 /** Returns true if u is a municipal operator. */
 bool user_is_operator(const User *u);
+
+/** Returns true if u is a municipal administrator. */
+bool user_is_admin(const User *u);
+
+/**
+ * Registers a new admin. Fails if an admin already exists for that city.
+ * Returns 0 on success, -1 on error, -2 if admin already exists for city.
+ */
+int user_register_admin(const char *username, const char *plainPassword, const char *city);
+
+/**
+ * Serializza in buf (max byte) un array JSON degli operatori della città.
+ * Restituisce il numero di byte scritti.
+ */
+size_t user_get_operators_json(char *buf, size_t max, const char *city);
 
 #endif /* USER_H */

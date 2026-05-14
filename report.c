@@ -62,6 +62,7 @@ static cJSON *report_to_cjson(const ActiveReport *r) {
 
     cJSON_AddNumberToObject(obj, "id",          (double)r->reportId);
     cJSON_AddNumberToObject(obj, "author_id",   (double)r->authorId);
+    cJSON_AddNumberToObject(obj, "assigned_to", (double)r->assignedTo);
     cJSON_AddNumberToObject(obj, "lat",         r->lat);
     cJSON_AddNumberToObject(obj, "lon",         r->lon);
     cJSON_AddStringToObject(obj, "city",        r->city);
@@ -69,6 +70,8 @@ static cJSON *report_to_cjson(const ActiveReport *r) {
     cJSON_AddStringToObject(obj, "description", r->description);
     cJSON_AddNumberToObject(obj, "status",      (double)r->status);
     cJSON_AddNumberToObject(obj, "created_at",  (double)r->createdAt);
+    cJSON_AddNumberToObject(obj, "assigned_at", (double)r->assignedAt);
+    cJSON_AddNumberToObject(obj, "resolved_at", (double)r->resolvedAt);
 
     return obj;
 }
@@ -344,6 +347,15 @@ size_t report_get_archived_json(char *buf, size_t max,
         cache_store(city, cache_uid, isOperator, true, buf, len);
 
     return len;
+}
+
+size_t report_get_all_city_json(char *buf, size_t max, const char *city) {
+    /* No TTL cache for admin — semplicità; i dati cambiano raramente */
+    DbCursor *c = db_cursor_open(
+        "SELECT " SELECT_COLS " FROM reports "
+        "WHERE city = ? ORDER BY created_at DESC;",
+        "s", city);
+    return cursor_to_json_array(c, buf, max);
 }
 
 bool report_get_by_id(uint64_t reportId, ActiveReport *out) {

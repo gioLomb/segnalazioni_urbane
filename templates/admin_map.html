@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dashboard Amministratore - SegnalaCity</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="/static/common.css">
+  <style>
+    #map { height: 460px; border-radius: 10px; margin-bottom: 1.5rem; }
+    .loading { color: #9ca3af; font-style: italic; }
+    .filters {
+      display: flex; flex-wrap: wrap; gap: .75rem;
+      align-items: flex-end; margin-bottom: 1.25rem;
+    }
+    .filters label { font-size:.8rem; font-weight:600; color:#6b7280; display:block; margin-bottom:.2rem; }
+    .filters select, .filters input[type="date"] {
+      padding:.4rem .65rem; border:1px solid #d1d5db; border-radius:7px;
+      font-size:.875rem; background:#fff; cursor:pointer;
+    }
+    .filters .btn-sm { padding:.4rem .9rem; font-size:.85rem; }
+    .map-legend { display:flex; gap:1.2rem; margin-bottom:.75rem; font-size:.82rem; flex-wrap:wrap; }
+    .legend-dot { width:12px; height:12px; border-radius:50%; display:inline-block; margin-right:4px; vertical-align:middle; }
+    .dot-active   { background:#3b82f6; }
+    .dot-progress { background:#f59e0b; }
+    .dot-resolved { background:#10b981; }
+    .modal-backdrop {
+      display:none; position:fixed; inset:0; background:rgba(0,0,0,.45);
+      z-index:1000; align-items:center; justify-content:center;
+    }
+    .modal-backdrop.open { display:flex; }
+    .modal-box {
+      background:#fff; border-radius:14px; padding:2rem;
+      width:min(420px,92vw); box-shadow:0 20px 60px rgba(0,0,0,.25);
+    }
+    .modal-box h3 { margin-bottom:1rem; }
+    .modal-box select { width:100%; margin-bottom:1rem; }
+    .modal-actions { display:flex; gap:.75rem; justify-content:flex-end; }
+  </style>
+</head>
+<body>
+
+  <nav class="navbar">
+    <h1>&#128205; SegnalaCity</h1>
+    <div class="nav-right">
+      <span>&#9962; {{USERNAME}} (Amministratore)</span>
+      <a href="/logout">Esci</a>
+    </div>
+  </nav>
+
+  <div class="page-content">
+
+    <div class="page-header">
+      <h2>&#128202; Dashboard Amministrativa &mdash; {{CITY}}</h2>
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat-card"><div class="val" id="s-active">-</div><div class="lbl">Attive</div></div>
+      <div class="stat-card"><div class="val" id="s-progress">-</div><div class="lbl">In lavorazione</div></div>
+      <div class="stat-card"><div class="val" id="s-resolved">-</div><div class="lbl">Risolte</div></div>
+      <div class="stat-card"><div class="val" id="s-total">-</div><div class="lbl">Totale</div></div>
+    </div>
+
+    <div class="card" style="margin-bottom:1.5rem">
+      <div class="map-legend">
+        <span><span class="legend-dot dot-active"></span>Attiva</span>
+        <span><span class="legend-dot dot-progress"></span>In lavorazione</span>
+        <span><span class="legend-dot dot-resolved"></span>Risolta</span>
+      </div>
+      <div id="map"></div>
+    </div>
+
+    <div class="card">
+      <div class="filters">
+        <div>
+          <label>Categoria</label>
+          <select id="f-category">
+            <option value="">Tutte</option>
+            <option>Buche e asfalto</option>
+            <option>Illuminazione</option>
+            <option>Rifiuti</option>
+            <option>Verde pubblico</option>
+            <option>Vandalismo</option>
+            <option>Sicurezza</option>
+            <option>Altro</option>
+          </select>
+        </div>
+        <div>
+          <label>Stato</label>
+          <select id="f-status">
+            <option value="">Tutti</option>
+            <option value="0">Attivo</option>
+            <option value="1">In lavorazione</option>
+            <option value="2">Risolto</option>
+          </select>
+        </div>
+        <div>
+          <label>Dal</label>
+          <input type="date" id="f-date-from">
+        </div>
+        <div>
+          <label>Al</label>
+          <input type="date" id="f-date-to">
+        </div>
+        <div>
+          <button class="btn btn-primary btn-sm" onclick="applyFilters()">Filtra</button>
+          <button class="btn btn-sm" style="margin-left:.4rem" onclick="resetFilters()">Reset</button>
+        </div>
+      </div>
+
+      <h3 style="margin-bottom:1rem">&#128203; Tutte le segnalazioni &mdash; {{CITY}}</h3>
+      <div id="reports-table"><p class="loading">Caricamento...</p></div>
+    </div>
+
+  </div>
+
+  <!-- Modal assegnazione -->
+  <div class="modal-backdrop" id="assign-modal">
+    <div class="modal-box">
+      <h3>&#128100; Assegna operatore</h3>
+      <p id="modal-report-info" style="margin-bottom:1rem;font-size:.9rem;color:#6b7280"></p>
+      <label style="font-size:.85rem;font-weight:600;color:#374151;display:block;margin-bottom:.4rem">Operatore</label>
+      <select id="operator-select">
+        <option value="">-- Seleziona operatore --</option>
+      </select>
+      <div class="modal-actions">
+        <button class="btn" onclick="closeModal()">Annulla</button>
+        <button class="btn btn-primary" onclick="confirmAssign()">Assegna</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    var STATUS       = ['Attivo','In lavorazione','Risolto'];
+    var STATUS_CLASS = ['badge-0','badge-1','badge-2'];
+    var MARKER_COLOR = ['#3b82f6','#f59e0b','#10b981'];
+
+    var allReports  = [];
+    var operators   = [];
+    var markers     = [];
+    var assigningId = null;
+
+    function esc(s) {
+      return String(s)
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    }
+
+    /* ── Mappa ─────────────────────────────────────────────── */
+    var map = L.map('map').setView([41.9,12.5],10);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+      attribution:'© OpenStreetMap contributors'
+    }).addTo(map);
+
+    function makeIcon(color) {
+      var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="34" viewBox="0 0 24 36">'
+        +'<path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 24 12 24s12-15 12-24C24 5.4 18.6 0 12 0z" fill="'+color+'"/>'
+        +'<circle cx="12" cy="12" r="5" fill="#fff"/></svg>';
+      return L.divIcon({html:svg,className:'',iconSize:[22,34],iconAnchor:[11,34],popupAnchor:[0,-34]});
+    }
+
+    function clearMarkers() {
+      markers.forEach(function(m){ map.removeLayer(m); });
+      markers = [];
+    }
+
+    function drawMarkers(reports) {
+      clearMarkers();
+      var bounds = [];
+      reports.forEach(function(r) {
+        if (!r.lat && !r.lon) return;
+        var mk = L.marker([r.lat,r.lon],{icon:makeIcon(MARKER_COLOR[r.status])}).addTo(map);
+        var dc = new Date(r.created_at*1000).toLocaleDateString('it-IT');
+        var popup = '<b>#'+r.id+' — '+esc(r.category)+'</b><br>'
+          +esc(r.description)+'<br><small>'+STATUS[r.status]+' · Creata: '+dc+'</small>';
+        if (r.status === 2 && r.resolved_at)
+          popup += '<br><small>Risolta: '+new Date(r.resolved_at*1000).toLocaleDateString('it-IT')+'</small>';
+        mk.bindPopup(popup);
+        markers.push(mk);
+        bounds.push([r.lat,r.lon]);
+      });
+      if (bounds.length > 1) {
+        try { map.fitBounds(bounds,{padding:[30,30]}); } catch(e){}
+      }
+    }
+
+    /* ── Filtri ────────────────────────────────────────────── */
+    function getFiltered() {
+      var cat      = document.getElementById('f-category').value;
+      var status   = document.getElementById('f-status').value;
+      var dateFrom = document.getElementById('f-date-from').value;
+      var dateTo   = document.getElementById('f-date-to').value;
+      var fromTs   = dateFrom ? new Date(dateFrom).getTime()/1000 : null;
+      var toTs     = dateTo   ? new Date(dateTo).getTime()/1000+86399 : null;
+      return allReports.filter(function(r) {
+        if (cat    && r.category !== cat)                  return false;
+        if (status !== '' && r.status !== parseInt(status)) return false;
+        if (fromTs && r.created_at < fromTs)               return false;
+        if (toTs   && r.created_at > toTs)                 return false;
+        return true;
+      });
+    }
+
+    function applyFilters() { render(getFiltered()); }
+    function resetFilters() {
+      document.getElementById('f-category').value  = '';
+      document.getElementById('f-status').value    = '';
+      document.getElementById('f-date-from').value = '';
+      document.getElementById('f-date-to').value   = '';
+      render(allReports);
+    }
+
+    /* ── Render ────────────────────────────────────────────── */
+    function render(reports) {
+      drawMarkers(reports);
+      var active=0, progress=0, resolved=0;
+      var c = document.getElementById('reports-table');
+
+      if (!reports || !reports.length) {
+        c.innerHTML = '<p class="loading">Nessuna segnalazione trovata.</p>';
+        document.getElementById('s-active').textContent   = 0;
+        document.getElementById('s-progress').textContent = 0;
+        document.getElementById('s-resolved').textContent = 0;
+        document.getElementById('s-total').textContent    = 0;
+        return;
+      }
+
+      var h = '<table><thead><tr>'
+        +'<th>ID</th><th>Categoria</th><th>Descrizione</th>'
+        +'<th>Stato</th><th>Creata</th><th>Risolta</th><th>Azioni</th>'
+        +'</tr></thead><tbody>';
+
+      reports.forEach(function(r) {
+        if      (r.status === 0) active++;
+        else if (r.status === 1) progress++;
+        else if (r.status === 2) resolved++;
+
+        var dc = new Date(r.created_at*1000).toLocaleDateString('it-IT');
+        var dr = (r.resolved_at && r.resolved_at > 0)
+               ? new Date(r.resolved_at*1000).toLocaleDateString('it-IT') : '—';
+
+        var acts = '';
+        if (r.status === 0) {
+          acts = '<button class="btn btn-warning btn-sm" '
+               + 'onclick="openAssign('+r.id+',\''+esc(r.category)+'\')">&#128100; Assegna</button>';
+        } else if (r.status === 1) {
+          acts = '<span style="font-size:.8rem;color:#6b7280">Op. #'+r.assigned_to+'</span>';
+        } else {
+          acts = '<span style="font-size:.8rem;color:#10b981">&#10003; Completato</span>';
+        }
+
+        h += '<tr>'
+          +'<td>#'+r.id+'</td>'
+          +'<td>'+esc(r.category)+'</td>'
+          +'<td>'+esc(r.description)+'</td>'
+          +'<td><span class="badge '+STATUS_CLASS[r.status]+'">'+STATUS[r.status]+'</span></td>'
+          +'<td>'+dc+'</td>'
+          +'<td>'+dr+'</td>'
+          +'<td>'+acts+'</td>'
+          +'</tr>';
+      });
+
+      h += '</tbody></table>';
+      c.innerHTML = h;
+      document.getElementById('s-active').textContent   = active;
+      document.getElementById('s-progress').textContent = progress;
+      document.getElementById('s-resolved').textContent = resolved;
+      document.getElementById('s-total').textContent    = reports.length;
+    }
+
+    /* ── Modal ─────────────────────────────────────────────── */
+    function openAssign(reportId, category) {
+      assigningId = reportId;
+      document.getElementById('modal-report-info').textContent =
+        'Segnalazione #'+reportId+' — '+category;
+      var sel = document.getElementById('operator-select');
+      sel.innerHTML = '<option value="">-- Seleziona operatore --</option>';
+      operators.forEach(function(op) {
+        var o = document.createElement('option');
+        o.value = op.id;
+        o.textContent = op.username;
+        sel.appendChild(o);
+      });
+      document.getElementById('assign-modal').classList.add('open');
+    }
+
+    function closeModal() {
+      document.getElementById('assign-modal').classList.remove('open');
+      assigningId = null;
+    }
+
+    function confirmAssign() {
+      var opId = document.getElementById('operator-select').value;
+      if (!opId) { alert('Seleziona un operatore.'); return; }
+      fetch('/api/admin/assign', {
+        method:'POST',
+        headers:{'Content-Type':'application/x-www-form-urlencoded'},
+        body:'report_id='+assigningId+'&operator_id='+opId
+      })
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        closeModal();
+        if (d.ok) loadData();
+        else alert('Errore: '+(d.error||'sconosciuto'));
+      })
+      .catch(function(){ alert('Errore di rete.'); });
+    }
+
+    document.getElementById('assign-modal').addEventListener('click', function(e){
+      if (e.target === this) closeModal();
+    });
+
+    /* ── Avvio ─────────────────────────────────────────────── */
+    function loadOperators() {
+      return fetch('/api/operators')
+        .then(function(r){ return r.json(); })
+        .then(function(d){ operators = d; });
+    }
+
+    function loadData() {
+      fetch('/api/reports/all')
+        .then(function(r){ return r.json(); })
+        .then(function(d){
+          allReports = d;
+          render(getFiltered());
+        })
+        .catch(function(){
+          document.getElementById('reports-table').innerHTML =
+            '<p class="loading">Errore di caricamento.</p>';
+        });
+    }
+
+    loadOperators();
+    loadData();
+    setInterval(loadData, 30000);
+  </script>
+
+</body>
+</html>

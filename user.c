@@ -163,3 +163,49 @@ bool user_get_by_id(uint64_t id, User *out) {
 bool user_is_operator(const User *u) {
     return u && u->role == ROLE_OPERATOR;
 }
+
+bool user_is_admin(const User *u) {
+    return u && u->role == ROLE_ADMIN;
+}
+
+int user_register_admin(const char *username, const char *plainPassword, const char *city) {
+    /* Check uniqueness: only one admin per city */
+    DbCursor *c = db_cursor_open(
+        "SELECT id FROM users WHERE role = 2 AND city = ? LIMIT 1;",
+        "s", city);
+    bool exists = db_cursor_next(c);
+    db_cursor_close(c);
+    if (exists) return -2;  /* -2 = admin già presente per questa città */
+
+    return user_register(username, plainPassword, city, ROLE_ADMIN);
+}
+size_t user_get_operators_json(char *buf, size_t max, const char *city) {
+    DbCursor *c = db_cursor_open(
+        "SELECT id, username FROM users WHERE role = 1 AND city = ? ORDER BY username;",
+        "s", city);
+
+    char  *p   = buf;
+    char  *end = buf + max - 2;   /* lascia spazio per ']' e '\0' */
+    bool   first = true;
+    *p++ = '[';
+
+    while (db_cursor_next(c) && p < end) {
+        int64_t     uid  = db_cursor_int64(c, 0);
+        const char *name = db_cursor_text(c, 1);
+        char tmp[192];
+        int  n = snprintf(tmp, sizeof(tmp),
+                          "%s{\"id\":%lld,\"username\":\"%s\"}",
+                          first ? "" : ",",
+                          (long long)uid,
+                          name ? name : "");
+        if (p + n >= end) break;
+        memcpy(p, tmp, (size_t)n);
+        p   += n;
+        first = false;
+    }
+
+    db_cursor_close(c);
+    *p++ = ']';
+    *p   = '\0';
+    return (size_t)(p - buf);
+}

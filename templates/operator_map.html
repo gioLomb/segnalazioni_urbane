@@ -7,10 +7,18 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <link rel="stylesheet" href="/static/common.css">
   <style>
- 
-
     #map { height: 420px; border-radius: 10px; margin-bottom: 1.5rem; }
     .loading { color: #9ca3af; font-style: italic; }
+    .filters {
+      display:flex; flex-wrap:wrap; gap:.75rem;
+      align-items:flex-end; margin-bottom:1.25rem;
+    }
+    .filters label { font-size:.8rem; font-weight:600; color:#6b7280; display:block; margin-bottom:.2rem; }
+    .filters select, .filters input[type="date"] {
+      padding:.4rem .65rem; border:1px solid #d1d5db; border-radius:7px;
+      font-size:.875rem; background:#fff; cursor:pointer;
+    }
+    .filters .btn-sm { padding:.4rem .9rem; font-size:.85rem; }
   </style>
 </head>
 <body>
@@ -26,115 +34,184 @@
   <div class="page-content">
 
     <div class="page-header">
-      <h2>&#128204; Segnalazioni - {{CITY}}</h2>
+      <h2>&#128204; Segnalazioni — {{CITY}}</h2>
     </div>
 
     <div class="stat-grid">
-      <div class="stat-card">
-        <div class="val" id="s-active">-</div>
-        <div class="lbl">Segnalazioni attive</div>
-      </div>
-      <div class="stat-card">
-        <div class="val" id="s-progress">-</div>
-        <div class="lbl">In lavorazione</div>
-      </div>
-      <!-- <div class="stat-card">
-        <div class="val" id="s-uptime">-</div>
-        <div class="lbl">Uptime server (s)</div>
-      </div> -->
+      <div class="stat-card"><div class="val" id="s-active">-</div><div class="lbl">Segnalazioni attive</div></div>
+      <div class="stat-card"><div class="val" id="s-progress">-</div><div class="lbl">In lavorazione</div></div>
     </div>
 
     <div class="card" style="margin-bottom:1.5rem">
       <div id="map"></div>
     </div>
 
-    <div class="card">
-      <h3 style="margin-bottom:1rem">Segnalazioni attive - {{CITY}}</h3>
+    <!-- Segnalazioni attive -->
+    <div class="card" style="margin-bottom:1.5rem">
+      <div class="filters">
+        <div>
+          <label>Categoria</label>
+          <select id="f-category">
+            <option value="">Tutte</option>
+            <option>Buche e asfalto</option>
+            <option>Illuminazione</option>
+            <option>Rifiuti</option>
+            <option>Verde pubblico</option>
+            <option>Vandalismo</option>
+            <option>Sicurezza</option>
+            <option>Altro</option>
+          </select>
+        </div>
+        <div>
+          <label>Stato</label>
+          <select id="f-status">
+            <option value="">Tutti</option>
+            <option value="0">Attivo</option>
+            <option value="1">In lavorazione</option>
+          </select>
+        </div>
+        <div>
+          <label>Dal</label>
+          <input type="date" id="f-date-from">
+        </div>
+        <div>
+          <label>Al</label>
+          <input type="date" id="f-date-to">
+        </div>
+        <div>
+          <button class="btn btn-primary btn-sm" onclick="applyFilters()">Filtra</button>
+          <button class="btn btn-sm" style="margin-left:.4rem" onclick="resetFilters()">Reset</button>
+        </div>
+      </div>
+      <h3 style="margin-bottom:1rem">Segnalazioni attive — {{CITY}}</h3>
       <div id="reports-table"><p class="loading">Caricamento...</p></div>
+    </div>
+
+    <!-- Segnalazioni archiviate -->
+    <div class="card">
+      <h3 style="margin-bottom:1rem">&#128190; Archiviate — {{CITY}}</h3>
+      <div id="archived-table"><p class="loading">Caricamento...</p></div>
     </div>
 
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    var STATUS       = ['Attivo', 'In lavorazione', 'Risolto'];
-    var STATUS_CLASS = ['badge-0', 'badge-1', 'badge-2'];
+    var STATUS       = ['Attivo','In lavorazione','Risolto'];
+    var STATUS_CLASS = ['badge-0','badge-1','badge-2'];
+
+    var allActive = [];
+    var markers   = [];
 
     function esc(s) {
       return String(s)
-        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
     }
 
-    var map = L.map('map').setView([41.9, 12.5], 6);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors'
+    /* ── Mappa ─────────────────────────────────────────────── */
+    var map = L.map('map').setView([41.9,12.5],10);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+      attribution:'© OpenStreetMap contributors'
     }).addTo(map);
-    var markers = [];
 
     function clearMarkers() {
-      markers.forEach(function(m) { map.removeLayer(m); });
+      markers.forEach(function(m){ map.removeLayer(m); });
       markers = [];
     }
 
-    function updateStatus(reportId, newStatus) {
-      fetch('/api/report/status', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: 'report_id=' + reportId + '&status=' + newStatus
-      })
-      .then(function(r) { return r.json(); })
-      .then(function(d) {
-        if (d.ok) loadReports();
-        else      alert('Errore: ' + (d.error || 'sconosciuto'));
-      })
-      .catch(function() { alert('Errore di rete.'); });
+    function drawMarkers(reports) {
+      clearMarkers();
+      var bounds = [];
+      reports.forEach(function(r) {
+        if (!r.lat && !r.lon) return;
+        var mk = L.marker([r.lat,r.lon]).addTo(map);
+        mk.bindPopup('<b>#'+r.id+' — '+esc(r.category)+'</b><br>'+esc(r.description));
+        markers.push(mk);
+        bounds.push([r.lat,r.lon]);
+      });
+      if (bounds.length > 1) {
+        try { map.fitBounds(bounds,{padding:[30,30]}); } catch(e){}
+      }
     }
 
-    function renderReports(reports) {
-      clearMarkers();
-      var activeCount = 0, progressCount = 0;
+    /* ── Filtri ────────────────────────────────────────────── */
+    function getFiltered() {
+      var cat      = document.getElementById('f-category').value;
+      var status   = document.getElementById('f-status').value;
+      var dateFrom = document.getElementById('f-date-from').value;
+      var dateTo   = document.getElementById('f-date-to').value;
+      var fromTs   = dateFrom ? new Date(dateFrom).getTime()/1000 : null;
+      var toTs     = dateTo   ? new Date(dateTo).getTime()/1000+86399 : null;
+      return allActive.filter(function(r) {
+        if (cat    && r.category !== cat)                  return false;
+        if (status !== '' && r.status !== parseInt(status)) return false;
+        if (fromTs && r.created_at < fromTs)               return false;
+        if (toTs   && r.created_at > toTs)                 return false;
+        return true;
+      });
+    }
+
+    function applyFilters() { renderActive(getFiltered()); }
+    function resetFilters() {
+      document.getElementById('f-category').value  = '';
+      document.getElementById('f-status').value    = '';
+      document.getElementById('f-date-from').value = '';
+      document.getElementById('f-date-to').value   = '';
+      renderActive(allActive);
+    }
+
+    /* ── Aggiorna stato (solo operatore assegnato può risolvere) */
+    function updateStatus(reportId, newStatus) {
+      fetch('/api/report/status', {
+        method:'POST',
+        headers:{'Content-Type':'application/x-www-form-urlencoded'},
+        body:'report_id='+reportId+'&status='+newStatus
+      })
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        if (d.ok) loadActive();
+        else alert('Errore: '+(d.error||'sconosciuto'));
+      })
+      .catch(function(){ alert('Errore di rete.'); });
+    }
+
+    /* ── Render attive ─────────────────────────────────────── */
+    function renderActive(reports) {
+      drawMarkers(reports);
+      var activeCount=0, progressCount=0;
       var c = document.getElementById('reports-table');
 
       if (!reports || !reports.length) {
         c.innerHTML = '<p class="loading">Nessuna segnalazione attiva.</p>';
+        document.getElementById('s-active').textContent   = 0;
+        document.getElementById('s-progress').textContent = 0;
         return;
       }
 
       var h = '<table><thead><tr>'
-        + '<th>ID</th><th>Categoria</th><th>Descrizione</th>'
-        + '<th>Stato</th><th>Data</th><th>Azioni</th>'
-        + '</tr></thead><tbody>';
+        +'<th>ID</th><th>Categoria</th><th>Descrizione</th>'
+        +'<th>Stato</th><th>Data</th><th>Azioni</th>'
+        +'</tr></thead><tbody>';
 
       reports.forEach(function(r) {
-        var d    = new Date(r.created_at * 1000).toLocaleDateString('it-IT');
+        var d    = new Date(r.created_at*1000).toLocaleDateString('it-IT');
         var acts = '';
         if (r.status === 0) {
           activeCount++;
-          acts = '<button class="btn btn-warning btn-sm" '
-               + 'onclick="updateStatus(' + r.id + ',1)">Prendi in carico</button>';
+          acts = '<button class="btn btn-warning btn-sm" onclick="updateStatus('+r.id+',1)">Prendi in carico</button>';
         } else if (r.status === 1) {
           progressCount++;
-          acts = '<button class="btn btn-success btn-sm" '
-               + 'onclick="updateStatus(' + r.id + ',2)">Segna risolto</button>';
+          acts = '<button class="btn btn-success btn-sm" onclick="updateStatus('+r.id+',2)">Segna risolto</button>';
         }
-
         h += '<tr>'
-          + '<td>#' + r.id + '</td>'
-          + '<td>' + esc(r.category)    + '</td>'
-          + '<td>' + esc(r.description) + '</td>'
-          + '<td><span class="badge ' + STATUS_CLASS[r.status] + '">'
-          +   STATUS[r.status] + '</span></td>'
-          + '<td>' + d + '</td>'
-          + '<td>' + acts + '</td>'
-          + '</tr>';
-
-        if (r.lat !== 0 || r.lon !== 0) {
-          var mk = L.marker([r.lat, r.lon]).addTo(map);
-          mk.bindPopup('<b>#' + r.id + ' - ' + esc(r.category) + '</b><br>'
-                       + esc(r.description));
-          markers.push(mk);
-        }
+          +'<td>#'+r.id+'</td>'
+          +'<td>'+esc(r.category)+'</td>'
+          +'<td>'+esc(r.description)+'</td>'
+          +'<td><span class="badge '+STATUS_CLASS[r.status]+'">'+STATUS[r.status]+'</span></td>'
+          +'<td>'+d+'</td>'
+          +'<td>'+acts+'</td>'
+          +'</tr>';
       });
 
       h += '</tbody></table>';
@@ -143,20 +220,60 @@
       document.getElementById('s-progress').textContent = progressCount;
     }
 
-    function loadReports() {
+    /* ── Render archiviate ─────────────────────────────────── */
+    function renderArchived(reports) {
+      var c = document.getElementById('archived-table');
+      if (!reports || !reports.length) {
+        c.innerHTML = '<p class="loading">Nessuna segnalazione archiviata.</p>';
+        return;
+      }
+      var h = '<table><thead><tr>'
+        +'<th>ID</th><th>Categoria</th><th>Descrizione</th>'
+        +'<th>Creata</th><th>Risolta</th>'
+        +'</tr></thead><tbody>';
+      reports.forEach(function(r) {
+        var dc = new Date(r.created_at*1000).toLocaleDateString('it-IT');
+        var dr = (r.resolved_at && r.resolved_at > 0)
+               ? new Date(r.resolved_at*1000).toLocaleDateString('it-IT') : '—';
+        h += '<tr>'
+          +'<td>#'+r.id+'</td>'
+          +'<td>'+esc(r.category)+'</td>'
+          +'<td>'+esc(r.description)+'</td>'
+          +'<td>'+dc+'</td>'
+          +'<td>'+dr+'</td>'
+          +'</tr>';
+      });
+      h += '</tbody></table>';
+      c.innerHTML = h;
+    }
+
+    /* ── Caricamento ───────────────────────────────────────── */
+    function loadActive() {
       fetch('/api/reports/active')
-        .then(function(r) { return r.json(); })
-        .then(renderReports)
-        .catch(function() {
+        .then(function(r){ return r.json(); })
+        .then(function(d){
+          allActive = d;
+          renderActive(getFiltered());
+        })
+        .catch(function(){
           document.getElementById('reports-table').innerHTML =
             '<p class="loading">Errore di caricamento.</p>';
         });
     }
 
+    function loadArchived() {
+      fetch('/api/reports/archived')
+        .then(function(r){ return r.json(); })
+        .then(renderArchived)
+        .catch(function(){
+          document.getElementById('archived-table').innerHTML =
+            '<p class="loading">Errore di caricamento.</p>';
+        });
+    }
 
-
-    loadReports();
-    setInterval(loadReports, 30000);
+    loadActive();
+    loadArchived();
+    setInterval(loadActive, 30000);
   </script>
 
 </body>
