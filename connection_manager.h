@@ -21,7 +21,7 @@
  *
  * This structure tracks the state, network handles, and buffers for an active session.
  */
-typedef struct ClientCtx {
+typedef struct __attribute__((aligned(64))) ClientCtx {
     uv_tcp_t          handle;         /**< libuv TCP handle */
     uv_timer_t        timer;          /**< Inactivity timeout timer */
     unsigned int closing        : 1;        /**< Flag indicating the connection is being shut down */

@@ -6,7 +6,7 @@
 
 // Each Chunk is a contiguous slab of memory divided into fixed-size blocks.
 // Chunks form a doubly-linked list to allow O(1) unlinking when a chunk is empty.
-typedef struct Chunk {
+typedef struct __attribute__((aligned(64))) Chunk {
     struct Chunk *next;         // Next chunk in the pool
     struct Chunk *prev;         // Previous chunk in the pool
     void         *local_free;   // Head of this chunk's singly-linked free-list
