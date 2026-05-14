@@ -1,6 +1,7 @@
 #ifndef USER_H
 #define USER_H
 
+#include <cjson/cJSON.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>

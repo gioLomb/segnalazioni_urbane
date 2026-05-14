@@ -184,28 +184,32 @@ size_t user_get_operators_json(char *buf, size_t max, const char *city) {
         "SELECT id, username FROM users WHERE role = 1 AND city = ? ORDER BY username;",
         "s", city);
 
-    char  *p   = buf;
-    char  *end = buf + max - 2;   /* lascia spazio per ']' e '\0' */
-    bool   first = true;
-    *p++ = '[';
-
-    while (db_cursor_next(c) && p < end) {
-        int64_t     uid  = db_cursor_int64(c, 0);
-        const char *name = db_cursor_text(c, 1);
-        char tmp[192];
-        int  n = snprintf(tmp, sizeof(tmp),
-                          "%s{\"id\":%lld,\"username\":\"%s\"}",
-                          first ? "" : ",",
-                          (long long)uid,
-                          name ? name : "");
-        if (p + n >= end) break;
-        memcpy(p, tmp, (size_t)n);
-        p   += n;
-        first = false;
+    if (!c) {
+        if (max > 2) { strcpy(buf, "[]"); return 2; }
+        return 0;
     }
 
+    // 1. Creiamo l'oggetto radice (un array)
+    cJSON *root = cJSON_CreateArray();
+
+    while (db_cursor_next(c)) {
+        // 2. Creiamo un oggetto per ogni riga
+        cJSON *item = cJSON_CreateObject();
+        
+        // Aggiungiamo i campi (cJSON gestisce i tipi correttamente)
+        cJSON_AddNumberToObject(item, "id", (double)db_cursor_int64(c, 0));
+        cJSON_AddStringToObject(item, "username", db_cursor_text(c, 1));
+        
+        // Lo aggiungiamo all'array
+        cJSON_AddItemToArray(root, item);
+    }
     db_cursor_close(c);
-    *p++ = ']';
-    *p   = '\0';
-    return (size_t)(p - buf);
+
+    // 3. Renderizziamo il JSON direttamente nel buffer fornito
+    // cJSON_PrintPreallocated è l'ideale se hai già un buffer e vuoi evitare allocazioni extra
+    bool success = cJSON_PrintPreallocated(root, buf, (int)max, 0); // 0 = unformatted (senza spazi/invio)
+    
+    cJSON_Delete(root); // Libera la memoria della struttura cJSON
+
+    return success ? strlen(buf) : 0;
 }
