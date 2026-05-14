@@ -38,15 +38,16 @@
     </div>
 
     <div class="stat-grid">
-      <div class="stat-card"><div class="val" id="s-active">-</div><div class="lbl">Segnalazioni attive</div></div>
-      <div class="stat-card"><div class="val" id="s-progress">-</div><div class="lbl">In lavorazione</div></div>
+      <div class="stat-card">
+        <div class="val" id="s-progress">-</div>
+        <div class="lbl">Assegnate a me</div>
+      </div>
     </div>
 
     <div class="card" style="margin-bottom:1.5rem">
       <div id="map"></div>
     </div>
 
-    <!-- Segnalazioni attive -->
     <div class="card" style="margin-bottom:1.5rem">
       <div class="filters">
         <div>
@@ -63,14 +64,6 @@
           </select>
         </div>
         <div>
-          <label>Stato</label>
-          <select id="f-status">
-            <option value="">Tutti</option>
-            <option value="0">Attivo</option>
-            <option value="1">In lavorazione</option>
-          </select>
-        </div>
-        <div>
           <label>Dal</label>
           <input type="date" id="f-date-from">
         </div>
@@ -83,11 +76,10 @@
           <button class="btn btn-sm" style="margin-left:.4rem" onclick="resetFilters()">Reset</button>
         </div>
       </div>
-      <h3 style="margin-bottom:1rem">Segnalazioni attive — {{CITY}}</h3>
+      <h3 style="margin-bottom:1rem">In lavorazione — {{CITY}}</h3>
       <div id="reports-table"><p class="loading">Caricamento...</p></div>
     </div>
 
-    <!-- Segnalazioni archiviate -->
     <div class="card">
       <h3 style="margin-bottom:1rem">&#128190; Archiviate — {{CITY}}</h3>
       <div id="archived-table"><p class="loading">Caricamento...</p></div>
@@ -97,7 +89,6 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    var STATUS       = ['Attivo','In lavorazione','Risolto'];
     var STATUS_CLASS = ['badge-0','badge-1','badge-2'];
 
     var allActive = [];
@@ -138,16 +129,14 @@
     /* ── Filtri ────────────────────────────────────────────── */
     function getFiltered() {
       var cat      = document.getElementById('f-category').value;
-      var status   = document.getElementById('f-status').value;
       var dateFrom = document.getElementById('f-date-from').value;
       var dateTo   = document.getElementById('f-date-to').value;
       var fromTs   = dateFrom ? new Date(dateFrom).getTime()/1000 : null;
       var toTs     = dateTo   ? new Date(dateTo).getTime()/1000+86399 : null;
       return allActive.filter(function(r) {
-        if (cat    && r.category !== cat)                  return false;
-        if (status !== '' && r.status !== parseInt(status)) return false;
-        if (fromTs && r.created_at < fromTs)               return false;
-        if (toTs   && r.created_at > toTs)                 return false;
+        if (cat    && r.category !== cat)    return false;
+        if (fromTs && r.created_at < fromTs) return false;
+        if (toTs   && r.created_at > toTs)   return false;
         return true;
       });
     }
@@ -155,13 +144,12 @@
     function applyFilters() { renderActive(getFiltered()); }
     function resetFilters() {
       document.getElementById('f-category').value  = '';
-      document.getElementById('f-status').value    = '';
       document.getElementById('f-date-from').value = '';
       document.getElementById('f-date-to').value   = '';
       renderActive(allActive);
     }
 
-    /* ── Aggiorna stato (solo operatore assegnato può risolvere) */
+    /* ── Aggiorna stato ────────────────────────────────────── */
     function updateStatus(reportId, newStatus) {
       fetch('/api/report/status', {
         method:'POST',
@@ -170,45 +158,43 @@
       })
       .then(function(r){ return r.json(); })
       .then(function(d){
-        if (d.ok) loadActive();
+        if (d.ok) { loadActive(); loadArchived(); }
         else alert('Errore: '+(d.error||'sconosciuto'));
       })
       .catch(function(){ alert('Errore di rete.'); });
     }
 
-    /* ── Render attive ─────────────────────────────────────── */
+    /* ── Render in lavorazione ─────────────────────────────── */
     function renderActive(reports) {
       drawMarkers(reports);
-      var activeCount=0, progressCount=0;
       var c = document.getElementById('reports-table');
 
+      document.getElementById('s-progress').textContent = reports ? reports.length : 0;
+
       if (!reports || !reports.length) {
-        c.innerHTML = '<p class="loading">Nessuna segnalazione attiva.</p>';
-        document.getElementById('s-active').textContent   = 0;
-        document.getElementById('s-progress').textContent = 0;
+        c.innerHTML = '<p class="loading">Nessuna segnalazione assegnata.</p>';
         return;
       }
 
       var h = '<table><thead><tr>'
         +'<th>ID</th><th>Categoria</th><th>Descrizione</th>'
-        +'<th>Stato</th><th>Data</th><th>Azioni</th>'
+        +'<th>Data</th><th>Azioni</th>'
         +'</tr></thead><tbody>';
 
       reports.forEach(function(r) {
-        var d    = new Date(r.created_at*1000).toLocaleDateString('it-IT');
-        var acts = '';
-        if (r.status === 0) {
-          activeCount++;
-          acts = '<button class="btn btn-warning btn-sm" onclick="updateStatus('+r.id+',1)">Prendi in carico</button>';
-        } else if (r.status === 1) {
-          progressCount++;
-          acts = '<button class="btn btn-success btn-sm" onclick="updateStatus('+r.id+',2)">Segna risolto</button>';
-        }
+        var d = new Date(r.created_at*1000).toLocaleDateString('it-IT');
+        /*
+         * La query server restituisce solo status=1 (assegnate a questo operatore).
+         * L'assegnazione spetta esclusivamente all'amministratore comunale:
+         * qui l'operatore può solo segnare il lavoro come risolto.
+         */
+        var acts = '<button class="btn btn-success btn-sm" '
+                 + 'onclick="updateStatus('+r.id+',2)">&#10003; Segna risolto</button>';
+
         h += '<tr>'
           +'<td>#'+r.id+'</td>'
           +'<td>'+esc(r.category)+'</td>'
           +'<td>'+esc(r.description)+'</td>'
-          +'<td><span class="badge '+STATUS_CLASS[r.status]+'">'+STATUS[r.status]+'</span></td>'
           +'<td>'+d+'</td>'
           +'<td>'+acts+'</td>'
           +'</tr>';
@@ -216,8 +202,6 @@
 
       h += '</tbody></table>';
       c.innerHTML = h;
-      document.getElementById('s-active').textContent   = activeCount;
-      document.getElementById('s-progress').textContent = progressCount;
     }
 
     /* ── Render archiviate ─────────────────────────────────── */

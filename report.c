@@ -45,13 +45,13 @@ static void cursor_to_report(DbCursor *c, ActiveReport *r) {
     r->assignedTo = (uint64_t)db_cursor_int64 (c, REP_COL_ASSIGNED_TO);
     r->lat        =           db_cursor_double(c, REP_COL_LAT);
     r->lon        =           db_cursor_double(c, REP_COL_LON);
-    strncpy(r->city,        db_cursor_text(c, REP_COL_CITY), CITY_LEN - 1);
-    strncpy(r->category,    db_cursor_text(c, REP_COL_CATEGORY), CAT_LEN  - 1);
+    strncpy(r->city,        db_cursor_text(c, REP_COL_CITY),        CITY_LEN - 1);
+    strncpy(r->category,    db_cursor_text(c, REP_COL_CATEGORY),    CAT_LEN  - 1);
     strncpy(r->description, db_cursor_text(c, REP_COL_DESCRIPTION), DESC_LEN - 1);
-    r->status     = (ReportStatus)db_cursor_int64(c,  REP_COL_STATUS);
-    r->createdAt  = (time_t)      db_cursor_int64(c,  REP_COL_CREATED_AT);
-    r->assignedAt = (time_t)      db_cursor_int64(c,  REP_COL_ASSIGNED_AT);
-    r->resolvedAt = (time_t)      db_cursor_int64(c,  REP_COL_RESOLVED_AT);
+    r->status     = (ReportStatus)db_cursor_int64(c, REP_COL_STATUS);
+    r->createdAt  = (time_t)      db_cursor_int64(c, REP_COL_CREATED_AT);
+    r->assignedAt = (time_t)      db_cursor_int64(c, REP_COL_ASSIGNED_AT);
+    r->resolvedAt = (time_t)      db_cursor_int64(c, REP_COL_RESOLVED_AT);
 }
 
 /* ── JSON builder ────────────────────────────────────────────────────── */
@@ -75,7 +75,6 @@ static cJSON *report_to_cjson(const ActiveReport *r) {
 
     return obj;
 }
-
 
 static size_t cursor_to_json_array(DbCursor *c, char *buf, size_t max) {
     cJSON *array = cJSON_CreateArray();
@@ -101,76 +100,35 @@ static size_t cursor_to_json_array(DbCursor *c, char *buf, size_t max) {
     cJSON_Delete(array);
     return strlen(buf);
 }
-/* ── JSON cache ─────────────────────────────────────────────────────── */
-/*
- * Simple TTL cache for the two most-queried endpoints:
- *   report_get_active_json()   — polled every 30 s by the operator map
- *   report_get_archived_json() — loaded on dashboard open
- *
- * Design
- * ──────
- * Fixed-size array of CacheEntry structs (no heap, no hash table).
- * Each entry is keyed by (city, user_id, is_operator, is_archived).
- * Lookup is O(n) — with at most a handful of active cities this is
- * faster than any hash table in practice.
- *
- * On a cache hit the inline JSON buffer is copied directly into the caller's buffer —
- * caller can free() it unconditionally, matching the behaviour of a fresh
- * query.
- *
- * TTL
- * ───
- * CACHE_TTL_SECONDS controls how stale the data can be.
- * 5 seconds is conservative: an operator refreshing every 30 s will get
- * a live query once every 5 s at worst, cached results the rest of the time.
- * Raise it if your workload allows (e.g. 30 s for archived reports).
- *
- * The server is single-threaded (libuv event loop) so no locking is needed.
- */
+
+/* ── JSON cache ──────────────────────────────────────────────────────── */
 
 #define CACHE_TTL_SECONDS 5
-#define CACHE_MAX_ENTRIES 32   /* enough for ~16 cities × 2 query types */
+#define CACHE_MAX_ENTRIES 32
 
-/*
- * JSON responses for the two most-queried endpoints fit comfortably inside
- * RESPONSE_BUFFER_SIZE bytes.  We store the serialised JSON directly in the
- * cache entry so that neither cache_store() nor cache_find() need to call
- * malloc/strdup — zero heap traffic on a hit.
- *
- * cached_at == 0 signals an empty slot (g_cache is static, zero-initialised).
- */
-#include "http_types.h"   /* pulls in RESPONSE_BUFFER_SIZE */
+#include "http_types.h"
 
 typedef struct {
-    /* Key */
     char     city[CITY_LEN];
-    uint64_t user_id;       /* 0 for operator queries (keyed by city only) */
+    uint64_t user_id;
     bool     is_operator;
     bool     is_archived;
-    /* Value */
-    time_t   cached_at;     /* 0 = empty slot */
-    char     json[RESPONSE_BUFFER_SIZE];   /* inline buffer — no heap */
+    time_t   cached_at;
+    char     json[RESPONSE_BUFFER_SIZE];
 } CacheEntry;
 
 static CacheEntry g_cache[CACHE_MAX_ENTRIES];
 
-/*
- * Returns the index of a matching live entry, or -1 on miss/expiry.
- * An expired entry is cleared (cached_at reset to 0) on lookup.
- */
 static int cache_find(const char *city, uint64_t user_id,
                       bool is_operator, bool is_archived) {
     time_t now = time(NULL);
     for (int i = 0; i < CACHE_MAX_ENTRIES; i++) {
         CacheEntry *e = &g_cache[i];
-        if (!e->cached_at) continue;   /* empty slot */
-
-        /* Evict expired entries on the fly */
+        if (!e->cached_at) continue;
         if (now - e->cached_at > CACHE_TTL_SECONDS) {
             e->cached_at = 0;
             continue;
         }
-
         if (e->is_operator == is_operator
             && e->is_archived == is_archived
             && strncmp(e->city, city, CITY_LEN) == 0
@@ -180,22 +138,14 @@ static int cache_find(const char *city, uint64_t user_id,
     return -1;
 }
 
-/*
- * Writes json (a NUL-terminated string already in buf) into the cache slot.
- * json_len is strlen(json) — passed in to avoid a second strlen().
- * Evicts the oldest entry if all slots are taken.
- * Does NOT take ownership: the caller's buffer is not touched after return.
- */
 static void cache_store(const char *city, uint64_t user_id,
                         bool is_operator, bool is_archived,
                         const char *json, size_t json_len) {
-    /* Silently drop if the serialised JSON is too large for the inline buf. */
     if (json_len >= RESPONSE_BUFFER_SIZE) return;
 
-    /* Find an empty slot; track oldest in parallel for eviction fallback */
-    int    slot        = -1;
-    int    oldest_idx  = 0;
-    time_t oldest_time = g_cache[0].cached_at;   /* initialise to first element */
+    int    slot       = -1;
+    int    oldest_idx = 0;
+    time_t oldest_time = g_cache[0].cached_at;
 
     for (int i = 0; i < CACHE_MAX_ENTRIES; i++) {
         if (!g_cache[i].cached_at) { slot = i; break; }
@@ -205,35 +155,24 @@ static void cache_store(const char *city, uint64_t user_id,
         }
     }
 
-    /* All slots full — evict the oldest */
     if (slot == -1) slot = oldest_idx;
 
-    CacheEntry *e  = &g_cache[slot];
+    CacheEntry *e = &g_cache[slot];
     strncpy(e->city, city, CITY_LEN - 1);
     e->city[CITY_LEN - 1] = '\0';
     e->user_id     = user_id;
     e->is_operator = is_operator;
     e->is_archived = is_archived;
-    memcpy(e->json, json, json_len + 1);   /* include NUL */
+    memcpy(e->json, json, json_len + 1);
     e->cached_at   = time(NULL);
 }
 
-/*
- * Targeted invalidation after a status change on a single report.
- * Only two slots can contain stale data:
- *   1. The operator slot for the city  (user_id=0, is_operator=true)
- *   2. The author's citizen slot       (user_id=authorId, is_operator=false)
- * All other citizen slots are keyed by their own author_id and are
- * unaffected by changes to another user's report.
- */
 void report_cache_invalidate_city(const char *city, uint64_t authorId) {
     for (int i = 0; i < CACHE_MAX_ENTRIES; i++) {
         CacheEntry *e = &g_cache[i];
         if (!e->cached_at) continue;
         if (strncmp(e->city, city, CITY_LEN) != 0) continue;
-
-        if (e->is_operator                       /* operator slot */
-                || e->user_id == authorId)       /* report author slot */
+        if (e->is_operator || e->user_id == authorId)
             e->cached_at = 0;
     }
 }
@@ -281,9 +220,13 @@ int report_resolve(uint64_t reportId, uint64_t operatorId) {
 
 size_t report_get_active_json(char *buf, size_t max,
                               uint64_t userId, const char *city, bool isOperator) {
-    uint64_t cache_uid = isOperator ? 0 : userId;
+    /*
+     * Cache key: sempre userId.
+     * Bug precedente: per gli operatori si usava 0 (condiviso tra tutti
+     * gli operatori della stessa città) — corretto: ora è per-utente.
+     */
+    uint64_t cache_uid = userId;
 
-    /* Cache hit — copy inline buffer straight into the caller's buf */
     int idx = cache_find(city, cache_uid, isOperator, false);
     if (idx >= 0) {
         size_t len = strlen(g_cache[idx].json);
@@ -291,16 +234,16 @@ size_t report_get_active_json(char *buf, size_t max,
             memcpy(buf, g_cache[idx].json, len + 1);
             return len;
         }
-        /* Cached value somehow exceeds caller's buf — treat as miss */
     }
 
-    /* Cache miss: run the query, serialise directly into buf */
     DbCursor *c = isOperator
+        /* Operatore: SOLO le segnalazioni assegnate a lui */
         ? db_cursor_open(
               "SELECT " SELECT_COLS " FROM reports "
-              "WHERE city = ? AND (status = 0 OR (status = 1 AND assigned_to = ?)) "
-              "ORDER BY created_at DESC;",
-              "sl", city, (int64_t)userId)
+              "WHERE status = 1 AND assigned_to = ? "
+              "ORDER BY assigned_at DESC;",
+              "l", (int64_t)userId)
+        /* Cittadino: le sue segnalazioni non ancora risolte */
         : db_cursor_open(
               "SELECT " SELECT_COLS " FROM reports "
               "WHERE author_id = ? AND status < 2 "
@@ -309,7 +252,6 @@ size_t report_get_active_json(char *buf, size_t max,
 
     size_t len = cursor_to_json_array(c, buf, max);
 
-    /* Populate the cache from the buffer we just filled */
     if (len > 0)
         cache_store(city, cache_uid, isOperator, false, buf, len);
 
@@ -318,7 +260,8 @@ size_t report_get_active_json(char *buf, size_t max,
 
 size_t report_get_archived_json(char *buf, size_t max,
                                 uint64_t userId, const char *city, bool isOperator) {
-    uint64_t cache_uid = isOperator ? 0 : userId;
+    /* Cache key per-utente, come per active (stesso bug corretto) */
+    uint64_t cache_uid = userId;
 
     int idx = cache_find(city, cache_uid, isOperator, true);
     if (idx >= 0) {
@@ -332,9 +275,9 @@ size_t report_get_archived_json(char *buf, size_t max,
     DbCursor *c = isOperator
         ? db_cursor_open(
               "SELECT " SELECT_COLS " FROM reports "
-              "WHERE city = ? AND status = 2 "
+              "WHERE assigned_to = ? AND status = 2 "
               "ORDER BY resolved_at DESC;",
-              "s", city)
+              "l", (int64_t)userId)
         : db_cursor_open(
               "SELECT " SELECT_COLS " FROM reports "
               "WHERE author_id = ? AND status = 2 "
@@ -350,7 +293,6 @@ size_t report_get_archived_json(char *buf, size_t max,
 }
 
 size_t report_get_all_city_json(char *buf, size_t max, const char *city) {
-    /* No TTL cache for admin — semplicità; i dati cambiano raramente */
     DbCursor *c = db_cursor_open(
         "SELECT " SELECT_COLS " FROM reports "
         "WHERE city = ? ORDER BY created_at DESC;",
