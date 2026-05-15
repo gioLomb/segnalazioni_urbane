@@ -125,7 +125,7 @@ int geo_load(const char *path, Hash_Table *ht, const char *cities_out) {
     return loaded;
 }
 
-bool geo_lookup(Hash_Table *ht, const char *comune, CityGeo *out) {
+bool geo_lookup(Hash_Table * restrict ht, const char * restrict comune, CityGeo * restrict out) {
     // Perform lookup including the null terminator in the key
     return ht_get(ht, (void *)comune, strlen(comune) + 1, out, sizeof(CityGeo));
 }

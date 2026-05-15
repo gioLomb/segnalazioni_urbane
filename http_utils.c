@@ -13,7 +13,7 @@ static inline int hex_val(char c) {
     return 0;
 }
 
-static void url_decode(const char *src, char *dest, size_t max) {
+static void url_decode(const char * restrict src, char * restrict dest, size_t max) {
     size_t i = 0;
     while (*src && *src != '&' && *src != ' ' && *src != '\r' && *src != '\n'
            && i < max - 1) {
@@ -162,8 +162,8 @@ static inline bool append_to_buffer(char *out, size_t out_max, size_t *pos, cons
     return true;
 }
 
-int http_response_render(const HttpResponse *resp, bool keep_alive,
-                          char *out, size_t out_max) {
+int http_response_render(const HttpResponse * restrict resp, bool keep_alive,
+                          char * restrict out, size_t out_max) {
     const char *ct = infer_content_type(resp->body, resp->content_type);
     size_t body_len = (resp->status_code == 302) ? 0 : resp->body_len;
     size_t pos = 0;
@@ -220,7 +220,7 @@ void get_field(const char *src, const char *param_name, char *dest, size_t max) 
     }
 }
 
-void html_escape(const char *src, char *dest, size_t max) {
+void html_escape(const char * restrict src, char * restrict dest, size_t max) {
     size_t i = 0;
     while (*src && i + 7 < max) {
         switch (*src) {

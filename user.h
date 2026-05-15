@@ -8,7 +8,7 @@
 
 
 #define USERNAME_LEN  32
-#define PWD_HASH_LEN  32   /* 64 hex chars + NUL */
+#define PWD_HASH_LEN  32   
 #define SALT_HEX_LEN  32   /* 32 hex chars + NUL  (16 random bytes → 32 hex) */
 #define CITY_LEN      32
 

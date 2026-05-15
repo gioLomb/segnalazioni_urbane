@@ -67,6 +67,6 @@ void *slab_pool_alloc (SlabPool *pool);
  * @param pool Pointer to the SlabPool.
  * @param ptr Pointer to the block to free.
  */
-void slab_pool_free (SlabPool *pool, void *ptr);
+void slab_pool_free (SlabPool * restrict pool, void * restrict ptr);
 
 #endif /* SLAB_ALLOCATOR_H */

@@ -107,7 +107,7 @@ void *slab_pool_alloc(SlabPool *pool) {
     return user_ptr;
 }
 
-void slab_pool_free(SlabPool *pool, void *ptr) {
+void slab_pool_free(SlabPool * restrict pool, void * restrict ptr) {
     if (!ptr) return;
 
     // The hidden header (Chunk*) is stored just before the user pointer

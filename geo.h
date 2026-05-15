@@ -42,7 +42,7 @@ int geo_load(const char *path, Hash_Table *ht, const char *cities_out);
  * @param out Pointer to a CityGeo structure where results will be stored.
  * @return true if the city was found, false otherwise.
  */
-bool geo_lookup(Hash_Table *ht, const char *comune, CityGeo *out);
+bool geo_lookup(Hash_Table * restrict ht, const char * restrict comune, CityGeo * restrict out);
 
 /**
  * @brief Performs a fast bounding box check for a coordinate.

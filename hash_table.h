@@ -83,8 +83,8 @@ void ht_snapshot(Hash_Table *table, const char *path);
  * @param valueSize Size of the value.
  * @return 1 on success, 0 on failure
  */
-int ht_set(Hash_Table *table, void *key, size_t keySize,
-           void *value, size_t valueSize);
+int ht_set(Hash_Table * restrict table, void * restrict key, size_t keySize,
+           void * restrict value, size_t valueSize);
 
 /**
  * @brief Retrieves a copy of the value associated with a key.
@@ -97,8 +97,8 @@ int ht_set(Hash_Table *table, void *key, size_t keySize,
  * @param destSize Maximum capacity of destBuffer.
  * @return 1 if found, 0 otherwise.
  */
-int ht_get(Hash_Table *table, void *key, size_t keySize,
-           void *destBuffer, size_t destSize);
+int ht_get(Hash_Table * restrict table, void * restrict key, size_t keySize,
+           void * restrict destBuffer, size_t destSize);
 
 /**
  * @brief Removes an entry from the table.

@@ -64,14 +64,14 @@ bool http_request_keep_alive(const HttpRequest *req);
  * Returns bytes written, or -1 if out_max is too small.
  */
 int http_response_render(const HttpResponse *resp, bool keep_alive,
-                          char *out, size_t out_max);
+                          char * restrict out, size_t out_max);
 
 /* ── Body / HTML helpers ─────────────────────────────────────────────── */
 
 const char *post_body      (const char *req);
 void        get_field      (const char *src, const char *param_name,
                              char *dest, size_t max);
-void        html_escape    (const char *src, char *dest, size_t max);
+void        html_escape    (const char * restrict src, char * restrict dest, size_t max);
 void        make_error_block(const char *msg, char *dest, size_t max);
 
 #endif /* HTTP_UTILS_H */

@@ -51,10 +51,10 @@ static int count_placeholders(const char *sql) {
 }
 
 // Internal engine to prepare and bind parameters to a statement
-static sqlite3_stmt *prepare(const char *sql, const char *fmt, va_list ap) {
+static sqlite3_stmt *prepare(const char *restrict sql, const char *restrict fmt, va_list ap) {
     if (unlikely(!g_db)) return NULL;
 
-    sqlite3_stmt *stmt;
+    sqlite3_stmt *stmt = NULL;
     // Compile SQL into a prepared statement
     if (sqlite3_prepare_v2(g_db, sql, -1, &stmt, NULL) != SQLITE_OK) {
         return NULL;
@@ -67,8 +67,7 @@ static sqlite3_stmt *prepare(const char *sql, const char *fmt, va_list ap) {
     if (placeholders != fmt_len) {
         fprintf(stderr, "db: bind error, sql has %d markers but fmt has %d\n", 
                 placeholders, fmt_len);
-        sqlite3_finalize(stmt);
-        return NULL;
+        goto error;
     }
 
     // Iterate through fmt string and bind variadic arguments to the statement
@@ -84,17 +83,19 @@ static sqlite3_stmt *prepare(const char *sql, const char *fmt, va_list ap) {
             case 'n': rc = sqlite3_bind_null(stmt, idx); break;
             default:
                 fprintf(stderr, "db: unknown fmt char '%c'\n", fmt[i]);
-                sqlite3_finalize(stmt);
-                return NULL;
+                goto error;
         }
 
-        if (rc != SQLITE_OK) {
-            sqlite3_finalize(stmt);
-            return NULL;
+        if (unlikely(rc != SQLITE_OK)) {
+            goto error;
         }
     }
 
     return stmt;
+
+error:
+    if (stmt) sqlite3_finalize(stmt);
+    return NULL;
 }
 
 /* ── Execution ───────────────────────────────────────────────────────── */

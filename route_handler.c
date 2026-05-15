@@ -34,6 +34,7 @@ static const Route routes[] = {
     { .method = "POST", .path = "/api/admin/assign",     .handler = route_api_admin_assign     },
     { .method = "GET",  .path = "/static/common.css",    .handler = route_static_css           }
 };
+
 static const size_t NUM_ROUTES = sizeof(routes) / sizeof(routes[0]);
 
 /* ── Public API ──────────────────────────────────────────────────────── */

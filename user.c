@@ -137,11 +137,6 @@ bool user_authenticate(const char *username, const char *plainPassword,
         /* New path: salted hash */
         hash_password(out->salt, plainPassword, login_hash);
     } else {
-        /*
-         * Legacy path: unsalted hash for rows registered before the salt
-         * migration.  These will keep working until the user re-registers
-         * or we force a password reset.
-         */
         hash_password("", plainPassword, login_hash);
     }
 
