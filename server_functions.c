@@ -44,7 +44,7 @@ Hash_Table  *g_geo_table = NULL;
    ══════════════════════════════════════════════════════════════════════ */
 
 static Hash_Table *g_rate_table = NULL;
-
+static char g_response_buffer[RESPONSE_BUFFER_SIZE];
 /*
  * WriteReq bundles the libuv write request with the response bytes in one
  * allocation.  uv_write_t MUST be the first member (libuv cast requirement).
@@ -227,14 +227,14 @@ static void read_cb(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf) {
     bool keep_alive = http_request_keep_alive(&req);
 
     /* Allocate body buffer and dispatch */
-    char *body_buf = calloc(1, RESPONSE_BUFFER_SIZE);
-    if (!body_buf) { close_client(ctx); return; }
+    // char *body_buf = calloc(1, RESPONSE_BUFFER_SIZE);
+    // if (!body_buf) { close_client(ctx); return; }
 
-    HttpResponse resp = { .status_code = 200, .body = body_buf };
+    HttpResponse resp = { .status_code = 200, .body = g_response_buffer };
     handle_request(&req, &resp);
 
     send_response(ctx, &resp, keep_alive);
-    free(body_buf);
+    //free(body_buf);
 }
 
 static void write_cb(uv_write_t *req, int status) {

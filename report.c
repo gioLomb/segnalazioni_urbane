@@ -200,7 +200,15 @@ int report_assign(uint64_t reportId, uint64_t operatorId) {
         "lll",
         (int64_t)operatorId, (int64_t)time(NULL), (int64_t)reportId);
     if (rc != 0) return -1;
-    return db_changes() > 0 ? 1 : 0;
+    
+    if (db_changes() == 0) return 0;
+
+    // invalida qui, non nel chiamante
+    ActiveReport r;
+    if (report_get_by_id(reportId, &r))
+        report_cache_invalidate_city(r.city, r.authorId);
+
+    return 1;
 }
 
 int report_resolve(uint64_t reportId, uint64_t operatorId) {
@@ -211,7 +219,15 @@ int report_resolve(uint64_t reportId, uint64_t operatorId) {
         "lll",
         (int64_t)time(NULL), (int64_t)reportId, (int64_t)operatorId);
     if (rc != 0) return -1;
-    return db_changes() > 0 ? 1 : 0;
+
+    if (db_changes() == 0) return 0;
+
+    // invalida qui, non nel chiamante
+    ActiveReport r;
+    if (report_get_by_id(reportId, &r))
+        report_cache_invalidate_city(r.city, r.authorId);
+
+    return 1;
 }
 
 /* ── Read operations ─────────────────────────────────────────────────── */
