@@ -21,3 +21,4 @@ analisi
 *.o
 build/
 build
+segnalacity_cov

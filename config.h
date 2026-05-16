@@ -19,7 +19,13 @@
 
 /* ── Server tuning ───────────────────────────────────────────────────── */
 #define KEEPALIVE_TIMEOUT 10       /* idle connection timeout, seconds    */
-#define PORT              8080     /* TCP listening port                  */
+#ifndef PORT
+#define PORT 8080
+#endif
+
+#ifndef APP_DB_PATH
+#define APP_DB_PATH "segnalacity.db"
+#endif
 #define MAX_EVENTS        4096     /* max events per uv_run() iteration   */
 #define MAX_CLIENTS       16384    /* hard cap on simultaneous connections */
 #define LISTEN_BACKLOG    65535    /* TCP listen backlog                  */
@@ -41,7 +47,7 @@
 #define unlikely(x) __builtin_expect(!!(x), 0)
 
 /* ── Application paths ───────────────────────────────────────────────── */
-#define APP_DB_PATH      "segnalacity.db"
+//#define APP_DB_PATH      "segnalacity.db"
 #define GEO_JSON_PATH    "data/comuni.geojson"
 #define CITIES_JSON_PATH "data/cities.json"
 
