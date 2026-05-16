@@ -59,8 +59,8 @@ void ht_snapshot(Hash_Table *table, const char *path) {
     fclose(f);
 }
 
-int ht_set(Hash_Table *table, void *key, size_t keySize,
-           void *value, size_t valueSize) {
+int ht_set(Hash_Table * restrict table, void * restrict key, size_t keySize,
+           void * restrict value, size_t valueSize) {
     if (!table || !key) return 0;
     
     // Writers-only lock: modification of the structure starts here
@@ -109,8 +109,8 @@ error:
     return 0;
 }
 
-int ht_get(Hash_Table *table, void *key, size_t keySize,
-           void *destBuffer, size_t destSize) {
+int ht_get(Hash_Table * restrict table, void * restrict key, size_t keySize,
+           void * restrict destBuffer, size_t dest_size) {
     if (!table || !key || !destBuffer) return 0;
     
     // Concurrent access allowed here
@@ -122,7 +122,7 @@ int ht_get(Hash_Table *table, void *key, size_t keySize,
         if (!keys_equal(e->key, e->keySize, key, keySize)) continue;
 
         // Prevent buffer overflow in destination
-        size_t n = e->size < destSize ? e->size : destSize;
+        size_t n = e->size < dest_size ? e->size : dest_size;
         memcpy(destBuffer, e->value, n);
         pthread_rwlock_unlock(&table->lock);
         return 1;
@@ -132,7 +132,7 @@ int ht_get(Hash_Table *table, void *key, size_t keySize,
     return 0;
 }
 
-int ht_delete(Hash_Table *table, void *key, size_t keySize) {
+int ht_delete(Hash_Table * restrict table, void * restrict key, size_t keySize) {
     if (!table || !key) return 0;
     pthread_rwlock_wrlock(&table->lock);
 

@@ -17,9 +17,9 @@
  * used for spatial validation and map centering.
  */
 typedef struct {
-    double lat_min, lat_max;    /**< Latitude boundaries */
-    double lon_min, lon_max;    /**< Longitude boundaries */
-    double centroid_lat, centroid_lon; /**< Calculated center point */
+    double latMin, latMax;    /**< Latitude boundaries */
+    double lonMin, lonMax;    /**< Longitude boundaries */
+    double centroidLat, centroidLon; /**< Calculated center point */
 } CityGeo;
 
 /**
@@ -28,10 +28,10 @@ typedef struct {
  * @post Every valid feature in the file is inserted into ht, keyed by city name.
  * @param path Path to the ISTAT GeoJSON file.
  * @param ht Pointer to the destination hash table.
- * @param cities_out Optional path to save a JSON list of loaded city names.
+ * @param citiesOut Optional path to save a JSON list of loaded city names.
  * @return Number of cities loaded on success, -1 on fatal error.
  */
-int geo_load(const char *path, Hash_Table *ht, const char *cities_out);
+int geo_load(const char *path, Hash_Table *ht, const char *citiesOut);
 
 /**
  * @brief Retrieves geometry information for a city by its name.

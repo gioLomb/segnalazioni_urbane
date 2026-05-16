@@ -29,7 +29,8 @@ typedef struct __attribute__((aligned(64))) ClientCtx {
     struct ClientCtx *next;           /**< Next client in the active list */
     struct ClientCtx *prev;           /**< Previous client in the active list */
     size_t            totalRead;      /**< Total bytes read during the session */
-    char              buffer[BUFFER_SIZE]; /**< Per-client data buffer */
+    char             *buffer;             /**< Receive buffer — allocated lazily in alloc_cb,
+                                               freed in conn_manager_release. NULL until first read. */
 } ClientCtx;
 
 /* ── Lifecycle ───────────────────────────────────────────────────────── */

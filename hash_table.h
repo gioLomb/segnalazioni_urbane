@@ -89,16 +89,16 @@ int ht_set(Hash_Table * restrict table, void * restrict key, size_t keySize,
 /**
  * @brief Retrieves a copy of the value associated with a key.
  * @pre table != NULL, key != NULL, destBuffer != NULL
- * @post Up to destSize bytes are copied into destBuffer if the key is found
+ * @post Up to dest_size bytes are copied into destBuffer if the key is found
  * @param table Pointer to the hash table.
  * @param key Pointer to the search key.
  * @param keySize Size of the key.
  * @param destBuffer Buffer where the value will be copied.
- * @param destSize Maximum capacity of destBuffer.
+ * @param dest_size Maximum capacity of destBuffer.
  * @return 1 if found, 0 otherwise.
  */
 int ht_get(Hash_Table * restrict table, void * restrict key, size_t keySize,
-           void * restrict destBuffer, size_t destSize);
+           void * restrict destBuffer, size_t dest_size);
 
 /**
  * @brief Removes an entry from the table.
@@ -109,7 +109,7 @@ int ht_get(Hash_Table * restrict table, void * restrict key, size_t keySize,
  * @param keySize Size of the key.
  * @return 1 if found and deleted, 0 otherwise.
  */
-int ht_delete(Hash_Table *table, void *key, size_t keySize);
+int ht_delete(Hash_Table * restrict table, void * restrict key, size_t keySize);
 
 /**
  * @brief Destroys the table and frees all allocated resources.

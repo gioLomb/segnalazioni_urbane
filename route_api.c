@@ -58,11 +58,12 @@ void route_api_reports_archived(const HttpRequest *req, HttpResponse *resp) {
 
 void route_api_report_status(const HttpRequest *req, HttpResponse *resp) {
     User u = {0};
+    char rid_s[REPORT_ID_PARAM_LEN] = {0}, stat_s[STATUS_PARAM_LEN] = {0};
     if (!get_session_user(req, &u) || !user_is_operator(&u)) {
         resp_json_error(resp, 403, "forbidden"); return;
     }
 
-    char rid_s[24] = {0}, stat_s[4] = {0};
+    
     get_field(req->body, "report_id=", rid_s,  sizeof(rid_s));
     get_field(req->body, "status=",    stat_s, sizeof(stat_s));
     if (!rid_s[0] || !stat_s[0]) { resp_json_error(resp, 400, "missing params"); return; }
@@ -119,7 +120,7 @@ void route_api_admin_assign(const HttpRequest *req, HttpResponse *resp) {
         resp_json_error(resp, 403, "forbidden"); return;
     }
 
-    char rid_s[24] = {0}, op_s[24] = {0};
+    char rid_s[REPORT_ID_PARAM_LEN] = {0}, op_s[OPERATOR_ID_PARAM_LEN] = {0};
     get_field(req->body, "report_id=",   rid_s, sizeof(rid_s));
     get_field(req->body, "operator_id=", op_s,  sizeof(op_s));
     if (!rid_s[0] || !op_s[0]) { resp_json_error(resp, 400, "missing params"); return; }

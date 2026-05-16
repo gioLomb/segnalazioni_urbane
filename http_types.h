@@ -37,14 +37,14 @@
 typedef struct {
     /* Request line — pointers into raw buffer, NOT NUL-terminated */
     const char        *method;
-    size_t             method_len;
+    size_t             methodLen;
     const char        *path;
-    size_t             path_len;
+    size_t             pathLen;
 
     /* Parsed headers — direct output of phr_parse_request */
     struct phr_header  headers[HTTP_MAX_HEADERS];
-    size_t             num_headers;
-    int                minor_version;
+    size_t             numHeaders;
+    int                minorVersion;
 
     /* Body — NULL if request has no body */
     const char        *body;

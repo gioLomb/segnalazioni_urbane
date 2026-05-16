@@ -103,7 +103,7 @@ unsigned long hash_key(const void *key, size_t keySize, unsigned long seed) {
  */
 static void send_response(ClientCtx *ctx, const HttpResponse *resp, bool keep_alive) {
     /* Stima dimensione header (mai oltre 512 byte) */
-    size_t total_max = 512 + resp->body_len;
+    size_t total_max = MAX_HEADER_STR_LEN + resp->body_len;
     WriteReq *wr = malloc(sizeof(WriteReq) + total_max);
     if (!wr) { close_client(ctx); return; }
 
@@ -133,30 +133,30 @@ static void send_response(ClientCtx *ctx, const HttpResponse *resp, bool keep_al
  */
 static bool is_request_complete(const char *buf, size_t len) {
     struct phr_header headers[HTTP_MAX_HEADERS];
-    size_t            num_headers = HTTP_MAX_HEADERS;
+    size_t            numHeaders = HTTP_MAX_HEADERS;
     const char       *method, *path;
-    size_t            method_len, path_len;
-    int               minor_version;
+    size_t            methodLen, pathLen;
+    int               minorVersion;
 
     int r = phr_parse_request(buf, len,
-                               &method, &method_len,
-                               &path,   &path_len,
-                               &minor_version,
-                               headers, &num_headers,
+                               &method, &methodLen,
+                               &path,   &pathLen,
+                               &minorVersion,
+                               headers, &numHeaders,
                                0 /* last_len: always fresh parse */);
 
     if (r == -2) return false;   /* headers incomplete — wait */
     if (r == -1) return true;    /* malformed — let handler return 400 */
 
     /* For POST requests verify the body has fully arrived. */
-    if (method_len != 4 || memcmp(method, "POST", 4) != 0) return true;
+    if (methodLen != 4 || memcmp(method, "POST", 4) != 0) return true;
 
-    for (size_t i = 0; i < num_headers; i++) {
+    for (size_t i = 0; i < numHeaders; i++) {
         if (headers[i].name_len != 14) continue;
         if (strncasecmp(headers[i].name, "content-length", 14) != 0) continue;
 
-        char   val[24] = {0};
-        size_t vlen    = headers[i].value_len < 23 ? headers[i].value_len : 23;
+        char   val[MAX_NUMBER_LEN] = {0};
+        size_t vlen    = headers[i].value_len <MAX_NUMBER_LEN-1 ? headers[i].value_len :MAX_NUMBER_LEN-1;
         memcpy(val, headers[i].value, vlen);
         long cl = strtol(val, NULL, 10);
         if (cl <= 0) break;
@@ -183,8 +183,14 @@ static void get_peer_ip(uv_tcp_t *tcp, char *ip, size_t len) {
 
 static void alloc_cb(uv_handle_t *handle, size_t suggested_size, uv_buf_t *buf) {
     (void)suggested_size;
-    ClientCtx *ctx       = (ClientCtx *)handle->data;
-    size_t     remaining = BUFFER_SIZE - 1 - ctx->totalRead;
+    ClientCtx *ctx = (ClientCtx *)handle->data;
+
+    if (!ctx->buffer) {
+        ctx->buffer = malloc(BUFFER_SIZE);
+        if (!ctx->buffer) { buf->base = NULL; buf->len = 0; return; }
+    }
+
+    size_t remaining = BUFFER_SIZE - 1 - ctx->totalRead;
     buf->base = remaining ? ctx->buffer + ctx->totalRead : NULL;
     buf->len  = remaining;
 }
@@ -224,7 +230,7 @@ static void read_cb(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf) {
         return;
     }
 
-    bool keep_alive = http_request_keep_alive(&req);
+    bool keep_alive = http_request_contains_keepalive(&req);
 
     /* Allocate body buffer and dispatch */
     // char *body_buf = calloc(1, RESPONSE_BUFFER_SIZE);
@@ -246,7 +252,7 @@ static void write_cb(uv_write_t *req, int status) {
     if (status < 0 || !keep_alive) { close_client(ctx); return; }
 
     ctx->totalRead = 0;
-    memset(ctx->buffer, 0, BUFFER_SIZE);
+    //memset(ctx->buffer, 0, BUFFER_SIZE);
     uv_timer_start(&ctx->timer, timer_cb, KEEPALIVE_TIMEOUT * 1000, 0);
     uv_read_start((uv_stream_t *)&ctx->handle, alloc_cb, read_cb);
 }

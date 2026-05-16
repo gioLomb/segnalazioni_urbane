@@ -41,8 +41,8 @@ static const size_t NUM_ROUTES = sizeof(routes) / sizeof(routes[0]);
 
 // bool route_needs_large(const HttpRequest *req) {
 //     for (size_t i = 0; i < NUM_ROUTES; i++) {
-//         if (http_request_method_is(req, routes[i].method) &&
-//             http_request_path_is(req, routes[i].path))
+//         if (http_is_request_method(req, routes[i].method) &&
+//             http_is_request_path(req, routes[i].path))
 //             return routes[i].needs_large;
 //     }
 //     return false;
@@ -52,9 +52,9 @@ void handle_request(const HttpRequest *req, HttpResponse *resp) {
     bool path_found = false;
 
     for (size_t i = 0; i < NUM_ROUTES; i++) {
-        if (!http_request_path_is(req, routes[i].path)) continue;
+        if (!http_is_request_path(req, routes[i].path)) continue;
         path_found = true;
-        if (http_request_method_is(req, routes[i].method)) {
+        if (http_is_request_method(req, routes[i].method)) {
             routes[i].handler(req, resp);
             return;
         }
@@ -64,7 +64,7 @@ void handle_request(const HttpRequest *req, HttpResponse *resp) {
         resp_html_error(resp, 405, "405 Method Not Allowed");
     } else {
         char path[URL_BUFFER_SIZE + 1];
-        size_t n = req->path_len < URL_BUFFER_SIZE ? req->path_len : URL_BUFFER_SIZE;
+        size_t n = req->pathLen < URL_BUFFER_SIZE ? req->pathLen : URL_BUFFER_SIZE;
         memcpy(path, req->path, n);
         path[n] = '\0';
         snprintf(resp->body, RESPONSE_BUFFER_SIZE,

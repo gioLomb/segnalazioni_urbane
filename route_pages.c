@@ -95,7 +95,7 @@ void route_get_logout(const HttpRequest *req, HttpResponse *resp) {
 
 void route_post_login(const HttpRequest *req, HttpResponse *resp) {
     char username[USERNAME_LEN] = {0};
-    char password[128]          = {0};
+    char password[PWD_PLAIN_LEN]          = {0};
     get_field(req->body, "username=", username, sizeof(username));
     get_field(req->body, "password=", password, sizeof(password));
 
@@ -105,7 +105,7 @@ void route_post_login(const HttpRequest *req, HttpResponse *resp) {
         return;
     }
 
-    char token[TOKEN_HEX_LEN + 2];
+    char token[TOKEN_HEX_LEN + 1];
     if (!session_create(g_sessions, &u, token)) {
         login_error(resp, "Errore interno. Riprova.");
         return;
@@ -120,7 +120,7 @@ void route_post_login(const HttpRequest *req, HttpResponse *resp) {
 
 void route_post_register(const HttpRequest *req, HttpResponse *resp) {
     char username[USERNAME_LEN] = {0};
-    char password[128]          = {0};
+    char password[PWD_PLAIN_LEN]          = {0};
     char city[CITY_LEN]         = {0};
     char role_str[4]            = {0};
     get_field(req->body, "username=", username, sizeof(username));
@@ -161,8 +161,8 @@ void route_post_submit(const HttpRequest *req, HttpResponse *resp) {
 
     char category[CAT_LEN] = {0};
     char desc[DESC_LEN]    = {0};
-    char lat_s[32]         = {0};
-    char lon_s[32]         = {0};
+    char lat_s[COORDINATE_STR_LEN]         = {0};
+    char lon_s[COORDINATE_STR_LEN]         = {0};
     get_field(req->body, "category=",    category, sizeof(category));
     get_field(req->body, "description=", desc,     sizeof(desc));
     get_field(req->body, "lat=",         lat_s,    sizeof(lat_s));

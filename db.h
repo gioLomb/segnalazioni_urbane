@@ -86,7 +86,7 @@ bool db_cursor_next(DbCursor *c);
  * @param col Zero-based column index.
  * @return The string content, or an empty string "" if the value is NULL.
  */
-const char *db_cursor_text(DbCursor *c, int col);
+const char *db_cursor_text(DbCursor *cursor, int col);
 
 /**
  * @brief Retrieves a 64-bit integer value from a column.
@@ -94,7 +94,7 @@ const char *db_cursor_text(DbCursor *c, int col);
  * @param col Zero-based column index.
  * @return The integer value, or 0 if the value is NULL.
  */
-int64_t db_cursor_int64(DbCursor *c, int col);
+int64_t db_cursor_int64(DbCursor *cursor, int col);
 
 /**
  * @brief Retrieves a double-precision float value from a column.
@@ -102,13 +102,13 @@ int64_t db_cursor_int64(DbCursor *c, int col);
  * @param col Zero-based column index.
  * @return The double value, or 0.0 if the value is NULL.
  */
-double db_cursor_double(DbCursor *c, int col);
+double db_cursor_double(DbCursor *cursor, int col);
 
 /**
  * @brief Closes the cursor and releases associated statement memory.
  * @param c Pointer to the cursor to close.
  */
-void db_cursor_close(DbCursor *c);
+void db_cursor_close(DbCursor *cursor);
 
 /* ── Execution API (INSERT/UPDATE/DELETE) ────────────────────────────── */
 

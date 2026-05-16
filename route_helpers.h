@@ -18,6 +18,8 @@
 #include "config.h"
 #include "server_functions.h"   /* g_sessions, g_geo_table */
 
+#define ERROR_BLOCK_MAX_LEN 128
+#define ESCAPED_PARAM_LEN 64
 /* ── Session ─────────────────────────────────────────────────────────── */
 
 /**

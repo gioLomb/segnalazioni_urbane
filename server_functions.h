@@ -19,6 +19,8 @@
 #include "hash_table.h"
 #include "route_handler.h"
 
+#define MAX_HEADER_STR_LEN 512
+#define MAX_NUMBER_LEN 24
 /* ── Shared application state ────────────────────────────────────────── */
 
 /**

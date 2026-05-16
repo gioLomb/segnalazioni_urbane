@@ -11,6 +11,7 @@
 
 #include "http_types.h"
 
+#define COORDINATE_STR_LEN 32
 void route_get_root      (const HttpRequest *req, HttpResponse *resp);
 void route_get_register  (const HttpRequest *req, HttpResponse *resp);
 void route_get_home      (const HttpRequest *req, HttpResponse *resp);

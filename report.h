@@ -84,6 +84,6 @@ int report_count_active(void);
 
 /* ── Utility ─────────────────────────────────────────────────────────── */
 
-bool report_to_json(const ActiveReport *r, char *dest, size_t destSize);
+bool report_to_json(const ActiveReport *r, char *dest, size_t dest_size);
 
 #endif /* REPORT_H */

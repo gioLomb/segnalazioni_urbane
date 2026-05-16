@@ -36,17 +36,21 @@ ClientCtx *conn_manager_alloc(void) {
     ClientCtx *ctx = slab_pool_alloc(&g_pool);
     if (!ctx) return NULL;
 
-    // Explicitly reset non-zero fields for clarity and safety
+    /* Slab memory is zeroed; reset explicitly for clarity and safety. */
     ctx->closing        = false;
     ctx->pending_closes = 0;
     ctx->totalRead      = 0;
+    ctx->buffer         = NULL;   /* allocated lazily in alloc_cb */
     ctx->next           = NULL;
     ctx->prev           = NULL;
     return ctx;
 }
 
 void conn_manager_release(ClientCtx *ctx) {
-    // Return block to the pool. Pointer becomes invalid for the caller immediately.
+    /* Free the receive buffer if it was ever allocated, then return the
+     * slab block. Pointer becomes invalid for the caller immediately. */
+    free(ctx->buffer);
+    ctx->buffer = NULL;
     slab_pool_free(&g_pool, ctx);
 }
 

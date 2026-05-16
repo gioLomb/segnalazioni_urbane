@@ -4,6 +4,31 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include "http_types.h"
+#include <stdio.h>
+
+#define CACHE_TTL_SECONDS  5
+#define CACHE_MAX_ENTRIES  32
+/*
+ * Risultati più grandi di questo threshold non vengono cachati ma vengono
+ * comunque serviti dalla query — nessun limite artificiale sui dati restituiti.
+ * ~16 KB copre ~15 report worst-case (desc unicode piena); utenti normali
+ * rientrano sempre, utenti con molti report saltano la cache silenziosamente.
+ * Footprint: 32 × 16 KB = 512 KB  (vs 32 × 256 KB = 8 MB prima).
+ */
+#define CACHE_JSON_MAX (16 * 1024)
+
+typedef struct {
+    char     city[CITY_LEN];
+    uint64_t user_id;
+    bool     is_operator;
+    bool     is_archived;
+    time_t   cached_at;
+    size_t   json_len;
+    char     json[CACHE_JSON_MAX];
+} CacheEntry;
+
+static CacheEntry g_cache[CACHE_MAX_ENTRIES];
 
 /* ── Column order used in every SELECT ────────────────────────────────── */
 #define SELECT_COLS \
@@ -78,17 +103,13 @@ static cJSON *report_to_cjson(const ActiveReport *r) {
 
 static size_t cursor_to_json_array(DbCursor *c, char *buf, size_t max) {
     cJSON *array = cJSON_CreateArray();
-    if (unlikely(!array)) {
-        if (max > 0) buf[0] = '\0';
-        return 0;
-    }
+    if (unlikely(!array)) { if (max > 0) buf[0] = '\0'; return 0; }
 
     while (db_cursor_next(c)) {
         ActiveReport r;
         cursor_to_report(c, &r);
         cJSON_AddItemToArray(array, report_to_cjson(&r));
     }
-
     db_cursor_close(c);
 
     if (!cJSON_PrintPreallocated(array, buf, (int)max, false)) {
@@ -96,28 +117,13 @@ static size_t cursor_to_json_array(DbCursor *c, char *buf, size_t max) {
         if (max > 0) buf[0] = '\0';
         return 0;
     }
-
     cJSON_Delete(array);
     return strlen(buf);
 }
 
 /* ── JSON cache ──────────────────────────────────────────────────────── */
 
-#define CACHE_TTL_SECONDS 5
-#define CACHE_MAX_ENTRIES 32
 
-#include "http_types.h"
-
-typedef struct {
-    char     city[CITY_LEN];
-    uint64_t user_id;
-    bool     is_operator;
-    bool     is_archived;
-    time_t   cached_at;
-    char     json[RESPONSE_BUFFER_SIZE];
-} CacheEntry;
-
-static CacheEntry g_cache[CACHE_MAX_ENTRIES];
 
 static int cache_find(const char *city, uint64_t user_id,
                       bool is_operator, bool is_archived) {
@@ -141,10 +147,11 @@ static int cache_find(const char *city, uint64_t user_id,
 static void cache_store(const char *city, uint64_t user_id,
                         bool is_operator, bool is_archived,
                         const char *json, size_t json_len) {
-    if (json_len >= RESPONSE_BUFFER_SIZE) return;
+    /* Risultati troppo grandi non vengono cachati — serviti dalla query. */
+    if (json_len >= CACHE_JSON_MAX) return;
 
-    int    slot       = -1;
-    int    oldest_idx = 0;
+    int    slot        = -1;
+    int    oldest_idx  = 0;
     time_t oldest_time = g_cache[0].cached_at;
 
     for (int i = 0; i < CACHE_MAX_ENTRIES; i++) {
@@ -157,12 +164,13 @@ static void cache_store(const char *city, uint64_t user_id,
 
     if (slot == -1) slot = oldest_idx;
 
-    CacheEntry *e = &g_cache[slot];
+    CacheEntry *e  = &g_cache[slot];
     strncpy(e->city, city, CITY_LEN - 1);
     e->city[CITY_LEN - 1] = '\0';
     e->user_id     = user_id;
     e->is_operator = is_operator;
     e->is_archived = is_archived;
+    e->json_len    = json_len;
     memcpy(e->json, json, json_len + 1);
     e->cached_at   = time(NULL);
 }
@@ -232,24 +240,14 @@ int report_resolve(uint64_t reportId, uint64_t operatorId) {
 
 /* ── Read operations ─────────────────────────────────────────────────── */
 
-#include <stdio.h>
+
 
 size_t report_get_active_json(char *buf, size_t max,
                               uint64_t userId, const char *city, bool isOperator) {
-    /*
-     * Cache key: sempre userId.
-     * Bug precedente: per gli operatori si usava 0 (condiviso tra tutti
-     * gli operatori della stessa città) — corretto: ora è per-utente.
-     */
-    uint64_t cache_uid = userId;
-
-    int idx = cache_find(city, cache_uid, isOperator, false);
+    int idx = cache_find(city, userId, isOperator, false);
     if (idx >= 0) {
-        size_t len = strlen(g_cache[idx].json);
-        if (len < max) {
-            memcpy(buf, g_cache[idx].json, len + 1);
-            return len;
-        }
+        memcpy(buf, g_cache[idx].json, g_cache[idx].json_len + 1);
+        return g_cache[idx].json_len;
     }
 
     DbCursor *c = isOperator
@@ -267,25 +265,18 @@ size_t report_get_active_json(char *buf, size_t max,
               "l", (int64_t)userId);
 
     size_t len = cursor_to_json_array(c, buf, max);
-
     if (len > 0)
-        cache_store(city, cache_uid, isOperator, false, buf, len);
+        cache_store(city, userId, isOperator, false, buf, len);
 
     return len;
 }
 
 size_t report_get_archived_json(char *buf, size_t max,
                                 uint64_t userId, const char *city, bool isOperator) {
-    /* Cache key per-utente, come per active (stesso bug corretto) */
-    uint64_t cache_uid = userId;
-
-    int idx = cache_find(city, cache_uid, isOperator, true);
+    int idx = cache_find(city, userId, isOperator, true);
     if (idx >= 0) {
-        size_t len = strlen(g_cache[idx].json);
-        if (len < max) {
-            memcpy(buf, g_cache[idx].json, len + 1);
-            return len;
-        }
+        memcpy(buf, g_cache[idx].json, g_cache[idx].json_len + 1);
+        return g_cache[idx].json_len;
     }
 
     DbCursor *c = isOperator
@@ -301,14 +292,14 @@ size_t report_get_archived_json(char *buf, size_t max,
               "l", (int64_t)userId);
 
     size_t len = cursor_to_json_array(c, buf, max);
-
     if (likely(len > 0))
-        cache_store(city, cache_uid, isOperator, true, buf, len);
+        cache_store(city, userId, isOperator, true, buf, len);
 
     return len;
 }
 
 size_t report_get_all_city_json(char *buf, size_t max, const char *city) {
+    /* Admin view: not cached, no LIMIT (admin sees everything) */
     DbCursor *c = db_cursor_open(
         "SELECT " SELECT_COLS " FROM reports "
         "WHERE city = ? ORDER BY created_at DESC;",

@@ -59,20 +59,20 @@ static const char *infer_content_type(const char *body, const char *override) {
 
 bool http_request_parse(const char *raw, size_t raw_len, HttpRequest *req) {
     memset(req, 0, sizeof(*req));
-    req->num_headers = HTTP_MAX_HEADERS;
+    req->numHeaders = HTTP_MAX_HEADERS;
 
     int r = phr_parse_request(raw, raw_len,
-                               &req->method,   &req->method_len,
-                               &req->path,     &req->path_len,
-                               &req->minor_version,
-                               req->headers,   &req->num_headers,
+                               &req->method,   &req->methodLen,
+                               &req->path,     &req->pathLen,
+                               &req->minorVersion,
+                               req->headers,   &req->numHeaders,
                                0);
     if (r < 0) return false;
 
     /* Strip query string from path */
-    const char *q = memchr(req->path, '?', req->path_len);
+    const char *q = memchr(req->path, '?', req->pathLen);
     if (q) {
-        req->path_len = (size_t)(q - req->path);
+        req->pathLen = (size_t)(q - req->path);
     }
     /* Point body past the header block */
     if (raw_len > (size_t)r) {
@@ -87,7 +87,7 @@ const char *http_request_header(const HttpRequest *req,
                                  const char        *name,
                                  size_t            *value_len) {
     size_t nlen = strlen(name);
-    for (size_t i = 0; i < req->num_headers; i++) {
+    for (size_t i = 0; i < req->numHeaders; i++) {
         if (req->headers[i].name_len == nlen &&
             strncasecmp(req->headers[i].name, name, nlen) == 0) {
             if (value_len) *value_len = req->headers[i].value_len;
@@ -125,17 +125,18 @@ void http_request_cookie(const HttpRequest *req, const char *name, char *dest, s
     }
 }
 
-bool http_request_path_is(const HttpRequest *req, const char *path) {
+
+bool http_is_request_path(const HttpRequest *req, const char *path) {
     size_t plen = strlen(path);
-    return req->path_len == plen && memcmp(req->path, path, plen) == 0;
+    return req->pathLen == plen && memcmp(req->path, path, plen) == 0;
 }
 
-bool http_request_method_is(const HttpRequest *req, const char *method) {
+bool http_is_request_method(const HttpRequest *req, const char *method) {
     size_t mlen = strlen(method);
-    return req->method_len == mlen && memcmp(req->method, method, mlen) == 0;
+    return req->methodLen == mlen && memcmp(req->method, method, mlen) == 0;
 }
 
-bool http_request_keep_alive(const HttpRequest *req) {
+bool http_request_contains_keepalive(const HttpRequest *req) {
     size_t      vlen = 0;
     const char *val  = http_request_header(req, "connection", &vlen);
     return val && vlen >= 10 && strncasecmp(val, "keep-alive", 10) == 0;

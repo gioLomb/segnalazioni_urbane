@@ -4,8 +4,8 @@
  * Three groups of functions:
  *
  *   Request parsing  — http_request_parse(), http_request_header(),
- *                      http_request_cookie(), http_request_path_is(),
- *                      http_request_method_is(), http_request_keep_alive()
+ *                      http_request_cookie(), http_is_request_path(),
+ *                      http_is_request_method(), http_request_contains_keepalive()
  *
  *   Response render  — http_response_render()
  *
@@ -48,13 +48,13 @@ void http_request_cookie(const HttpRequest *req,
                           size_t             max);
 
 /** Returns true if req->path exactly matches path (NUL-terminated). */
-bool http_request_path_is(const HttpRequest *req, const char *path);
+bool http_is_request_path(const HttpRequest *req, const char *path);
 
 /** Returns true if req->method exactly matches method (NUL-terminated). */
-bool http_request_method_is(const HttpRequest *req, const char *method);
+bool http_is_request_method(const HttpRequest *req, const char *method);
 
 /** Returns true if the Connection header contains "keep-alive". */
-bool http_request_keep_alive(const HttpRequest *req);
+bool http_request_contains_keepalive(const HttpRequest *req);
 
 /* ── Response rendering ──────────────────────────────────────────────── */
 

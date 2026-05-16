@@ -10,6 +10,10 @@
 
 #include "http_types.h"
 
+#define REPORT_ID_PARAM_LEN 24
+#define STATUS_PARAM_LEN 4
+#define OPERATOR_ID_PARAM_LEN 24
+
 void route_api_cities           (const HttpRequest *req, HttpResponse *resp);
 void route_api_reports_active   (const HttpRequest *req, HttpResponse *resp);
 void route_api_reports_archived (const HttpRequest *req, HttpResponse *resp);

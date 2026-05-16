@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <float.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -15,9 +16,9 @@
  */
 static bool parse_geometry(cJSON *geometry, CityGeo *geo) {
     // Initialize boundaries to extreme values for min/max comparison
-    geo->lat_min = geo->lon_min =  1e9;
-    geo->lat_max = geo->lon_max = -1e9;
-    double lat_sum = 0, lon_sum = 0;
+    geo->latMin = geo->lonMin =  DBL_MAX;
+    geo->latMax = geo->lonMax = -DBL_MAX;
+    double latSum = 0, lonSum = 0;
     int    count   = 0;
 
     const char *type   = cJSON_GetStringValue(cJSON_GetObjectItem(geometry, "type"));
@@ -26,38 +27,38 @@ static bool parse_geometry(cJSON *geometry, CityGeo *geo) {
 
     //GeoJSON structures differ between Polygon and MultiPolygon.
     //We aim for the first outer ring (array of coordinates).
-    cJSON *outer_ring = cJSON_GetArrayItem(coords, 0);
+    cJSON *outerRing = cJSON_GetArrayItem(coords, 0);
     if (strcmp(type, "MultiPolygon") == 0)
-        outer_ring = cJSON_GetArrayItem(outer_ring, 0);
-    if (!outer_ring) return false;
+        outerRing = cJSON_GetArrayItem(outerRing, 0);
+    if (!outerRing) return false;
 
     cJSON *pair;
-    cJSON_ArrayForEach(pair, outer_ring) {
+    cJSON_ArrayForEach(pair, outerRing) {
         // GeoJSON standard defines [longitude, latitude] order
         double lon = cJSON_GetArrayItem(pair, 0)->valuedouble;
         double lat = cJSON_GetArrayItem(pair, 1)->valuedouble;
         
         // Update Bounding Box boundaries
-        if (lat < geo->lat_min) geo->lat_min = lat;
-        if (lat > geo->lat_max) geo->lat_max = lat;
-        if (lon < geo->lon_min) geo->lon_min = lon;
-        if (lon > geo->lon_max) geo->lon_max = lon;
+        if (lat < geo->latMin) geo->latMin = lat;
+        if (lat > geo->latMax) geo->latMax = lat;
+        if (lon < geo->lonMin) geo->lonMin = lon;
+        if (lon > geo->lonMax) geo->lonMax = lon;
         
         // Accumulate values for centroid calculation (arithmetic mean)
-        lat_sum += lat;
-        lon_sum += lon;
+        latSum += lat;
+        lonSum += lon;
         count++;
     }
 
     if (count == 0) return false;
-    geo->centroid_lat = lat_sum / count;
-    geo->centroid_lon = lon_sum / count;
+    geo->centroidLat = latSum / count;
+    geo->centroidLon = lonSum / count;
     return true;
 }
 
 /* ── Public API ──────────────────────────────────────────────────────── */
 
-int geo_load(const char *path, Hash_Table *ht, const char *cities_out) {
+int geo_load(const char *path, Hash_Table *ht, const char *citiesOut) {
     // Open file using low-level descriptor for mmap
     int fd = open(path, O_RDONLY);
     if (fd < 0) { perror(path); return -1; }
@@ -81,7 +82,7 @@ int geo_load(const char *path, Hash_Table *ht, const char *cities_out) {
     }
 
     cJSON *features   = cJSON_GetObjectItem(root, "features");
-    cJSON *cities_arr = cities_out ? cJSON_CreateArray() : NULL;
+    cJSON *citiesArr = citiesOut ? cJSON_CreateArray() : NULL;
     int    loaded = 0, skipped = 0;
 
     cJSON *feature;
@@ -101,8 +102,8 @@ int geo_load(const char *path, Hash_Table *ht, const char *cities_out) {
         ht_set(ht, (void *)name, strlen(name) + 1, &geo, sizeof(geo));
         
         // Track the name for the optional output list
-        if (cities_arr)
-            cJSON_AddItemToArray(cities_arr, cJSON_CreateString(name));
+        if (citiesArr)
+            cJSON_AddItemToArray(citiesArr, cJSON_CreateString(name));
         loaded++;
     }
 
@@ -110,13 +111,13 @@ int geo_load(const char *path, Hash_Table *ht, const char *cities_out) {
 
     // Write city names list to disk if requested. 
 
-    if (cities_arr) {
-        char *json = cJSON_PrintUnformatted(cities_arr);
-        cJSON_Delete(cities_arr);
+    if (citiesArr) {
+        char *json = cJSON_PrintUnformatted(citiesArr);
+        cJSON_Delete(citiesArr);
         if (json) {
-            FILE *cf = fopen(cities_out, "w");
+            FILE *cf = fopen(citiesOut, "w");
             if (cf) { fputs(json, cf); fclose(cf); }
-            else    perror(cities_out);
+            else    perror(citiesOut);
             free(json);
         }
     }
@@ -132,6 +133,6 @@ bool geo_lookup(Hash_Table * restrict ht, const char * restrict comune, CityGeo 
 
 bool geo_contains(const CityGeo *geo, double lat, double lon) {
     // Basic rectangular inclusion check (Bounding Box)
-    return lat >= geo->lat_min && lat <= geo->lat_max &&
-           lon >= geo->lon_min && lon <= geo->lon_max;
+    return lat >= geo->latMin && lat <= geo->latMax &&
+           lon >= geo->lonMin && lon <= geo->lonMax;
 }
