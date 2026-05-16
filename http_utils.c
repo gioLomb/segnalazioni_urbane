@@ -57,6 +57,43 @@ static const char *infer_content_type(const char *body, const char *override) {
 
 /* ── Request parsing ─────────────────────────────────────────────────── */
 
+bool http_is_request_complete(const char *buf, size_t len) {
+    struct phr_header headers[HTTP_MAX_HEADERS];
+    size_t            numHeaders = HTTP_MAX_HEADERS;
+    const char       *method, *path;
+    size_t            methodLen, pathLen;
+    int               minorVersion;
+
+    int r = phr_parse_request(buf, len,
+                               &method, &methodLen,
+                               &path,   &pathLen,
+                               &minorVersion,
+                               headers, &numHeaders,
+                               0 /* last_len: always fresh parse */);
+
+    if (r == -2) return false;   /* headers incomplete — wait */
+    if (r == -1) return true;    /* malformed — let handler return 400 */
+
+    /* For POST requests verify the body has fully arrived. */
+    if (methodLen != 4 || memcmp(method, "POST", 4) != 0) return true;
+
+    for (size_t i = 0; i < numHeaders; i++) {
+        if (headers[i].name_len != 14) continue;
+        if (strncasecmp(headers[i].name, "content-length", 14) != 0) continue;
+
+        char   val[MAX_NUMBER_LEN] = {0};
+        size_t vlen    = headers[i].value_len <MAX_NUMBER_LEN-1 ? headers[i].value_len :MAX_NUMBER_LEN-1;
+        memcpy(val, headers[i].value, vlen);
+        long cl = strtol(val, NULL, 10);
+        if (cl <= 0) break;
+
+        size_t body_received = len - (size_t)r;
+        return body_received >= (size_t)cl;
+    }
+    return true;
+}
+
+
 bool http_request_parse(const char *raw, size_t raw_len, HttpRequest *req) {
     memset(req, 0, sizeof(*req));
     req->numHeaders = HTTP_MAX_HEADERS;

@@ -5,18 +5,26 @@
  * ───────────
  *   Section 1  — Exported globals
  *   Section 2  — Private state + WriteReq type
- *   Section 3  — Utility          (hash_key, config_signal_context)
- *   Section 4  — HTTP response    (http_status_msg, infer_content_type,
- *                                   build_http_header, send_response)
- *   Section 5  — Request helpers  (is_request_complete, get_peer_ip)
+ *   Section 3  — Utility          (hash_key)
+ *   Section 4  — HTTP response    (send_response)
+ *   Section 5  — Request helpers  (get_peer_ip)
  *   Section 6  — Connection lifecycle (alloc_cb, read_cb, write_cb,
  *                                       timer_cb, on_close, close_client)
  *   Section 7  — Connection setup (setup_client, on_connection)
  *   Section 8  — Rate limiter     (rate_limit_check)
- *   Section 9  — Server loop      (on_signal, server_bind, server_shutdown,
- *                                   server_loop)
- *   Section 10 — Startup          (init_db, init_templates, init_geo_table,
+ *   Section 9  — Server loop      (on_signal, server_bind, server_shutdown)
+ *   Section 10 — Startup + main() (init_db, init_templates, init_geo_table,
  *                                   init_sessions, main)
+ *
+ * main() algorithm at a glance
+ * ────────────────────────────
+ *   signal(SIGPIPE, SIG_IGN)
+ *   assert: conn_manager_init, init_db, init_templates, init_geo_table,
+ *           init_sessions, rate_table alloc        ← fail-fast, each init
+ *                                                     prints its own diagnostic
+ *   server_bind()    — TCP bind + listen + SIGINT arm
+ *   uv_run()         — blocks until SIGINT
+ *   server_shutdown()— drain callbacks + destroy all subsystems
  */
 
 #include "server_functions.h"
@@ -27,24 +35,27 @@
 #include "geo.h"
 #include "session.h"
 #include "db.h"
-
 #include "http_utils.h"
 #include "connection_manager.h"
+
 #include <stdio.h>
+#include <assert.h>
 #include <arpa/inet.h>
 
 /* ══════════════════════════════════════════════════════════════════════
    SECTION 1 — Exported globals
    ══════════════════════════════════════════════════════════════════════ */
-Hash_Table  *g_sessions  = NULL;
-Hash_Table  *g_geo_table = NULL;
+
+Hash_Table *g_sessions  = NULL;
+Hash_Table *g_geo_table = NULL;
 
 /* ══════════════════════════════════════════════════════════════════════
    SECTION 2 — Private state + WriteReq type
    ══════════════════════════════════════════════════════════════════════ */
 
-static Hash_Table *g_rate_table = NULL;
-static char g_response_buffer[RESPONSE_BUFFER_SIZE];
+static Hash_Table *g_rate_table     = NULL;
+static char        g_response_buffer[RESPONSE_BUFFER_SIZE];
+
 /*
  * WriteReq bundles the libuv write request with the response bytes in one
  * allocation.  uv_write_t MUST be the first member (libuv cast requirement).
@@ -85,26 +96,19 @@ unsigned long hash_key(const void *key, size_t keySize, unsigned long seed) {
     return h;
 }
 
-// void config_signal_context(void) {
-//     signal(SIGPIPE, SIG_IGN);
-// }
-
 /* ══════════════════════════════════════════════════════════════════════
    SECTION 4 — HTTP response builder
    ══════════════════════════════════════════════════════════════════════ */
 
-/* Section 4 (HTTP response helpers) lives in http_utils.c:
- * http_response_render() handles status line, headers, body serialization. */
+/* http_response_render() (status line, headers, body) lives in http_utils.c */
 
 /**
  * Serializes an HttpResponse into a WriteReq and submits it via uv_write().
- * http_response_render() handles header building and content-type inference.
- * The WriteReq (rendered response in one block) is freed in write_cb.
+ * The WriteReq (header + body in one block) is freed in write_cb.
  */
 static void send_response(ClientCtx *ctx, const HttpResponse *resp, bool keep_alive) {
-    /* Stima dimensione header (mai oltre 512 byte) */
-    size_t total_max = MAX_HEADER_STR_LEN + resp->body_len;
-    WriteReq *wr = malloc(sizeof(WriteReq) + total_max);
+    size_t    total_max = MAX_HEADER_STR_LEN + resp->body_len;
+    WriteReq *wr        = malloc(sizeof(WriteReq) + total_max);
     if (!wr) { close_client(ctx); return; }
 
     int total = http_response_render(resp, keep_alive, wr->data, total_max);
@@ -112,60 +116,13 @@ static void send_response(ClientCtx *ctx, const HttpResponse *resp, bool keep_al
 
     wr->ctx        = ctx;
     wr->keep_alive = keep_alive;
-    uv_buf_t buf = uv_buf_init(wr->data, (size_t)total);
+    uv_buf_t buf   = uv_buf_init(wr->data, (size_t)total);
     uv_write(&wr->req, (uv_stream_t *)&ctx->handle, &buf, 1, write_cb);
 }
 
 /* ══════════════════════════════════════════════════════════════════════
    SECTION 5 — Request helpers
    ══════════════════════════════════════════════════════════════════════ */
-
-/**
- * Returns true when buf contains a complete HTTP request.
- *
- * Uses phr_parse_request for header detection:
- *   -2 → headers not yet complete → wait for more data
- *   -1 → malformed request       → pass to route handler for a 400
- *   ≥0 → headers complete        → for POST: verify body has arrived
- *
- * Content-Length is read directly from the parsed header array —
- * no manual strstr or atol on raw bytes.
- */
-static bool is_request_complete(const char *buf, size_t len) {
-    struct phr_header headers[HTTP_MAX_HEADERS];
-    size_t            numHeaders = HTTP_MAX_HEADERS;
-    const char       *method, *path;
-    size_t            methodLen, pathLen;
-    int               minorVersion;
-
-    int r = phr_parse_request(buf, len,
-                               &method, &methodLen,
-                               &path,   &pathLen,
-                               &minorVersion,
-                               headers, &numHeaders,
-                               0 /* last_len: always fresh parse */);
-
-    if (r == -2) return false;   /* headers incomplete — wait */
-    if (r == -1) return true;    /* malformed — let handler return 400 */
-
-    /* For POST requests verify the body has fully arrived. */
-    if (methodLen != 4 || memcmp(method, "POST", 4) != 0) return true;
-
-    for (size_t i = 0; i < numHeaders; i++) {
-        if (headers[i].name_len != 14) continue;
-        if (strncasecmp(headers[i].name, "content-length", 14) != 0) continue;
-
-        char   val[MAX_NUMBER_LEN] = {0};
-        size_t vlen    = headers[i].value_len <MAX_NUMBER_LEN-1 ? headers[i].value_len :MAX_NUMBER_LEN-1;
-        memcpy(val, headers[i].value, vlen);
-        long cl = strtol(val, NULL, 10);
-        if (cl <= 0) break;
-
-        size_t body_received = len - (size_t)r;
-        return body_received >= (size_t)cl;
-    }
-    return true;
-}
 
 /** Resolves the IPv4 address of the TCP peer into ip. */
 static void get_peer_ip(uv_tcp_t *tcp, char *ip, size_t len) {
@@ -205,7 +162,7 @@ static void read_cb(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf) {
     ctx->totalRead             += (size_t)nread;
     ctx->buffer[ctx->totalRead] = '\0';
 
-    if (!is_request_complete(ctx->buffer, ctx->totalRead)) return;
+    if (!http_is_request_complete(ctx->buffer, ctx->totalRead)) return;
 
     uv_read_stop(stream);
     uv_timer_stop(&ctx->timer);
@@ -220,7 +177,6 @@ static void read_cb(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf) {
         return;
     }
 
-    /* Parse request — already complete, so phr will not return -2 */
     HttpRequest req = {0};
     if (!http_request_parse(ctx->buffer, ctx->totalRead, &req)) {
         HttpResponse bad = { .status_code = 400,
@@ -232,15 +188,9 @@ static void read_cb(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf) {
 
     bool keep_alive = http_request_contains_keepalive(&req);
 
-    /* Allocate body buffer and dispatch */
-    // char *body_buf = calloc(1, RESPONSE_BUFFER_SIZE);
-    // if (!body_buf) { close_client(ctx); return; }
-
     HttpResponse resp = { .status_code = 200, .body = g_response_buffer };
     handle_request(&req, &resp);
-
     send_response(ctx, &resp, keep_alive);
-    //free(body_buf);
 }
 
 static void write_cb(uv_write_t *req, int status) {
@@ -252,7 +202,6 @@ static void write_cb(uv_write_t *req, int status) {
     if (status < 0 || !keep_alive) { close_client(ctx); return; }
 
     ctx->totalRead = 0;
-    //memset(ctx->buffer, 0, BUFFER_SIZE);
     uv_timer_start(&ctx->timer, timer_cb, KEEPALIVE_TIMEOUT * 1000, 0);
     uv_read_start((uv_stream_t *)&ctx->handle, alloc_cb, read_cb);
 }
@@ -273,8 +222,8 @@ static void close_client(ClientCtx *ctx) {
     if (ctx->closing) return;
     ctx->closing        = true;
     ctx->pending_closes = 2;
-    uv_close((uv_handle_t *)&ctx->handle,   on_close);
-    uv_close((uv_handle_t *)&ctx->timer, on_close);
+    uv_close((uv_handle_t *)&ctx->handle, on_close);
+    uv_close((uv_handle_t *)&ctx->timer,  on_close);
 }
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -290,19 +239,17 @@ static int setup_client(uv_stream_t *server) {
     uv_loop_t *loop = uv_default_loop();
     uv_tcp_init(loop, &ctx->handle);
     uv_timer_init(loop, &ctx->timer);
-    ctx->handle.data   = ctx;
-    ctx->timer.data = ctx;
+    ctx->handle.data = ctx;
+    ctx->timer.data  = ctx;
 
     if (uv_accept(server, (uv_stream_t *)&ctx->handle) != 0) {
-        close_client(ctx);   /* handles are initialised: must close via pool */
+        close_client(ctx);
         return 0;
     }
 
     uv_tcp_nodelay(&ctx->handle, 1);
     uv_timer_start(&ctx->timer, timer_cb, KEEPALIVE_TIMEOUT * 1000, 0);
-
     conn_manager_link(ctx);
-
     uv_read_start((uv_stream_t *)&ctx->handle, alloc_cb, read_cb);
     return 1;
 }
@@ -360,47 +307,47 @@ static void on_signal(uv_signal_t *handle, int signum) {
     uv_stop(uv_default_loop());
 }
 
-/** Binds and begins listening on PORT. Returns 0 on success, -1 on error. */
-static int server_bind(uv_tcp_t *server) {
+/**
+ * Initialises the TCP server handle, binds to PORT, starts listening,
+ * and arms the SIGINT signal handler.
+ * Called by main() before uv_run(). Returns 0 on success, -1 on error.
+ */
+static int server_bind(uv_loop_t *loop, uv_tcp_t *server, uv_signal_t *sig) {
     struct sockaddr_in addr;
+    uv_tcp_init(loop, server);
     uv_ip4_addr("0.0.0.0", PORT, &addr);
     uv_tcp_bind(server, (const struct sockaddr *)&addr, 0);
     int r = uv_listen((uv_stream_t *)server, LISTEN_BACKLOG, on_connection);
     if (r) { fprintf(stderr, "uv_listen error: %s\n", uv_strerror(r)); return -1; }
+
+    uv_signal_init(loop, sig);
+    uv_signal_start(sig, on_signal, SIGINT);
     return 0;
 }
 
-/** Graceful shutdown: close all clients, drain callbacks, close server handles. */
+/**
+ * Graceful shutdown sequence:
+ *   1. Close all active client connections + libuv handles
+ *   2. Drain remaining close callbacks with a final uv_run()
+ *   3. Destroy all application subsystems in reverse-init order:
+ *      templates → sessions → geo table → rate table → conn pool → db
+ */
 static void server_shutdown(uv_loop_t *loop, uv_tcp_t *server, uv_signal_t *sig) {
-    // 1. Inizia a chiudere tutto subito
     conn_manager_close_all(close_client);
     uv_close((uv_handle_t *)sig,    NULL);
     uv_close((uv_handle_t *)server, NULL);
 
-    // 2. Ora che tutti gli handle sono in fase di chiusura (closing), 
-    //    esegui il loop un'ultima volta per processare i callback on_close.
-    //    Il loop finirà AUTOMATICAMENTE quando l'ultimo handle sarà chiuso.
-    uv_run(loop, UV_RUN_DEFAULT); 
-
-    uv_loop_close(loop);
-    fprintf(stderr, "Shutdown: event loop closed.\n");
-}
-
-void server_loop() {
-    uv_loop_t  *loop = uv_default_loop();
-    uv_tcp_t    server;
-    uv_signal_t sig;
-
-    uv_tcp_init(loop, &server);
-    if (server_bind(&server) != 0) return;
-
-    uv_signal_init(loop, &sig);
-    uv_signal_start(&sig, on_signal, SIGINT);
-
-    printf("SegnalaCity listening on port %d\n", PORT);
     uv_run(loop, UV_RUN_DEFAULT);
+    uv_loop_close(loop);
 
-    server_shutdown(loop, &server, &sig);
+    tpl_unload_all();
+    ht_destroy(g_sessions,   NULL);
+    ht_destroy(g_geo_table,  NULL);
+    ht_destroy(g_rate_table, NULL);
+    conn_manager_destroy();
+    db_close();
+
+    printf("Shutdown complete.\n");
 }
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -413,7 +360,6 @@ static int init_db(void) {
                 APP_DB_PATH, db_errmsg());
         return -1;
     }
-
     if (user_setup_table()   != 0) { fprintf(stderr, "Fatal: user_setup_table\n");   return -1; }
     if (report_setup_table() != 0) { fprintf(stderr, "Fatal: report_setup_table\n"); return -1; }
     printf("Database: %s\n", APP_DB_PATH);
@@ -437,10 +383,7 @@ static int init_templates(void) {
 
 static int init_geo_table(void) {
     g_geo_table = ht_create(8192, hash_key);
-    if (!g_geo_table) {
-        fprintf(stderr, "Fatal: geo table allocation failed\n");
-        return -1;
-    }
+    if (!g_geo_table) { fprintf(stderr, "Fatal: geo table allocation failed\n"); return -1; }
     if (geo_load(GEO_JSON_PATH, g_geo_table, CITIES_JSON_PATH) < 0) {
         fprintf(stderr, "Fatal: failed to load '%s'\n", GEO_JSON_PATH);
         return -1;
@@ -454,38 +397,48 @@ static int init_geo_table(void) {
 
 static int init_sessions(void) {
     g_sessions = ht_create(0, hash_key);
-    if (!g_sessions) {
-        fprintf(stderr, "Fatal: session table allocation failed\n");
-        return -1;
-    }
+    if (!g_sessions) { fprintf(stderr, "Fatal: session table allocation failed\n"); return -1; }
     return 0;
 }
 
+/**
+ * main() — server algorithm at a glance
+ *
+ *  1. Ignore SIGPIPE (broken pipes must not kill the process)
+ *  2. Init all subsystems — single assert guarantees fail-fast if any returns -1;
+ *     each init prints its own diagnostic before returning, so the failing step
+ *     is always visible in the log.
+ *  3. Bind TCP socket + arm SIGINT handler   (assert on failure)
+ *  4. Run the event loop                     (blocks until SIGINT)
+ *  5. Graceful shutdown                      (drain callbacks, destroy all state)
+ */
 int main(void) {
+    /* ── Declarations ── */
+    uv_loop_t  *loop;
+    uv_tcp_t    server;
+    uv_signal_t sig;
+
+    /* ── 1. Signal disposition ── */
     signal(SIGPIPE, SIG_IGN);
 
-    //TODO: migliora gestione errori
-    if (conn_manager_init() != 0) {
-        fprintf(stderr, "Fatal: client pool init failed\n");
-        return EXIT_FAILURE;
-    }
-    if (init_db()        != 0) return EXIT_FAILURE;
-    if (init_templates() != 0) return EXIT_FAILURE;
-    if (init_geo_table() != 0) return EXIT_FAILURE;
-    if (init_sessions()  != 0) return EXIT_FAILURE;
+    /* ── 2. Subsystem initialisation ── */
+    assert( conn_manager_init() == 0 &&
+            init_db()           == 0 &&
+            init_templates()    == 0 &&
+            init_geo_table()    == 0 &&
+            init_sessions()     == 0 &&
+            (g_rate_table = ht_create(1024, hash_key)) != NULL
+            && "Fatal: startup failed — see stderr for details" );
 
-    g_rate_table = ht_create(1024,hash_key);
+    /* ── 3. Bind socket and arm SIGINT ── */
+    loop = uv_default_loop();
+    assert(server_bind(loop, &server, &sig) == 0 && "Fatal: server_bind");
 
-    //scomponi server loop per schiarire l'algoritmo
-    server_loop();
+    /* ── 4. Event loop (blocks here until SIGINT) ── */
+    printf("SegnalaCity listening on port %d\n", PORT);
+    uv_run(loop, UV_RUN_DEFAULT);
 
-    //todo: crea helper per shutdown
-    tpl_unload_all();
-    ht_destroy(g_sessions,  NULL);
-    ht_destroy(g_geo_table, NULL);
-    ht_destroy(g_rate_table,  NULL);
-    conn_manager_destroy();
-    db_close();
-    printf("Shutdown complete.\n");
+    /* ── 5. Graceful shutdown + full cleanup ── */
+    server_shutdown(loop, &server, &sig);
     return EXIT_SUCCESS;
 }

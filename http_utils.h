@@ -20,6 +20,7 @@
 #include "http_types.h"
 #include <stdbool.h>
 
+#define MAX_NUMBER_LEN     24
 /* ── Request parsing ─────────────────────────────────────────────────── */
 
 /**
@@ -52,6 +53,8 @@ bool http_is_request_path(const HttpRequest *req, const char *path);
 
 /** Returns true if req->method exactly matches method (NUL-terminated). */
 bool http_is_request_method(const HttpRequest *req, const char *method);
+
+bool http_is_request_complete(const char *buf, size_t len);
 
 /** Returns true if the Connection header contains "keep-alive". */
 bool http_request_contains_keepalive(const HttpRequest *req);
