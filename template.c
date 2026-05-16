@@ -194,9 +194,9 @@ const Template *tpl_get(const char *path) {
 
 /* ── Rendering ──────────────────────────────────────────────────────── */
 
-int tpl_render(const Template *tpl, char *dest, size_t dest_size,
+int tpl_render(const Template *tpl, char *dest, size_t destSize,
                const TplVar *vars, int nvars) {
-    if (!tpl || !dest || !dest_size) return -1;
+    if (!tpl || !dest || !destSize) return -1;
 
     /*
      * I fragment sono stati pre-calcolati al caricamento del template:
@@ -218,7 +218,7 @@ int tpl_render(const Template *tpl, char *dest, size_t dest_size,
             len  = strlen(data);
         }
 
-        if (written + len + 1 > dest_size) {
+        if (written + len + 1 > destSize) {
             dest[written] = '\0';
             return -1;
         }

@@ -38,7 +38,7 @@ typedef struct {
 
 /**
  * Dispatches req to the matching handler and fills resp.
- * Sets resp->status_code to 404 or 405 when no handler matches.
+ * Sets resp->statusCode to 404 or 405 when no handler matches.
  */
 void handle_request(const HttpRequest *req, HttpResponse *resp);
 

@@ -31,9 +31,9 @@ void route_api_cities(const HttpRequest *req, HttpResponse *resp) {
     const Template *tpl = tpl_get(CITIES_JSON_PATH);
     if (unlikely(!tpl)) { resp_json_error(resp, 404, "cities not found"); return; }
     int n = tpl_render(tpl, resp->body, RESPONSE_BUFFER_SIZE, NULL, 0);
-    resp->body_len     = n > 0 ? (size_t)n : 0;
-    resp->status_code  = 200;
-    resp->content_type = "application/json";
+    resp->bodyLen     = n > 0 ? (size_t)n : 0;
+    resp->statusCode  = 200;
+    resp->contentType = "application/json";
 }
 
 /* ── Citizen / operator endpoints ────────────────────────────────────── */
@@ -41,17 +41,17 @@ void route_api_cities(const HttpRequest *req, HttpResponse *resp) {
 void route_api_reports_active(const HttpRequest *req, HttpResponse *resp) {
     User u = {0};
     if (!get_session_user(req, &u)) { resp_json_error(resp, 401, "unauthorized"); return; }
-    resp->body_len    = report_get_active_json(resp->body, RESPONSE_BUFFER_SIZE,
+    resp->bodyLen    = report_get_active_json(resp->body, RESPONSE_BUFFER_SIZE,
                                                u.userId, u.city, user_is_operator(&u));
-    resp->status_code = 200;
+    resp->statusCode = 200;
 }
 
 void route_api_reports_archived(const HttpRequest *req, HttpResponse *resp) {
     User u = {0};
     if (!get_session_user(req, &u)) { resp_json_error(resp, 401, "unauthorized"); return; }
-    resp->body_len    = report_get_archived_json(resp->body, RESPONSE_BUFFER_SIZE,
+    resp->bodyLen    = report_get_archived_json(resp->body, RESPONSE_BUFFER_SIZE,
                                                  u.userId, u.city, user_is_operator(&u));
-    resp->status_code = 200;
+    resp->statusCode = 200;
 }
 
 /* ── Operator endpoints ──────────────────────────────────────────────── */
@@ -90,8 +90,8 @@ void route_api_report_status(const HttpRequest *req, HttpResponse *resp) {
 
     //report_cache_invalidate_city(r.city, r.authorId); //TODO: evita qui e metti in report_* qui sopra
     snprintf(resp->body, RESPONSE_BUFFER_SIZE, "{\"ok\":true}");
-    resp->body_len    = strlen(resp->body);
-    resp->status_code = 200;
+    resp->bodyLen    = strlen(resp->body);
+    resp->statusCode = 200;
 }
 
 /* ── Admin endpoints ─────────────────────────────────────────────────── */
@@ -101,8 +101,8 @@ void route_api_reports_all(const HttpRequest *req, HttpResponse *resp) {
     if (!get_session_user(req, &u) || !user_is_admin(&u)) {
         resp_json_error(resp, 403, "forbidden"); return;
     }
-    resp->body_len    = report_get_all_city_json(resp->body, RESPONSE_BUFFER_SIZE, u.city);
-    resp->status_code = 200;
+    resp->bodyLen    = report_get_all_city_json(resp->body, RESPONSE_BUFFER_SIZE, u.city);
+    resp->statusCode = 200;
 }
 
 void route_api_operators(const HttpRequest *req, HttpResponse *resp) {
@@ -110,8 +110,8 @@ void route_api_operators(const HttpRequest *req, HttpResponse *resp) {
     if (!get_session_user(req, &u) || !user_is_admin(&u)) {
         resp_json_error(resp, 403, "forbidden"); return;
     }
-    resp->body_len    = user_get_operators_json(resp->body, RESPONSE_BUFFER_SIZE, u.city);
-    resp->status_code = 200;
+    resp->bodyLen    = user_get_operators_json(resp->body, RESPONSE_BUFFER_SIZE, u.city);
+    resp->statusCode = 200;
 }
 
 void route_api_admin_assign(const HttpRequest *req, HttpResponse *resp) {
@@ -145,6 +145,6 @@ void route_api_admin_assign(const HttpRequest *req, HttpResponse *resp) {
 
     //report_cache_invalidate_city(r.city, r.authorId);
     snprintf(resp->body, RESPONSE_BUFFER_SIZE, "{\"ok\":true}");
-    resp->body_len    = strlen(resp->body);
-    resp->status_code = 200;
+    resp->bodyLen    = strlen(resp->body);
+    resp->statusCode = 200;
 }

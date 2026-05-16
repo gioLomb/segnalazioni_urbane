@@ -328,15 +328,15 @@ int report_count_active(void) {
 
 /* ── Utility ─────────────────────────────────────────────────────────── */
 
-bool report_to_json(const ActiveReport *r, char *dest, size_t dest_size) {
-    if (!r || !dest || dest_size == 0) return false;
+bool report_to_json(const ActiveReport *r, char *dest, size_t destSize) {
+    if (!r || !dest || destSize == 0) return false;
     cJSON *obj = report_to_cjson(r);
     if (!obj) return false;
     char  *str = cJSON_PrintUnformatted(obj);
     cJSON_Delete(obj);
     if (!str) return false;
     size_t len = strlen(str);
-    bool   ok  = len < dest_size;
+    bool   ok  = len < destSize;
     if (ok) memcpy(dest, str, len + 1);
     free(str);
     return ok;

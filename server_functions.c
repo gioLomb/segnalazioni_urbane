@@ -107,7 +107,7 @@ unsigned long hash_key(const void *key, size_t keySize, unsigned long seed) {
  * The WriteReq (header + body in one block) is freed in write_cb.
  */
 static void send_response(ClientCtx *ctx, const HttpResponse *resp, bool keep_alive) {
-    size_t    total_max = MAX_HEADER_STR_LEN + resp->body_len;
+    size_t    total_max = MAX_HEADER_STR_LEN + resp->bodyLen;
     WriteReq *wr        = malloc(sizeof(WriteReq) + total_max);
     if (!wr) { close_client(ctx); return; }
 
@@ -170,25 +170,25 @@ static void read_cb(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf) {
     char ip[INET6_ADDRSTRLEN] = {0};
     get_peer_ip(&ctx->handle, ip, sizeof(ip));
     if (DEBUG_RATE_LIMIT && !rate_limit_check(ip)) {
-        HttpResponse r429 = { .status_code = 429,
+        HttpResponse r429 = { .statusCode = 429,
                                .body        = "Too Many Requests\n",
-                               .body_len    = 18 };
+                               .bodyLen    = 18 };
         send_response(ctx, &r429, false);
         return;
     }
 
     HttpRequest req = {0};
     if (!http_request_parse(ctx->buffer, ctx->totalRead, &req)) {
-        HttpResponse bad = { .status_code = 400,
+        HttpResponse bad = { .statusCode = 400,
                              .body        = "<h1>400 Bad Request</h1>",
-                             .body_len    = 24 };
+                             .bodyLen    = 24 };
         send_response(ctx, &bad, false);
         return;
     }
 
     bool keep_alive = http_request_contains_keepalive(&req);
 
-    HttpResponse resp = { .status_code = 200, .body = g_response_buffer };
+    HttpResponse resp = { .statusCode = 200, .body = g_response_buffer };
     handle_request(&req, &resp);
     send_response(ctx, &resp, keep_alive);
 }
@@ -212,7 +212,7 @@ static void timer_cb(uv_timer_t *handle) {
 
 static void on_close(uv_handle_t *handle) {
     ClientCtx *ctx = (ClientCtx *)handle->data;
-    if (--ctx->pending_closes > 0) return;
+    if (--ctx->pendingCloses > 0) return;
 
     conn_manager_unlink(ctx);
     conn_manager_release(ctx);
@@ -221,7 +221,7 @@ static void on_close(uv_handle_t *handle) {
 static void close_client(ClientCtx *ctx) {
     if (ctx->closing) return;
     ctx->closing        = true;
-    ctx->pending_closes = 2;
+    ctx->pendingCloses = 2;
     uv_close((uv_handle_t *)&ctx->handle, on_close);
     uv_close((uv_handle_t *)&ctx->timer,  on_close);
 }

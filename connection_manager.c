@@ -2,101 +2,88 @@
 #include "slab_allocator.h"
 #include <string.h>
 
-/** Capacity of each memory slab for ClientCtx objects */
+// Number of ClientCtx slots per slab chunk.
 #define CONN_CHUNK_CAPACITY 64
 
 /* ── Module state ────────────────────────────────────────────────────── */
 
-// Global pool for ClientCtx memory management
-static SlabPool   g_pool         = {0};
-// Head of the doubly-linked list for active (live) connections
-static ClientCtx *g_active_head  = NULL;
-// Counter for monitoring current load
-static int        g_active_count = 0;
+static SlabPool clientPool;             // Slab pool for ClientCtx allocation
+static ClientCtx *ptrActiveClientsHead; // Head of the doubly-linked active list
+static int activeClientsCount;          // Current number of live connections
 
 /* ── Lifecycle ───────────────────────────────────────────────────────── */
 
 int conn_manager_init(void) {
-    // Initialize slab allocator with the size of ClientCtx
-    return slab_pool_init(&g_pool, sizeof(ClientCtx), CONN_CHUNK_CAPACITY);
+    // Initialise the slab with ClientCtx-sized blocks and 64 slots per chunk.
+    return slab_pool_init(&clientPool, sizeof(ClientCtx), CONN_CHUNK_CAPACITY);
 }
 
 void conn_manager_destroy(void) {
-    // Release all slabs back to the system
-    slab_pool_destroy(&g_pool);
-    // Reset tracking state
-    g_active_head  = NULL;
-    g_active_count = 0;
+    slab_pool_destroy(&clientPool);
+    ptrActiveClientsHead = NULL;
+    activeClientsCount = 0;
 }
 
 /* ── Per-connection alloc / release ─────────────────────────────────── */
 
 ClientCtx *conn_manager_alloc(void) {
-    // Request a block from the slab. Memory is already zeroed by the allocator.
-    ClientCtx *ctx = slab_pool_alloc(&g_pool);
+    ClientCtx *ctx = slab_pool_alloc(&clientPool);
     if (!ctx) return NULL;
 
-    /* Slab memory is zeroed; reset explicitly for clarity and safety. */
-    ctx->closing        = false;
-    ctx->pending_closes = 0;
-    ctx->totalRead      = 0;
-    ctx->buffer         = NULL;   /* allocated lazily in alloc_cb */
-    ctx->next           = NULL;
-    ctx->prev           = NULL;
+    // Explicitly reset all fields even though the slab doesn't guarantee zeroing.
+    ctx->closing = false;
+    ctx->pendingCloses = 0;
+    ctx->totalRead = 0;
+    ctx->buffer = NULL;
+    ctx->next = NULL;
+    ctx->prev = NULL;
     return ctx;
 }
 
 void conn_manager_release(ClientCtx *ctx) {
-    /* Free the receive buffer if it was ever allocated, then return the
-     * slab block. Pointer becomes invalid for the caller immediately. */
+    // Free the receive buffer if it was ever allocated, then recycle the slot.
     free(ctx->buffer);
     ctx->buffer = NULL;
-    slab_pool_free(&g_pool, ctx);
+    slab_pool_free(&clientPool, ctx);
 }
 
 /* ── Active list ─────────────────────────────────────────────────────── */
 
 void conn_manager_link(ClientCtx *ctx) {
-    // Standard O(1) prepend operation for doubly-linked list
-    ctx->next = g_active_head;
+    // O(1) prepend: new node becomes the new head.
+    ctx->next = ptrActiveClientsHead;
     ctx->prev = NULL;
-    
-    if (g_active_head) {
-        g_active_head->prev = ctx;
-    }
-    
-    g_active_head = ctx;
-    g_active_count++;
+
+    if (ptrActiveClientsHead) ptrActiveClientsHead->prev = ctx;
+
+    ptrActiveClientsHead = ctx;
+    activeClientsCount++;
 }
 
 void conn_manager_unlink(ClientCtx *ctx) {
-    // Adjust adjacent nodes or the global head if we are at the start
-    if (ctx->prev) {
+    // Patch adjacent nodes or update the head when removing from the front.
+    if (ctx->prev){
         ctx->prev->next = ctx->next;
-    } else {
-        g_active_head   = ctx->next;
+    }else{
+        ptrActiveClientsHead = ctx->next;
     }
-    
-    if (ctx->next) {
-        ctx->next->prev = ctx->prev;
-    }
-    
-    // Clean up pointers in the removed node to prevent accidental re-traversal
+
+    if (ctx->next) ctx->next->prev = ctx->prev;
+
     ctx->next = ctx->prev = NULL;
-    g_active_count--;
+    activeClientsCount--;
 }
 
 int conn_manager_active_count(void) {
-    return g_active_count;
+    return activeClientsCount;
 }
 
 void conn_manager_close_all(void (*fn)(ClientCtx *ctx)) {
-    ClientCtx *curr = g_active_head;
-    
-    // Iterate through all active clients
+    ClientCtx *curr = ptrActiveClientsHead;
+
     while (curr) {
-        // Cache next pointer because 'fn' (e.g. server_close_client) 
-        // will trigger unlinking, which modifies curr->next.
+        // Cache next before calling fn, because fn (e.g. close_client) will
+        // trigger conn_manager_unlink, which overwrites curr->next.
         ClientCtx *next = curr->next;
         fn(curr);
         curr = next;

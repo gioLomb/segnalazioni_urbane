@@ -6,21 +6,30 @@
 
 /* ── Internal helpers ────────────────────────────────────────────────── */
 
-static inline int hex_val(char c) {
+/* Converts a single hex digit character to its numeric value (0–15). */
+static inline int hex_val(char c)
+{
     if (c >= '0' && c <= '9') return c - '0';
     if (c >= 'a' && c <= 'f') return c - 'a' + 10;
     if (c >= 'A' && c <= 'F') return c - 'A' + 10;
     return 0;
 }
 
-static void url_decode(const char * restrict src, char * restrict dest, size_t max) {
+/*
+ * URL-decodes src into dest, stopping at query-string delimiters
+ * ('&', ' ', '\r', '\n') or when dest is full.
+ * '%XX' sequences are decoded; '+' is mapped to a space.
+ * A decoded NUL byte (%00) terminates the loop as a safety measure.
+ */
+static void url_decode(const char * restrict src, char * restrict dest, size_t max)
+{
     size_t i = 0;
     while (*src && *src != '&' && *src != ' ' && *src != '\r' && *src != '\n'
            && i < max - 1) {
         if (*src == '%' && isxdigit((unsigned char)src[1])
                         && isxdigit((unsigned char)src[2])) {
             char c = (char)((hex_val(src[1]) << 4) | hex_val(src[2]));
-            if (c == '\0') break;
+            if (c == '\0') break; // %00 could be used to bypass string checks
             dest[i++] = c;
             src += 3;
         } else if (*src == '+') {
@@ -33,7 +42,9 @@ static void url_decode(const char * restrict src, char * restrict dest, size_t m
     dest[i] = '\0';
 }
 
-static const char *http_status_msg(int code) {
+/* Returns the standard reason-phrase for the most common HTTP status codes. */
+static const char *http_status_msg(int code)
+{
     switch (code) {
         case 200: return "OK";
         case 302: return "Found";
@@ -48,7 +59,13 @@ static const char *http_status_msg(int code) {
     }
 }
 
-static const char *infer_content_type(const char *body, const char *override) {
+/*
+ * Determines the Content-Type to use in the response.
+ * Returns override directly if it is non-NULL and non-empty;
+ * otherwise infers the type from the first byte of body.
+ */
+static const char *infer_contentType(const char *body, const char *override)
+{
     if (override && override[0])                    return override;
     if (body && body[0] == '<')                     return "text/html; charset=utf-8";
     if (body && (body[0] == '{' || body[0] == '[')) return "application/json";
@@ -57,7 +74,8 @@ static const char *infer_content_type(const char *body, const char *override) {
 
 /* ── Request parsing ─────────────────────────────────────────────────── */
 
-bool http_is_request_complete(const char *buf, size_t len) {
+bool http_is_request_complete(const char *buf, size_t len)
+{
     struct phr_header headers[HTTP_MAX_HEADERS];
     size_t            numHeaders = HTTP_MAX_HEADERS;
     const char       *method, *path;
@@ -65,173 +83,192 @@ bool http_is_request_complete(const char *buf, size_t len) {
     int               minorVersion;
 
     int r = phr_parse_request(buf, len,
-                               &method, &methodLen,
-                               &path,   &pathLen,
-                               &minorVersion,
-                               headers, &numHeaders,
-                               0 /* last_len: always fresh parse */);
+                              &method, &methodLen,
+                              &path,   &pathLen,
+                              &minorVersion,
+                              headers, &numHeaders,
+                              0 /* lastLen: always a fresh parse */);
 
-    if (r == -2) return false;   /* headers incomplete — wait */
-    if (r == -1) return true;    /* malformed — let handler return 400 */
+    if (r == -2) return false; // headers incomplete — wait for more data
+    if (r == -1) return true;  // malformed — let the handler return 400
 
-    /* For POST requests verify the body has fully arrived. */
+    // For POST requests verify that the body has fully arrived
     if (methodLen != 4 || memcmp(method, "POST", 4) != 0) return true;
 
     for (size_t i = 0; i < numHeaders; i++) {
+        // Fast pre-filter: "content-length" is exactly 14 chars
         if (headers[i].name_len != 14) continue;
         if (strncasecmp(headers[i].name, "content-length", 14) != 0) continue;
 
+        // phr_header values are not NUL-terminated — copy into a local buffer
+        // and clamp to MAX_NUMBER_LEN - 1 to leave room for the NUL
         char   val[MAX_NUMBER_LEN] = {0};
-        size_t vlen    = headers[i].value_len <MAX_NUMBER_LEN-1 ? headers[i].value_len :MAX_NUMBER_LEN-1;
+        size_t vlen = headers[i].value_len < MAX_NUMBER_LEN - 1
+                    ? headers[i].value_len
+                    : MAX_NUMBER_LEN - 1;
         memcpy(val, headers[i].value, vlen);
-        long cl = strtol(val, NULL, 10);
-        if (cl <= 0) break;
 
-        size_t body_received = len - (size_t)r;
-        return body_received >= (size_t)cl;
+        long cl = strtol(val, NULL, 10);
+        if (cl <= 0) break; // malformed or zero-length body — treat as complete
+
+        // r is the byte offset where the body starts (returned by phr_parse_request)
+        size_t bodyReceived = len - (size_t)r;
+        return bodyReceived >= (size_t)cl;
     }
     return true;
 }
 
-
-bool http_request_parse(const char *raw, size_t raw_len, HttpRequest *req) {
+bool http_request_parse(const char *raw, size_t rawLen, HttpRequest *req)
+{
     memset(req, 0, sizeof(*req));
     req->numHeaders = HTTP_MAX_HEADERS;
 
-    int r = phr_parse_request(raw, raw_len,
-                               &req->method,   &req->methodLen,
-                               &req->path,     &req->pathLen,
-                               &req->minorVersion,
-                               req->headers,   &req->numHeaders,
-                               0);
+    int r = phr_parse_request(raw, rawLen,
+                              &req->method,   &req->methodLen,
+                              &req->path,     &req->pathLen,
+                              &req->minorVersion,
+                              req->headers,   &req->numHeaders,
+                              0);
     if (r < 0) return false;
 
-    /* Strip query string from path */
+    // Strip the query string from the path (e.g. "/api/x?foo=1" → "/api/x")
     const char *q = memchr(req->path, '?', req->pathLen);
-    if (q) {
-        req->pathLen = (size_t)(q - req->path);
-    }
-    /* Point body past the header block */
-    if (raw_len > (size_t)r) {
-        req->body     = raw + r;
-        req->body_len = raw_len - (size_t)r;
+    if (q) req->pathLen = (size_t)(q - req->path);
+
+    // Point body to the bytes that follow the header block
+    if (rawLen > (size_t)r) {
+        req->body    = raw + r;
+        req->bodyLen = rawLen - (size_t)r;
     }
 
     return true;
 }
 
 const char *http_request_header(const HttpRequest *req,
-                                 const char        *name,
-                                 size_t            *value_len) {
+                                const char        *name,
+                                size_t            *valueLenOut)
+{
     size_t nlen = strlen(name);
     for (size_t i = 0; i < req->numHeaders; i++) {
         if (req->headers[i].name_len == nlen &&
             strncasecmp(req->headers[i].name, name, nlen) == 0) {
-            if (value_len) *value_len = req->headers[i].value_len;
+            if (valueLenOut) *valueLenOut = req->headers[i].value_len;
             return req->headers[i].value;
         }
     }
     return NULL;
 }
 
-void http_request_cookie(const HttpRequest *req, const char *name, char *dest, size_t max) {
+void http_request_cookie(const HttpRequest *req, const char *name, char *dest, size_t max)
+{
     dest[0] = '\0';
-    size_t cookie_len = 0;
-    const char *h = http_request_header(req, "cookie", &cookie_len);
+
+    size_t cookieLen = 0;
+    const char *h = http_request_header(req, "cookie", &cookieLen);
     if (!h) return;
 
-    size_t name_len = strlen(name);
-    const char *end = h + cookie_len;
+    size_t nameLen = strlen(name);
+    const char *end = h + cookieLen;
 
     while (h < end) {
-        // Cerca la prossima occorrenza del nome del cookie nel buffer rimanente
-        h = memmem(h, end - h, name, name_len);
+        // Fast scan for the next occurrence of the cookie name in the remaining buffer
+        h = memmem(h, end - h, name, nameLen);
         if (!h) break;
 
-        // Controllo dei confini:
-        // 1. Deve essere preceduto da ';' o ' ' (o essere all'inizio)
-        // 2. Deve essere seguito da '='
-        bool prefix_ok = (h == req->headers[0].value || *(h - 1) == ' ' || *(h - 1) == ';');
-        if (prefix_ok && (h + name_len < end) && h[name_len] == '=') {
-            url_decode(h + name_len + 1, dest, max);
+        /*
+         * Verify token boundaries:
+         *  - must be preceded by ';', ' ', or be at the very start of the value
+         *  - must be immediately followed by '='
+         */
+        bool prefixOk = (h == req->headers[0].value || *(h-1) == ' ' || *(h-1) == ';');
+        if (prefixOk && (h + nameLen < end) && h[nameLen] == '=') {
+            url_decode(h + nameLen + 1, dest, max);
             return;
         }
-        
-        // Se non era quello giusto, avanza di un byte e ricomincia la ricerca veloce
+
+        // Not the right cookie — advance one byte and retry
         h++;
     }
 }
 
-
-bool http_is_request_path(const HttpRequest *req, const char *path) {
+bool http_is_request_path(const HttpRequest *req, const char *path)
+{
     size_t plen = strlen(path);
     return req->pathLen == plen && memcmp(req->path, path, plen) == 0;
 }
 
-bool http_is_request_method(const HttpRequest *req, const char *method) {
+bool http_is_request_method(const HttpRequest *req, const char *method)
+{
     size_t mlen = strlen(method);
     return req->methodLen == mlen && memcmp(req->method, method, mlen) == 0;
 }
 
-bool http_request_contains_keepalive(const HttpRequest *req) {
-    size_t      vlen = 0;
-    const char *val  = http_request_header(req, "connection", &vlen);
+bool http_request_contains_keepalive(const HttpRequest *req)
+{
+    size_t vlen = 0;
+    const char *val = http_request_header(req, "connection", &vlen);
     return val && vlen >= 10 && strncasecmp(val, "keep-alive", 10) == 0;
 }
 
 /* ── Response rendering ──────────────────────────────────────────────── */
 
-static inline bool append_to_buffer(char *out, size_t out_max, size_t *pos, const char *fmt, ...) {
+/*
+ * Appends formatted text to out starting at *pos.
+ * Updates *pos with the number of bytes written.
+ * Returns false if the buffer is too small.
+ * vsnprintf returns the bytes it *would* have written — if >= remaining
+ * the output was truncated and we treat that as an error.
+ */
+static inline bool append_to_buffer(char *out, size_t outMax, size_t *pos, const char *fmt, ...)
+{
     va_list ap;
     va_start(ap, fmt);
-    
-    // Calcola lo spazio rimanente
-    size_t remaining = out_max - *pos;
+
+    size_t remaining = outMax - *pos;
     int written = vsnprintf(out + *pos, remaining, fmt, ap);
-    
+
     va_end(ap);
 
-    // Errore di scrittura o buffer insufficiente (vsnprintf restituisce i byte necessari)
-    if (written < 0 || (size_t)written >= remaining) {
-        return false;
-    }
+    if (written < 0 || (size_t)written >= remaining) return false;
 
     *pos += (size_t)written;
     return true;
 }
 
-int http_response_render(const HttpResponse * restrict resp, bool keep_alive,
-                          char * restrict out, size_t out_max) {
-    const char *ct = infer_content_type(resp->body, resp->content_type);
-    size_t body_len = (resp->status_code == 302) ? 0 : resp->body_len;
+int http_response_render(const HttpResponse * restrict resp, bool keepAlive,
+                         char * restrict out, size_t outMax)
+{
+    const char *ct = infer_contentType(resp->body, resp->contentType);
+
+    // Redirect responses carry no body
+    size_t bodyLen = (resp->statusCode == 302) ? 0 : resp->bodyLen;
     size_t pos = 0;
 
-    // 1. Scrittura degli header principali
-    if (!append_to_buffer(out, out_max, &pos, 
+    // 1. Mandatory headers: status line, Content-Type, Content-Length, Connection
+    if (!append_to_buffer(out, outMax, &pos,
             "HTTP/1.1 %d %s\r\n"
             "Content-Type: %s\r\n"
             "Content-Length: %zu\r\n"
             "Connection: %s\r\n",
-            resp->status_code, http_status_msg(resp->status_code),
-            ct, body_len, keep_alive ? "keep-alive" : "close")) return -1;
+            resp->statusCode, http_status_msg(resp->statusCode),
+            ct, bodyLen, keepAlive ? "keep-alive" : "close")) return -1;
 
-    // 2. Header opzionali
-    if (resp->set_cookie[0]) {
-        if (!append_to_buffer(out, out_max, &pos, "Set-Cookie: %s\r\n", resp->set_cookie)) return -1;
+    // 2. Optional headers — emitted only when the field is non-empty
+    if (resp->setCookie[0]) {
+        if (!append_to_buffer(out, outMax, &pos, "Set-Cookie: %s\r\n", resp->setCookie)) return -1;
     }
-    
     if (resp->location[0]) {
-        if (!append_to_buffer(out, out_max, &pos, "Location: %s\r\n", resp->location)) return -1;
+        if (!append_to_buffer(out, outMax, &pos, "Location: %s\r\n", resp->location)) return -1;
     }
 
-    // 3. Fine degli header
-    if (!append_to_buffer(out, out_max, &pos, "\r\n")) return -1;
+    // 3. Blank line that terminates the header section (CRLFCRLF)
+    if (!append_to_buffer(out, outMax, &pos, "\r\n")) return -1;
 
-    // 4. Copia del corpo
-    if (pos + body_len > out_max) return -1; // Nota: rimosso '=' perché memcpy non mette il \0
-    if (body_len) {
-        memcpy(out + pos, resp->body, body_len);
-        pos += body_len;
+    // 4. Body — copied with memcpy because it may contain NUL bytes
+    if (pos + bodyLen > outMax) return -1;
+    if (bodyLen) {
+        memcpy(out + pos, resp->body, bodyLen);
+        pos += bodyLen;
     }
 
     return (int)pos;
@@ -239,18 +276,23 @@ int http_response_render(const HttpResponse * restrict resp, bool keep_alive,
 
 /* ── Body / HTML helpers ─────────────────────────────────────────────── */
 
-const char *post_body(const char *req) {
+const char *post_body(const char *req)
+{
     const char *p = strstr(req, "\r\n\r\n");
     return p ? p + 4 : NULL;
 }
 
-void get_field(const char *src, const char *param_name, char *dest, size_t max) {
+void get_field(const char *src, const char *paramName, char *dest, size_t max)
+{
     dest[0] = '\0';
-    if (unlikely(!src || !param_name)) return;
-    size_t      plen = strlen(param_name);
-    const char *p    = src;
-    while ((p = strstr(p, param_name)) != NULL) {
-        if (p == src || *(p - 1) == '&') {
+    if (unlikely(!src || !paramName)) return;
+
+    size_t plen = strlen(paramName);
+    const char *p = src;
+
+    while ((p = strstr(p, paramName)) != NULL) {
+        // Accept the match only at the start of the string or right after '&'
+        if (p == src || *(p-1) == '&') {
             url_decode(p + plen, dest, max);
             return;
         }
@@ -258,23 +300,26 @@ void get_field(const char *src, const char *param_name, char *dest, size_t max) 
     }
 }
 
-void html_escape(const char * restrict src, char * restrict dest, size_t max) {
+void html_escape(const char * restrict src, char * restrict dest, size_t max)
+{
     size_t i = 0;
+    // Reserve enough room for the longest entity (&quot; = 6 bytes) plus NUL
     while (*src && i + 7 < max) {
         switch (*src) {
-            case '<':  memcpy(dest + i, "&lt;",   4); i += 4; break;
-            case '>':  memcpy(dest + i, "&gt;",   4); i += 4; break;
-            case '&':  memcpy(dest + i, "&amp;",  5); i += 5; break;
-            case '"':  memcpy(dest + i, "&quot;", 6); i += 6; break;
-            case '\'': memcpy(dest + i, "&#39;",  5); i += 5; break;
-            default:   dest[i++] = *src;               break;
+            case '<':  memcpy(dest+i, "&lt;",   4); i += 4; break;
+            case '>':  memcpy(dest+i, "&gt;",   4); i += 4; break;
+            case '&':  memcpy(dest+i, "&amp;",  5); i += 5; break;
+            case '"':  memcpy(dest+i, "&quot;", 6); i += 6; break;
+            case '\'': memcpy(dest+i, "&#39;",  5); i += 5; break;
+            default:   dest[i++] = *src;             break;
         }
         src++;
     }
     dest[i] = '\0';
 }
 
-void make_error_block(const char *msg, char *dest, size_t max) {
+void make_error_block(const char *msg, char *dest, size_t max)
+{
     if (unlikely(!msg || !msg[0])) { dest[0] = '\0'; return; }
     snprintf(dest, max, "<div class='alert alert-err'>%s</div>", msg);
 }

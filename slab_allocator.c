@@ -2,133 +2,125 @@
 #include <stdlib.h>
 #include <string.h>
 
-// ── Internal Chunk type ───────────────────────────────────────────────
+/* ── Internal Chunk type ─────────────────────────────────────────────── */
 
-// Each Chunk is a contiguous slab of memory divided into fixed-size blocks.
-// Chunks form a doubly-linked list to allow O(1) unlinking when a chunk is empty.
+// Each Chunk is a contiguous slab of memory subdivided into fixed-size blocks.
+// Chunks form a doubly-linked list so an empty chunk can be unlinked in O(1).
 typedef struct __attribute__((aligned(64))) Chunk {
-    struct Chunk *next;         // Next chunk in the pool
-    struct Chunk *prev;         // Previous chunk in the pool
-    void         *local_free;   // Head of this chunk's singly-linked free-list
-    int           used_count;   // Number of blocks currently allocated
-    int           capacity;     // Total number of blocks in this chunk
-    char          data[];       // Flexible array member for raw block data
+    struct Chunk *next;       // Next chunk in the pool
+    struct Chunk *prev;       // Previous chunk in the pool
+    void         *localFree;  // Head of this chunk's singly-linked free-list
+    int           usedCount;  // Number of blocks currently allocated
+    int           capacity;   // Total number of blocks in this chunk
+    char          data[];     // Flexible array: raw block storage
 } Chunk;
 
-// ── Helpers ───────────────────────────────────────────────────────────
+/* ── Private helpers ─────────────────────────────────────────────────── */
 
-// Allocates and initializes a new memory chunk.
-// Each block in the chunk includes a hidden back-pointer to the Chunk itself.
+// Allocates and initialises a new Chunk. Each block embeds a hidden
+// back-pointer to the owning Chunk for O(1) deallocation.
 static Chunk *create_chunk(SlabPool *pool) {
-    size_t data_size = (size_t)pool->chunk_capacity * pool->internal_bsize;
-    Chunk *c = calloc(1, sizeof(Chunk) + data_size);
-    
+    size_t dataSize = (size_t)pool->chunkCapacity * pool->internalBsize;
+    Chunk *c = calloc(1, sizeof(Chunk) + dataSize);
     if (!c) return NULL;
 
-    c->capacity   = pool->chunk_capacity;
-    c->used_count = 0;
+    c->capacity = pool->chunkCapacity;
+    c->usedCount = 0;
 
-    // Initialize the free-list inside the chunk data area.
-    // Each free block stores the address of the next free block at its start.
+    // Build the free-list by threading each block through its user area.
     for (int i = 0; i < c->capacity; i++) {
-        char *block_start = c->data + (i * pool->internal_bsize);
-        
-        // Set the hidden back-pointer to this Chunk header
-        *(Chunk **)block_start = c;
+        char *blockStart = c->data + (i * pool->internalBsize);
 
-        // Thread the block into the local free-list
-        // The pointer returned to the user is at (block_start + sizeof(void*))
-        void *user_area = block_start + sizeof(void *);
-        *(void **)user_area = c->local_free;
-        c->local_free = user_area;
+        // Store the Chunk back-pointer in the hidden header slot.
+        *(Chunk **)blockStart = c;
+
+        // The pointer returned to callers starts after the hidden header.
+        void *userArea = blockStart + sizeof(void *);
+        *(void **)userArea = c->localFree;
+        c->localFree = userArea;
     }
 
     return c;
 }
 
-// ── Public API ────────────────────────────────────────────────────────
+/* ── Public API ──────────────────────────────────────────────────────── */
 
-int slab_pool_init(SlabPool *pool, size_t block_size, int chunk_capacity) {
+int slab_pool_init(SlabPool *pool, size_t blockSize, int chunkCapacity) {
     if (!pool) return -1;
 
-    pool->block_size     = block_size;
-    // Each block contains a hidden pointer to the owner chunk + the user data
-    pool->internal_bsize = sizeof(void *) + block_size;
-    pool->chunk_capacity = chunk_capacity;
-    
-    // Pre-allocate the first chunk to ensure the pool is ready
-    pool->chunks_head = create_chunk(pool);
-    return pool->chunks_head ? 0 : -1;
+    pool->blockSize = blockSize;
+    // Each block stores a hidden Chunk* before the user-visible data.
+    pool->internalBsize = sizeof(void *) + blockSize;
+    pool->chunkCapacity = chunkCapacity;
+
+    // Pre-allocate the first chunk so the pool is immediately usable.
+    pool->chunksHead = create_chunk(pool);
+    return pool->chunksHead ? 0 : -1;
 }
 
 void slab_pool_destroy(SlabPool *pool) {
     if (!pool) return;
 
-    Chunk *chunk = (Chunk *)pool->chunks_head;
+    Chunk *chunk = (Chunk *)pool->chunksHead;
     while (chunk) {
         Chunk *next = chunk->next;
-        free(chunk); // Release the entire contiguous block
+        free(chunk); // Each chunk is one contiguous allocation.
         chunk = next;
     }
-    pool->chunks_head = NULL;
+    pool->chunksHead = NULL;
 }
 
 void *slab_pool_alloc(SlabPool *pool) {
     if (!pool) return NULL;
 
-    // Search for a chunk that has at least one free slot
-    Chunk *chunk = (Chunk *)pool->chunks_head;
-    while (chunk && !chunk->local_free)
+    // Find the first chunk with at least one free slot.
+    Chunk *chunk = (Chunk *)pool->chunksHead;
+    while (chunk && !chunk->localFree)
         chunk = chunk->next;
 
-    // If no chunk has space, we grow the pool by adding a new chunk at the head
+    // All chunks are full: grow the pool by prepending a new chunk.
     if (!chunk) {
         chunk = create_chunk(pool);
         if (!chunk) return NULL;
-        
-        chunk->next = (Chunk *)pool->chunks_head;
-        if (pool->chunks_head)
-            ((Chunk *)pool->chunks_head)->prev = chunk;
-        pool->chunks_head = chunk;
+
+        chunk->next = (Chunk *)pool->chunksHead;
+        if (pool->chunksHead)
+            ((Chunk *)pool->chunksHead)->prev = chunk;
+        pool->chunksHead = chunk;
     }
 
-    /* Pop the first available block from this chunk's local free-list. */
-    void *user_ptr    = chunk->local_free;
-    chunk->local_free = *(void **)user_ptr;
-    chunk->used_count++;
+    // Pop the first free block from this chunk's local free-list.
+    void *userPtr = chunk->localFree;
+    chunk->localFree = *(void **)userPtr;
+    chunk->usedCount++;
 
-    /*
-     * Do NOT zero the block here.  conn_manager_alloc() already resets
-     * every field of ClientCtx explicitly after allocation, so a full
-     * memset of 8 KB per connection is pure waste.  If this pool is ever
-     * reused for a different type that requires zeroing, add the memset
-     * in that allocator's wrapper, not here.
-     */
-    return user_ptr;
+    // NOTE: memory is NOT zeroed here. conn_manager_alloc() resets every
+    // ClientCtx field explicitly, so a full memset would be redundant.
+    return userPtr;
 }
 
 void slab_pool_free(SlabPool * restrict pool, void * restrict ptr) {
     if (!ptr) return;
 
-    // The hidden header (Chunk*) is stored just before the user pointer
+    // Recover the owning Chunk from the hidden header that precedes the user pointer.
     Chunk *chunk = *(Chunk **)((char *)ptr - sizeof(void *));
 
-    // Push the block back onto the chunk's free-list
-    *(void **)ptr  = chunk->local_free;
-    chunk->local_free = ptr;
-    chunk->used_count--;
+    // Push the block back onto the chunk's free-list.
+    *(void **)ptr = chunk->localFree;
+    chunk->localFree = ptr;
+    chunk->usedCount--;
 
-    // Optimization: If a chunk becomes entirely empty, free it to the system.
-    // We keep the last chunk to avoid frequent allocation/deallocation (thrashing).
-    if (chunk->used_count == 0 && (chunk->next || chunk->prev)) {
-        // Unlink the chunk from the doubly-linked list
+    // Release the chunk when it's entirely empty, but always keep at least
+    // one chunk alive to avoid thrashing under low load.
+    if (chunk->usedCount == 0 && (chunk->next || chunk->prev)) {
+        // Unlink from the doubly-linked list.
         if (chunk->prev) chunk->prev->next = chunk->next;
         if (chunk->next) chunk->next->prev = chunk->prev;
-        
-        // Update pool head if the first chunk was deleted
-        if (pool->chunks_head == chunk)
-            pool->chunks_head = chunk->next;
-            
+
+        // Update the pool head if we removed the first chunk.
+        if (pool->chunksHead == chunk)
+            pool->chunksHead = chunk->next;
+
         free(chunk);
     }
 }

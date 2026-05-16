@@ -1,17 +1,11 @@
 /**
- * http_utils.h — HTTP parsing and rendering utilities
+ * @file http_utils.h
+ * @brief HTTP parsing, evaluation, and serialization utility suite.
  *
- * Three groups of functions:
- *
- *   Request parsing  — http_request_parse(), http_request_header(),
- *                      http_request_cookie(), http_is_request_path(),
- *                      http_is_request_method(), http_request_contains_keepalive()
- *
- *   Response render  — http_response_render()
- *
- *   Body / HTML      — get_field(), post_body(), html_escape(),
- *                      make_error_block()
- *                      (unchanged — phr does not touch the body)
+ * Provides standalone helper functions divided into three operational tiers:
+ * 1. Stream Verification & Parsing (picohttpparser integrations).
+ * 2. HTTP/1.1 Compliant Response Serialization.
+ * 3. Security sanitization and body payload parameter extractions.
  */
 
 #ifndef HTTP_UTILS_H
@@ -20,61 +14,82 @@
 #include "http_types.h"
 #include <stdbool.h>
 
-#define MAX_NUMBER_LEN     24
-/* ── Request parsing ─────────────────────────────────────────────────── */
+/** Standard maximum length allocation bound for numerical parsing lookups. */
+#define MAX_NUMBER_LEN 24
+
+/* ── Request Parsing Tier ────────────────────────────────────────────── */
 
 /**
- * Parses raw bytes into req using picohttpparser.
- * All string pointers in req point into raw — no allocation, no copy.
- * Returns true on success, false if the request is malformed.
+ * @brief Parses raw network bytes into a structured HttpRequest context.
+ * @pre raw buffer contains a valid or partially received HTTP sequence.
+ * @param raw Pointer to the raw socket receive buffer.
+ * @param rawLen Length of data inside the raw buffer.
+ * @param req Pointer to target HttpRequest context destination.
+ * @return true if complete metadata parsing succeeded, false otherwise.
  */
-bool http_request_parse(const char *raw, size_t raw_len, HttpRequest *req);
+bool http_request_parse(const char *raw, size_t rawLen, HttpRequest *req);
 
 /**
- * Returns the value of the first header matching name (case-insensitive).
- * Writes its length into *value_len if non-NULL.
- * Returns NULL if not found. The returned pointer is NOT NUL-terminated.
+ * @brief Case-insensitively locates a specific header value.
+ * @param req Pointer to the current parsed request.
+ * @param name Target header name (NUL-terminated).
+ * @param valueLen Output pointer populated with the header value slice length.
+ * @return Pointer to the non-NUL-terminated header value string, or NULL.
  */
 const char *http_request_header(const HttpRequest *req,
-                                 const char        *name,
-                                 size_t            *value_len);
+                                const char *name,
+                                size_t *valueLen);
 
 /**
- * Finds the Cookie header and URL-decodes the named cookie into dest.
- * Writes an empty string if not found.
+ * @brief Locates and URL-decodes a specific Cookie value from incoming headers.
+ * @param req Pointer to the current parsed request.
+ * @param name Target cookie identifier token name.
+ * @param dest Output buffer target to write decoded contents.
+ * @param max Maximum memory safety ceiling boundary for destination buffer.
  */
 void http_request_cookie(const HttpRequest *req,
-                          const char        *name,
-                          char              *dest,
-                          size_t             max);
+                         const char *name,
+                         char *dest,
+                         size_t max);
 
-/** Returns true if req->path exactly matches path (NUL-terminated). */
+/** @return true if request matches path context exactly. */
 bool http_is_request_path(const HttpRequest *req, const char *path);
 
-/** Returns true if req->method exactly matches method (NUL-terminated). */
+/** @return true if request matches specified method string exactly. */
 bool http_is_request_method(const HttpRequest *req, const char *method);
 
+/** @return true if complete headers (and body for POST) have arrived. */
 bool http_is_request_complete(const char *buf, size_t len);
 
-/** Returns true if the Connection header contains "keep-alive". */
+/** @return true if Connection header specifies explicit persistent session. */
 bool http_request_contains_keepalive(const HttpRequest *req);
 
-/* ── Response rendering ──────────────────────────────────────────────── */
+/* ── Response Rendering Tier ─────────────────────────────────────────── */
 
 /**
- * Serializes resp into a complete HTTP/1.1 response written to out.
- * content_type == NULL → inferred from resp->body[0].
- * Returns bytes written, or -1 if out_max is too small.
+ * @brief Compiles structural HttpResponse context into valid raw HTTP wire data.
+ * @param resp Source configured HttpResponse to serialize.
+ * @param keepAlive Connection lifecycle flag indicator.
+ * @param out Target output byte tracking array.
+ * @param outMax Maximum allocation capability ceiling of target output buffer.
+ * @return Total integer network bytes generated, or -1 on sizing constraint failure.
  */
-int http_response_render(const HttpResponse *resp, bool keep_alive,
-                          char * restrict out, size_t out_max);
+int http_response_render(const HttpResponse *resp, bool keepAlive,
+                         char *restrict out, size_t outMax);
 
-/* ── Body / HTML helpers ─────────────────────────────────────────────── */
+/* ── Body & HTML Sanitization Helpers ───────────────────────────────── */
 
-const char *post_body      (const char *req);
-void        get_field      (const char *src, const char *param_name,
-                             char *dest, size_t max);
-void        html_escape    (const char * restrict src, char * restrict dest, size_t max);
-void        make_error_block(const char *msg, char *dest, size_t max);
+/** @return Pointer locating the functional start of the HTTP payload body. */
+const char *post_body(const char *req);
+
+/** @brief Extracts and URL-decodes an individual key variable from an URL-encoded buffer. */
+void get_field(const char *src, const char *paramName,
+               char *dest, size_t max);
+
+/** @brief Escapes basic dangerous syntax structures to avoid Cross-Site Scripting (XSS). */
+void html_escape(const char *restrict src, char *restrict dest, size_t max);
+
+/** @brief Wraps text messages inside stylized template warning blocks. */
+void make_error_block(const char *msg, char *dest, size_t max);
 
 #endif /* HTTP_UTILS_H */

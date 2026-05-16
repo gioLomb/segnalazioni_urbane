@@ -1,22 +1,14 @@
 /**
- * http_types.h — Shared HTTP request/response types
+ * @file http_types.h
+ * @brief Shared HTTP request and response data structures.
  *
- * This header defines the "contract" between the transport layer
- * (server_functions.c) and the routing/business layer (route_handler.c).
+ * This module defines the core data representations exchanged between the
+ * network transport layer and the application's routing/business logic.
  *
- * HttpRequest
- * ───────────
- * Produced once by http_request_parse() in server_functions.c.
- * All string fields (method, path, header names/values) are NON-NUL-terminated
- * pointers directly into the raw receive buffer — zero copies, zero allocations.
- * Use the corresponding _len fields for all operations.
- *
- * HttpResponse
- * ────────────
- * Filled by a route handler and consumed by http_response_render().
- * body points to a RESPONSE_BUFFER_SIZE slab allocated in read_cb; route
- * handlers write into it with snprintf/tpl_render as before.
- * content_type = NULL means "infer from first byte of body".
+ * Zero-Copy Architecture:
+ * The HttpRequest structure relies heavily on non-NUL-terminated string slices
+ * pointing directly into the network receive buffer to achieve high performance
+ * with zero heap allocations.
  */
 
 #ifndef HTTP_TYPES_H
@@ -27,52 +19,43 @@
 #include <stddef.h>
 #include <stdbool.h>
 
-/** Maximum number of HTTP headers stored per request. */
+/** Maximum number of HTTP headers tracked per request. */
 #define HTTP_MAX_HEADERS 32
+
+/** Maximum size allowed for cookie values. */
 #define COOKIE_MAX 512
 
+/**
+ * @brief Representation of an incoming HTTP request.
+ * @note String fields are NOT null-terminated; use their length fields.
+ */
+typedef struct
+{
+    const char *method;     /**< HTTP Method string slice (e.g., "GET") */
+    size_t methodLen;       /**< Length of the method string slice */
+    const char *path;       /**< Resource path string slice (e.g., "/index") */
+    size_t pathLen;         /**< Length of the path string slice */
 
-/* ── Request ─────────────────────────────────────────────────────────── */
+    struct phr_header headers[HTTP_MAX_HEADERS]; /**< Extracted raw headers */
+    size_t numHeaders;      /**< Total number of headers successfully parsed */
+    int minorVersion;       /**< HTTP minor version (e.g., 1 for HTTP/1.1) */
 
-typedef struct {
-    /* Request line — pointers into raw buffer, NOT NUL-terminated */
-    const char        *method;
-    size_t             methodLen;
-    const char        *path;
-    size_t             pathLen;
-
-    /* Parsed headers — direct output of phr_parse_request */
-    struct phr_header  headers[HTTP_MAX_HEADERS];
-    size_t             numHeaders;
-    int                minorVersion;
-
-    /* Body — NULL if request has no body */
-    const char        *body;
-    size_t             body_len;
+    const char *body;       /**< Pointer to the start of the body payload */
+    size_t bodyLen;         /**< Total byte length of the body payload */
 } HttpRequest;
 
-/* ── Response ────────────────────────────────────────────────────────── */
 
-typedef struct {
-    int         status_code;
-
-    /*
-     * content_type: if NULL, http_response_render() infers from body[0]:
-     *   '<'       → text/html; charset=utf-8
-     *   '{' | '[' → application/json
-     *   else      → text/plain; charset=utf-8
-     *
-     * Set explicitly for CSS, binary data, or any non-inferrable type.
-     */
-    const char *content_type;
-
-    /* Body buffer: pre-allocated by read_cb, written by route handlers. */
-    char       *body;
-    size_t      body_len;
-
-    /* Optional out-of-band fields — empty string = not set */
-    char        set_cookie[COOKIE_MAX];
-    char        location[256];
+/**
+ * @brief Representation of an outgoing HTTP response.
+ */
+typedef struct
+{
+    int statusCode;         /**< HTTP Status Code (e.g., 200, 404, 302) */
+    const char *contentType; /**If left NULL, http_response_render() infers it */
+    char *body;             /**< Pre-allocated pointer to the output message body */
+    size_t bodyLen;         /**< Byte length of the message body */
+    char setCookie[COOKIE_MAX]; /**< Optional out-of-band Set-Cookie header field */
+    char location[256];         /**< Optional Location header redirect target field */
 } HttpResponse;
 
 #endif /* HTTP_TYPES_H */

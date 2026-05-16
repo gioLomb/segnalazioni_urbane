@@ -110,7 +110,7 @@ error:
 }
 
 int ht_get(Hash_Table * restrict table, void * restrict key, size_t keySize,
-           void * restrict destBuffer, size_t dest_size) {
+           void * restrict destBuffer, size_t destSize) {
     if (!table || !key || !destBuffer) return 0;
     
     // Concurrent access allowed here
@@ -122,7 +122,7 @@ int ht_get(Hash_Table * restrict table, void * restrict key, size_t keySize,
         if (!keys_equal(e->key, e->keySize, key, keySize)) continue;
 
         // Prevent buffer overflow in destination
-        size_t n = e->size < dest_size ? e->size : dest_size;
+        size_t n = e->size < destSize ? e->size : destSize;
         memcpy(destBuffer, e->value, n);
         pthread_rwlock_unlock(&table->lock);
         return 1;
@@ -198,7 +198,7 @@ static unsigned long generate_seed(void) {
     // Attempt to use system random source for security
     FILE *f = fopen("/dev/urandom", "rb");
     if (f) {
-        fread(&seed, sizeof(seed), 1, f);
+        (void) fread(&seed, sizeof(seed), 1, f);
         fclose(f);
     } else {
         // Fallback to time if /dev/urandom is unavailable

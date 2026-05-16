@@ -192,7 +192,7 @@ void route_static_css(const HttpRequest *req, HttpResponse *resp) {
     const Template *tpl = tpl_get("templates/common.css");
     if (unlikely(!tpl)) { resp_html_error(resp, 404, "CSS not found"); return; }
     int n = tpl_render(tpl, resp->body, RESPONSE_BUFFER_SIZE, NULL, 0);
-    resp->body_len     = n > 0 ? (size_t)n : 0;
-    resp->status_code  = 200;
-    resp->content_type = "text/css; charset=utf-8";
+    resp->bodyLen     = n > 0 ? (size_t)n : 0;
+    resp->statusCode  = 200;
+    resp->contentType = "text/css; charset=utf-8";
 }

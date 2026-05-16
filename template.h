@@ -31,7 +31,7 @@ void tpl_unload_all(void);
 const Template *tpl_get(const char *path);
 
 /* Renderizza il template in dest. Restituisce byte scritti, -1 in errore. */
-int tpl_render(const Template *tpl, char *dest, size_t dest_size,
+int tpl_render(const Template *tpl, char *dest, size_t destSize,
                const TplVar *vars, int nvars);
 
 #endif

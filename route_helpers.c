@@ -19,22 +19,22 @@ bool get_session_user(const HttpRequest *req, User *u) {
 /* ── Response primitives ─────────────────────────────────────────────── */
 
 void redirect(HttpResponse *resp, const char *url, const char *cookie) {
-    resp->status_code = 302;
+    resp->statusCode = 302;
     snprintf(resp->location, sizeof(resp->location), "%s", url);
     if (cookie)
-        snprintf(resp->set_cookie, sizeof(resp->set_cookie), "%s", cookie);
+        snprintf(resp->setCookie, sizeof(resp->setCookie), "%s", cookie);
 }
 
 void resp_json_error(HttpResponse *resp, int status, const char *msg) {
-    resp->status_code = status;
+    resp->statusCode = status;
     snprintf(resp->body, RESPONSE_BUFFER_SIZE, "{\"error\":\"%s\"}", msg);
-    resp->body_len    = strlen(resp->body);
+    resp->bodyLen    = strlen(resp->body);
 }
 
 void resp_html_error(HttpResponse *resp, int status, const char *msg) {
-    resp->status_code = status;
+    resp->statusCode = status;
     snprintf(resp->body, RESPONSE_BUFFER_SIZE, "<h1>%s</h1>", msg);
-    resp->body_len    = strlen(resp->body);
+    resp->bodyLen    = strlen(resp->body);
 }
 
 /* ── Page-level error helpers ────────────────────────────────────────── */

@@ -69,7 +69,7 @@ void handle_request(const HttpRequest *req, HttpResponse *resp) {
         path[n] = '\0';
         snprintf(resp->body, RESPONSE_BUFFER_SIZE,
                  "<h1>404 Not Found</h1><p><code>%s</code> non esiste.</p>", path);
-        resp->status_code = 404;
-        resp->body_len    = strlen(resp->body);
+        resp->statusCode = 404;
+        resp->bodyLen    = strlen(resp->body);
     }
 }

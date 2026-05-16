@@ -52,8 +52,8 @@ static inline bool resp_render_tpl(HttpResponse   *resp,
     const Template *tpl = tpl_get(tpl_name);
     if (unlikely(!tpl)) { resp_html_error(resp, 500, "Server Error"); return false; }
     int n = tpl_render(tpl, resp->body, RESPONSE_BUFFER_SIZE, vars, n_vars);
-    resp->status_code = 200;
-    resp->body_len    = n > 0 ? (size_t)n : 0;
+    resp->statusCode = 200;
+    resp->bodyLen    = n > 0 ? (size_t)n : 0;
     return true;
 }
 
