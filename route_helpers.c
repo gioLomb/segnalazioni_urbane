@@ -7,15 +7,13 @@
 #include <string.h>
 #include <stdio.h>
 
-
-
 /* ── Session ─────────────────────────────────────────────────────────── */
 
 bool get_session_user(const HttpRequest *req, User *u) {
     char token[TOKEN_HEX_LEN + 1];
     http_request_cookie(req, SESSION_COOKIE_NAME, token, sizeof(token));
     if (!token[0]) return false;
-    return session_verify(g_sessions, token, u);
+    return session_verify(token, u);
 }
 
 /* ── Response primitives ─────────────────────────────────────────────── */
@@ -75,7 +73,7 @@ void submit_error(HttpResponse *resp, const User *u, const char *msg) {
 
 void build_map_vars(const char *city_name, MapVars *mv) {
     CityGeo geo;
-    if (geo_lookup(g_geo_table, city_name, &geo)) {
+    if (geo_lookup(city_name, &geo)) {
         snprintf(mv->lat,    sizeof(mv->lat),    "%.6f", geo.centroidLat);
         snprintf(mv->lon,    sizeof(mv->lon),    "%.6f", geo.centroidLon);
         snprintf(mv->bounds, sizeof(mv->bounds),

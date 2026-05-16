@@ -341,8 +341,8 @@ static void server_shutdown(uv_loop_t *loop, uv_tcp_t *server, uv_signal_t *sig)
     uv_loop_close(loop);
 
     tpl_unload_all();
-    ht_destroy(g_sessions,   NULL);
-    ht_destroy(g_geo_table,  NULL);
+    session_destroy_all();
+    geo_cleanup();;
     ht_destroy(g_rate_table, NULL);
     conn_manager_destroy();
     db_close();
@@ -382,9 +382,9 @@ static int init_templates(void) {
 }
 
 static int init_geo_table(void) {
-    g_geo_table = ht_create(8192, hash_key);
-    if (!g_geo_table) { fprintf(stderr, "Fatal: geo table allocation failed\n"); return -1; }
-    if (geo_load(GEO_JSON_PATH, g_geo_table, CITIES_JSON_PATH) < 0) {
+    // g_geo_table = ht_create(8192, hash_key);
+    // if (!g_geo_table) { fprintf(stderr, "Fatal: geo table allocation failed\n"); return -1; }
+    if (geo_init(GEO_JSON_PATH, CITIES_JSON_PATH) < 0) {
         fprintf(stderr, "Fatal: failed to load '%s'\n", GEO_JSON_PATH);
         return -1;
     }
@@ -396,9 +396,7 @@ static int init_geo_table(void) {
 }
 
 static int init_sessions(void) {
-    g_sessions = ht_create(0, hash_key);
-    if (!g_sessions) { fprintf(stderr, "Fatal: session table allocation failed\n"); return -1; }
-    return 0;
+    return session_init();
 }
 
 /**

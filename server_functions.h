@@ -2,14 +2,13 @@
  * server_functions.h — Public interface of the libuv server core
  *
  * Exposes only what route_handler.c and other translation units need:
- *   - g_sessions, g_geo_table  — shared in-memory tables
  *   - RateEntry                — type used by the rate-limiter hash table
  *   - hash_key()               — hash function shared by every Hash_Table
  *   - config_signal_context()  — SIGPIPE suppression
  *   - server_loop()            — starts the event loop
  *
- * Everything else (WriteReq, connection callbacks, loop handle, rate table)
- * is private to server_functions.c.
+ * g_sessions and g_geo_table are no longer exposed here: they are private
+ * to session.c and geo.c respectively (singleton pattern).
  */
 
 #ifndef SERVER_FUNCTIONS_H
@@ -21,42 +20,15 @@
 
 #define MAX_HEADER_STR_LEN 512
 #define MAX_NUMBER_LEN 24
-/* ── Shared application state ────────────────────────────────────────── */
 
-/**
- * In-memory session store: token → uint64_t userId.
- * Allocated in main(), used by session_* helpers in route_handler.c.
- */
-extern Hash_Table *g_sessions;
-
-/**
- * City geometry table: comune name → CityGeo (bbox + centroid).
- * Populated at startup by geo_load(); read-only during request handling.
- */
-extern Hash_Table *g_geo_table;
-
-
-/* ── Rate-limiter entry ──────────────────────────────────────────────── */
-
-/**
- * Sliding-window state for one IP address.
- * countPrev/countCurr implement a weighted cross-window estimate.
- */
 typedef struct {
     unsigned long countCurr;
     unsigned long countPrev;
     time_t        windowStartTime;
 } RateEntry;
 
-/* ── Functions ───────────────────────────────────────────────────────── */
-
-/** MurmurHash-inspired hash shared by every Hash_Table in the application. */
 unsigned long hash_key(const void *key, size_t keySize, unsigned long seed);
-
-/** Installs SIG_IGN for SIGPIPE. */
 void config_signal_context(void);
-
-/** Starts the libuv event loop and blocks until SIGINT. */
 void server_loop();
 
 #endif /* SERVER_FUNCTIONS_H */

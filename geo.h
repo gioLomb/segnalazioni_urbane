@@ -1,54 +1,56 @@
 /**
  * @file geo.h
  * @brief City geometry module for indexing and validating geographical data.
- * This module allows loading city boundaries (bounding boxes) and centroids
- * from GeoJSON files into a hash table for fast O(1) lookups.
+ *
+ * The module manages its own internal hash table; callers never handle
+ * a Hash_Table pointer directly.  Lifecycle: geo_init() at startup,
+ * geo_cleanup() at shutdown, geo_lookup() / geo_contains() at any time.
  */
 
 #ifndef GEO_H
 #define GEO_H
 
-#include "hash_table.h"
 #include <stdbool.h>
 
 /**
  * @brief Geometry data for a specific municipality (comune).
- * This structure stores the bounding box and the calculated centroid
- * used for spatial validation and map centering.
  */
 typedef struct {
-    double latMin, latMax;    /**< Latitude boundaries */
-    double lonMin, lonMax;    /**< Longitude boundaries */
+    double latMin, latMax;           /**< Latitude boundaries    */
+    double lonMin, lonMax;           /**< Longitude boundaries   */
     double centroidLat, centroidLon; /**< Calculated center point */
 } CityGeo;
 
 /**
- * @brief Parses a GeoJSON file and populates the hash table with city data.
- * @pre path points to a valid GeoJSON file, ht is an initialized Hash_Table.
- * @post Every valid feature in the file is inserted into ht, keyed by city name.
- * @param path Path to the ISTAT GeoJSON file.
- * @param ht Pointer to the destination hash table.
- * @param citiesOut Optional path to save a JSON list of loaded city names.
+ * @brief Allocates the internal hash table and loads city geometry from disk.
+ *
+ * @param geojsonPath  Path to the ISTAT GeoJSON file.
+ * @param citiesOut    Optional path to write a JSON array of loaded city names.
  * @return Number of cities loaded on success, -1 on fatal error.
  */
-int geo_load(const char *path, Hash_Table *ht, const char *citiesOut);
+int geo_init(const char *geojsonPath, const char *citiesOut);
+
+/**
+ * @brief Frees all resources allocated by geo_init().
+ * Safe to call even if geo_init() was never called or failed.
+ */
+void geo_cleanup(void);
 
 /**
  * @brief Retrieves geometry information for a city by its name.
- * @pre ht is initialized, comune is a null-terminated string.
- * @post if found, the out structure is populated with the city's geometry.
- * @param ht Pointer to the hash table.
- * @param comune Name of the city to search for.
- * @param out Pointer to a CityGeo structure where results will be stored.
+ *
+ * @param comune  Name of the city to search for.
+ * @param out     Populated with the city's geometry if found.
  * @return true if the city was found, false otherwise.
  */
-bool geo_lookup(Hash_Table * restrict ht, const char * restrict comune, CityGeo * restrict out);
+bool geo_lookup(const char *comune, CityGeo *out);
 
 /**
- * @brief Performs a fast bounding box check for a coordinate.
- * @param geo Pointer to the city geometry.
- * @param lat Latitude to check.
- * @param lon Longitude to check.
+ * @brief Fast bounding-box check for a coordinate pair.
+ *
+ * @param geo  Pointer to the city geometry.
+ * @param lat  Latitude to check.
+ * @param lon  Longitude to check.
  * @return true if the coordinates fall within the city's bounding box.
  */
 bool geo_contains(const CityGeo *geo, double lat, double lon);

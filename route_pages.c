@@ -61,7 +61,7 @@ void route_get_home(const HttpRequest *req, HttpResponse *resp) {
 
 void route_get_submit(const HttpRequest *req, HttpResponse *resp) {
     User u = {0};
-    if (!get_session_user(req, &u))              { redirect(resp, "/",     NULL); return; }
+    if (!get_session_user(req, &u))                { redirect(resp, "/",     NULL); return; }
     if (user_is_operator(&u) || user_is_admin(&u)) { redirect(resp, "/home", NULL); return; }
 
     char esc_user[64], esc_city[64];
@@ -82,7 +82,7 @@ void route_get_submit(const HttpRequest *req, HttpResponse *resp) {
 void route_get_logout(const HttpRequest *req, HttpResponse *resp) {
     char token[TOKEN_HEX_LEN + 2];
     http_request_cookie(req, SESSION_COOKIE_NAME, token, sizeof(token));
-    if (token[0]) session_destroy(g_sessions, token);
+    if (token[0]) session_destroy(token);
 
     char cookie[COOKIE_MAX];
     snprintf(cookie, sizeof(cookie),
@@ -94,8 +94,8 @@ void route_get_logout(const HttpRequest *req, HttpResponse *resp) {
 /* ── POST handlers ───────────────────────────────────────────────────── */
 
 void route_post_login(const HttpRequest *req, HttpResponse *resp) {
-    char username[USERNAME_LEN] = {0};
-    char password[PWD_PLAIN_LEN]          = {0};
+    char username[USERNAME_LEN]  = {0};
+    char password[PWD_PLAIN_LEN] = {0};
     get_field(req->body, "username=", username, sizeof(username));
     get_field(req->body, "password=", password, sizeof(password));
 
@@ -106,7 +106,7 @@ void route_post_login(const HttpRequest *req, HttpResponse *resp) {
     }
 
     char token[TOKEN_HEX_LEN + 1];
-    if (!session_create(g_sessions, &u, token)) {
+    if (!session_create(&u, token)) {
         login_error(resp, "Errore interno. Riprova.");
         return;
     }
@@ -119,10 +119,10 @@ void route_post_login(const HttpRequest *req, HttpResponse *resp) {
 }
 
 void route_post_register(const HttpRequest *req, HttpResponse *resp) {
-    char username[USERNAME_LEN] = {0};
-    char password[PWD_PLAIN_LEN]          = {0};
-    char city[CITY_LEN]         = {0};
-    char role_str[4]            = {0};
+    char username[USERNAME_LEN]  = {0};
+    char password[PWD_PLAIN_LEN] = {0};
+    char city[CITY_LEN]          = {0};
+    char role_str[4]             = {0};
     get_field(req->body, "username=", username, sizeof(username));
     get_field(req->body, "password=", password, sizeof(password));
     get_field(req->body, "city=",     city,     sizeof(city));
@@ -134,10 +134,10 @@ void route_post_register(const HttpRequest *req, HttpResponse *resp) {
         return register_error(resp, "La password deve avere almeno 6 caratteri.");
 
     CityGeo geo = {0};
-    if (!geo_lookup(g_geo_table, city, &geo))
+    if (!geo_lookup(city, &geo))
         return register_error(resp, "Comune non riconosciuto. Selezionalo dalla lista.");
 
-    int role_val = role_str[0] ? atoi(role_str) : 0;
+    int role_val  = role_str[0] ? atoi(role_str) : 0;
     UserRole role = (role_val == 2) ? ROLE_ADMIN
                   : (role_val == 1) ? ROLE_OPERATOR
                   : ROLE_CITIZEN;
@@ -159,10 +159,10 @@ void route_post_submit(const HttpRequest *req, HttpResponse *resp) {
     if (!get_session_user(req, &u))                { redirect(resp, "/",     NULL); return; }
     if (user_is_operator(&u) || user_is_admin(&u)) { redirect(resp, "/home", NULL); return; }
 
-    char category[CAT_LEN] = {0};
-    char desc[DESC_LEN]    = {0};
-    char lat_s[COORDINATE_STR_LEN]         = {0};
-    char lon_s[COORDINATE_STR_LEN]         = {0};
+    char category[CAT_LEN]              = {0};
+    char desc[DESC_LEN]                 = {0};
+    char lat_s[COORDINATE_STR_LEN]      = {0};
+    char lon_s[COORDINATE_STR_LEN]      = {0};
     get_field(req->body, "category=",    category, sizeof(category));
     get_field(req->body, "description=", desc,     sizeof(desc));
     get_field(req->body, "lat=",         lat_s,    sizeof(lat_s));
@@ -174,7 +174,7 @@ void route_post_submit(const HttpRequest *req, HttpResponse *resp) {
     double  lat = lat_s[0] ? atof(lat_s) : 0.0;
     double  lon = lon_s[0] ? atof(lon_s) : 0.0;
     CityGeo geo = {0};
-    if (geo_lookup(g_geo_table, u.city, &geo) && !geo_contains(&geo, lat, lon))
+    if (geo_lookup(u.city, &geo) && !geo_contains(&geo, lat, lon))
         return submit_error(resp, &u, "Le coordinate non appartengono alla tua città.");
 
     uint64_t rid = report_insert(u.userId, lat, lon, u.city,
