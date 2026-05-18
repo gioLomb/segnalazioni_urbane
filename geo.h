@@ -13,6 +13,8 @@
 
 #include <stdbool.h>
 
+#define COORDINATE_STR_LEN 32
+
 /**
  * @brief Axis-aligned bounding box and centroid for a municipality.
  */
@@ -21,6 +23,18 @@ typedef struct {
     double lonMin, lonMax;           /**< Longitude boundaries (west, east)   */
     double centroidLat, centroidLon; /**< Arithmetic centroid of the polygon  */
 } CityGeo;
+
+/**
+ * @brief Pre-formatted strings ready for direct injection into templates.
+ *
+ * All fields are decimal strings so they can be embedded in HTML/JS
+ * without further formatting.
+ */
+typedef struct {
+    char lat[COORDINATE_STR_LEN];     /**< Centroid latitude as a decimal string                      */
+    char lon[COORDINATE_STR_LEN];     /**< Centroid longitude as a decimal string                     */
+    char bounds[COORDINATE_STR_LEN * 4]; /**< Leaflet bounds [[latMin,lonMin],[latMax,lonMax]], or "null" */
+} MapVars;
 
 /**
  * @brief Loads city geometry from a GeoJSON file into the internal table.
@@ -68,5 +82,17 @@ bool geo_lookup(const char *city, CityGeo *out);
  * @return true if (lat, lon) falls within the bounding box.
  */
 bool geo_contains(const CityGeo *geo, double lat, double lon);
+
+/**
+ * @brief Fills mv with map rendering data for the given city.
+ *
+ * On a successful geo lookup, writes the centroid and bounding box.
+ * Falls back to Rome centre (41.9, 12.5) with bounds "null" if the
+ * city is not found in the geo table.
+ *
+ * @param cityName Name of the municipality to look up.
+ * @param mv       Output struct to populate.
+ */
+void build_map_vars(const char *cityName, MapVars *mv);
 
 #endif /* GEO_H */

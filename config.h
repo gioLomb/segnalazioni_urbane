@@ -47,7 +47,6 @@
 #define unlikely(x) __builtin_expect(!!(x), 0)
 
 /* ── Application paths ───────────────────────────────────────────────── */
-//#define APP_DB_PATH      "segnalacity.db"
 #define GEO_JSON_PATH    "data/comuni.geojson"
 #define CITIES_JSON_PATH "data/cities.json"
 

@@ -1,5 +1,5 @@
 /**
- * @file connection_manager.h
+ * @file client_manager.h
  * @brief Registry and memory manager for active TCP connections.
  *
  * Manages the lifecycle of ClientCtx objects through two mechanisms:
@@ -14,6 +14,9 @@
 #include "config.h"
 #include <uv.h>
 #include <stdbool.h>
+
+// Number of ClientCtx slots per slab chunk.
+#define CLIENT_CHUNK_CAPACITY 64
 
 /**
  * @brief State for a single active client connection.
@@ -33,36 +36,36 @@ typedef struct __attribute__((aligned(64))) ClientCtx {
 
 /**
  * @brief Initialises the internal slab pool and resets global state.
- * @post The slab allocator is ready; conn_manager_alloc() can be called.
+ * @post The slab allocator is ready; client_manager_alloc() can be called.
  * @return 0 on success, -1 on allocation failure.
  */
-int conn_manager_init(void);
+int client_manager_init(void);
 
 /**
  * @brief Releases all slab memory and resets the manager to an empty state.
  * @pre All connections should be closed before calling this.
  * @post No further alloc/release calls are valid until re-initialisation.
  */
-void conn_manager_destroy(void);
+void client_manager_destroy(void);
 
 /* ── Per-connection alloc / release ─────────────────────────────────── */
 
 /**
  * @brief Allocates a zeroed ClientCtx from the slab pool.
- * @pre conn_manager_init() has been called.
+ * @pre client_manager_init() has been called.
  * @post Returns a valid pointer with all fields reset, or NULL on OOM.
  * @return Pointer to a new ClientCtx, or NULL if memory is exhausted.
  */
-ClientCtx *conn_manager_alloc(void);
+ClientCtx *client_manager_alloc(void);
 
 /**
  * @brief Returns a ClientCtx to the slab pool and frees its buffer.
- * @pre ctx was allocated via conn_manager_alloc().
+ * @pre ctx was allocated via client_manager_alloc().
  * @pre ctx->pendingCloses == 0 (all libuv handles have been closed).
  * @post ctx->buffer is freed; the slab slot is available for reuse.
  * @param ctx Pointer to the context to release.
  */
-void conn_manager_release(ClientCtx *ctx);
+void client_manager_release(ClientCtx *ctx);
 
 /* ── Active list ─────────────────────────────────────────────────────── */
 
@@ -72,7 +75,7 @@ void conn_manager_release(ClientCtx *ctx);
  * @post ctx is the new head of the global list; active count increments.
  * @param ctx Pointer to the context to link.
  */
-void conn_manager_link(ClientCtx *ctx);
+void client_manager_link(ClientCtx *ctx);
 
 /**
  * @brief Removes a connection from the active tracking list.
@@ -80,13 +83,13 @@ void conn_manager_link(ClientCtx *ctx);
  * @post ctx is unlinked; active count decrements.
  * @param ctx Pointer to the context to unlink.
  */
-void conn_manager_unlink(ClientCtx *ctx);
+void client_manager_unlink(ClientCtx *ctx);
 
 /**
  * @brief Returns the number of currently active connections.
  * @return Count of linked ClientCtx objects.
  */
-int conn_manager_active_count(void);
+int client_manager_active_count(void);
 
 /**
  * @brief Iterates over all active connections and applies fn to each.
@@ -96,6 +99,6 @@ int conn_manager_active_count(void);
  *
  * @param fn Callback applied to every active ClientCtx.
  */
-void conn_manager_close_all(void (*fn)(ClientCtx *ctx));
+void client_manager_close_all(void (*fn)(ClientCtx *ctx));
 
 #endif /* CONNECTION_MANAGER_H */

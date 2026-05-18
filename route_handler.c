@@ -4,7 +4,7 @@
  *
  * This file contains only the routing logic: a static table that maps
  * (method, path) pairs to handler functions, and handle_request() which
- * walks it.  All business logic lives in route_pages.c and route_api.c.
+ * walks it. All business logic lives in route_pages.c and route_api.c.
  */
 
 #include "route_handler.h"
@@ -14,8 +14,12 @@
 #include <string.h>
 #include <stdio.h>
 
+#define NUM_ROUTES (sizeof(routes) / sizeof(routes[0]))
 /* ── Dispatch table ──────────────────────────────────────────────────── */
 
+// Each entry maps an exact (method, path) pair to a handler function.
+// Order does not affect correctness but placing frequent routes first
+// reduces the average number of comparisons per request.
 static const Route routes[] = {
     { .method = "GET",  .path = "/",                     .handler = route_get_root             },
     { .method = "GET",  .path = "/home",                 .handler = route_get_home             },
@@ -35,41 +39,37 @@ static const Route routes[] = {
     { .method = "GET",  .path = "/static/common.css",    .handler = route_static_css           }
 };
 
-static const size_t NUM_ROUTES = sizeof(routes) / sizeof(routes[0]);
+// static const size_t NUM_ROUTES = sizeof(routes) / sizeof(routes[0]);
 
 /* ── Public API ──────────────────────────────────────────────────────── */
 
-// bool route_needs_large(const HttpRequest *req) {
-//     for (size_t i = 0; i < NUM_ROUTES; i++) {
-//         if (http_is_request_method(req, routes[i].method) &&
-//             http_is_request_path(req, routes[i].path))
-//             return routes[i].needs_large;
-//     }
-//     return false;
-// }
-
 void handle_request(const HttpRequest *req, HttpResponse *resp) {
-    bool path_found = false;
+    // Two-phase matching: check path first, then method.
+    // This ensures a POST to a GET-only route returns 405, not 404.
+    bool pathFound = false;
 
     for (size_t i = 0; i < NUM_ROUTES; i++) {
         if (!http_is_request_path(req, routes[i].path)) continue;
-        path_found = true;
+        pathFound = true;
         if (http_is_request_method(req, routes[i].method)) {
             routes[i].handler(req, resp);
             return;
         }
     }
 
-    if (path_found) {
+    if (pathFound) {
+        // Path exists but the method is not registered for it.
         resp_html_error(resp, 405, "405 Method Not Allowed");
     } else {
+        // Copy the path into a NUL-terminated buffer for the error message,
+        // clamping to URL_BUFFER_SIZE to prevent overrun.
         char path[URL_BUFFER_SIZE + 1];
         size_t n = req->pathLen < URL_BUFFER_SIZE ? req->pathLen : URL_BUFFER_SIZE;
         memcpy(path, req->path, n);
         path[n] = '\0';
         snprintf(resp->body, RESPONSE_BUFFER_SIZE,
-                 "<h1>404 Not Found</h1><p><code>%s</code> non esiste.</p>", path);
+                 "<h1>404 Not Found</h1><p><code>%s</code> does not exist.</p>", path);
         resp->statusCode = 404;
-        resp->bodyLen    = strlen(resp->body);
+        resp->bodyLen = strlen(resp->body);
     }
 }

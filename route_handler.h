@@ -2,9 +2,8 @@
  * @file route_handler.h
  * @brief Public interface of the HTTP routing subsystem.
  *
- * handle_request() is the single entry point called by server_functions.c
- * for every complete HTTP request.  route_needs_large() is called before
- * dispatch to pick the right response buffer tier.
+ * handle_request() is the single entry point called by server.c
+ * for every complete HTTP request.
  *
  * Callers do not need to include route_pages.h, route_api.h, or
  * route_helpers.h — those are internal to the routing subsystem.
@@ -18,27 +17,34 @@
 #include "config.h"
 #include <stdbool.h>
 
-/** Signature shared by every route handler. */
+/**
+ * @brief Signature shared by every route handler.
+ *
+ * Handlers read from req and write their response into resp.
+ * They must always set resp->statusCode, resp->bodyLen and resp->body.
+ */
 typedef void (*RouteHandler)(const HttpRequest *req, HttpResponse *resp);
 
-/** Single entry in the dispatch table. */
+/**
+ * @brief Single entry in the static dispatch table.
+ */
 typedef struct {
-    const char  *method;      /* "GET" or "POST"                               */
-    const char  *path;        /* exact URL path                                */
-    RouteHandler handler;
-    //bool         needs_large; /* true = response may exceed RESP_SMALL_SIZE    */
+    const char  *method;   /**< HTTP method string, e.g. "GET" or "POST"  */
+    const char  *path;     /**< Exact URL path to match against            */
+    RouteHandler handler;  /**< Handler invoked on a full (method, path) match */
 } Route;
 
 /**
- * Returns true if the route matching req is expected to produce a response
- * larger than RESP_SMALL_SIZE.  Called by read_cb before dispatch to pick
- * the correct buffer tier from resp_pool.
- */
-//bool route_needs_large(const HttpRequest *req);
-
-/**
- * Dispatches req to the matching handler and fills resp.
- * Sets resp->statusCode to 404 or 405 when no handler matches.
+ * @brief Dispatches a request to the matching handler and fills resp.
+ *
+ * Walks the dispatch table checking path first, then method, so that an
+ * unknown method on a known path returns 405 rather than 404.
+ *
+ * @pre req->path and req->method are valid null-terminated strings.
+ * @post resp->statusCode is always set: handler's value on match,
+ *       405 on method mismatch, 404 if the path is not in the table.
+ * @param req  Incoming HTTP request (read-only).
+ * @param resp Response to populate.
  */
 void handle_request(const HttpRequest *req, HttpResponse *resp);
 

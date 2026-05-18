@@ -7,30 +7,36 @@
 #include "http_types.h"
 #include <stdio.h>
 
-#define CACHE_TTL_SECONDS  5
-#define CACHE_MAX_ENTRIES  32
-/*
- * Risultati più grandi di questo threshold non vengono cachati ma vengono
- * comunque serviti dalla query — nessun limite artificiale sui dati restituiti.
- * ~16 KB copre ~15 report worst-case (desc unicode piena); utenti normali
- * rientrano sempre, utenti con molti report saltano la cache silenziosamente.
- * Footprint: 32 × 16 KB = 512 KB  (vs 32 × 256 KB = 8 MB prima).
- */
+#define CACHE_TTL_SECONDS 5
+#define CACHE_MAX_ENTRIES 32
+
+// Results larger than this threshold are not cached but are still served
+// from the query — no artificial cap on returned data.
+// ~16 KB covers ~15 worst-case reports (full unicode description); normal
+// users always fit, users with many reports silently bypass the cache.
+// Total footprint: 32 × 16 KB = 512 KB (vs 32 × 256 KB = 8 MB before).
 #define CACHE_JSON_MAX (16 * 1024)
 
+// Internal cache entry: keyed on (city, userId, isOperator, isArchived).
 typedef struct {
     char     city[CITY_LEN];
-    uint64_t user_id;
-    bool     is_operator;
-    bool     is_archived;
-    time_t   cached_at;
-    size_t   json_len;
+    uint64_t userId;
+    bool     isOperator;
+    bool     isArchived;
+    time_t   cachedAt;   // Unix timestamp of insertion; 0 means slot is free
+    size_t   jsonLen;    // Length of json[], excluding the NUL terminator
     char     json[CACHE_JSON_MAX];
 } CacheEntry;
 
+// Declared at file scope so it is zero-initialised by the C runtime:
+// every cachedAt starts at 0, meaning all slots are initially free.
 static CacheEntry g_cache[CACHE_MAX_ENTRIES];
 
 /* ── Column order used in every SELECT ────────────────────────────────── */
+
+// Single source of truth for the SELECT column list.
+// ReportCol enum values index into this order, so adding a column here
+// requires a matching entry in the enum and in cursor_to_report().
 #define SELECT_COLS \
     "id, author_id, assigned_to, lat, lon, city, category, description, " \
     "status, created_at, assigned_at, resolved_at"
@@ -42,7 +48,7 @@ int report_setup_table(void) {
             "CREATE TABLE IF NOT EXISTS reports ("
             "  id          INTEGER PRIMARY KEY AUTOINCREMENT,"
             "  author_id   INTEGER NOT NULL,"
-            "  assigned_to INTEGER,"
+            "  assigned_to INTEGER,"          // NULL until assigned
             "  lat         REAL    NOT NULL DEFAULT 0,"
             "  lon         REAL    NOT NULL DEFAULT 0,"
             "  city        TEXT    NOT NULL DEFAULT '',"
@@ -50,41 +56,55 @@ int report_setup_table(void) {
             "  description TEXT    NOT NULL,"
             "  status      INTEGER NOT NULL DEFAULT 0,"
             "  created_at  INTEGER NOT NULL,"
-            "  assigned_at INTEGER,"
-            "  resolved_at INTEGER"
+            "  assigned_at INTEGER,"          // NULL until assigned
+            "  resolved_at INTEGER"           // NULL until resolved
             ");", NULL) != 0))
         return -1;
 
+    // Separate indexes on author, city and status cover the three main
+    // query shapes: per-user, per-city (admin) and per-status (operator).
     db_exec("CREATE INDEX IF NOT EXISTS idx_reports_author ON reports(author_id);", NULL);
-    db_exec("CREATE INDEX IF NOT EXISTS idx_reports_city   ON reports(city);",      NULL);
-    db_exec("CREATE INDEX IF NOT EXISTS idx_reports_status ON reports(status);",    NULL);
+    db_exec("CREATE INDEX IF NOT EXISTS idx_reports_city ON reports(city);", NULL);
+    db_exec("CREATE INDEX IF NOT EXISTS idx_reports_status ON reports(status);", NULL);
     return 0;
 }
 
 /* ── Row mapper ──────────────────────────────────────────────────────── */
 
+// Maps the current cursor row to an ActiveReport using the fixed SELECT_COLS order.
 static void cursor_to_report(DbCursor *c, ActiveReport *r) {
+    // Zero the struct first so unused padding bytes and any skipped fields
+    // don't contain garbage from the slab allocator.
     memset(r, 0, sizeof(*r));
-    r->reportId   = (uint64_t)db_cursor_int64 (c, REP_COL_ID);
-    r->authorId   = (uint64_t)db_cursor_int64 (c, REP_COL_AUTHOR_ID);
-    r->assignedTo = (uint64_t)db_cursor_int64 (c, REP_COL_ASSIGNED_TO);
-    r->lat        =           db_cursor_double(c, REP_COL_LAT);
-    r->lon        =           db_cursor_double(c, REP_COL_LON);
+
+    r->reportId = (uint64_t)db_cursor_int64(c, REP_COL_ID);
+    r->authorId = (uint64_t)db_cursor_int64(c, REP_COL_AUTHOR_ID);
+    r->assignedTo = (uint64_t)db_cursor_int64(c, REP_COL_ASSIGNED_TO);
+    r->lat = db_cursor_double(c, REP_COL_LAT);
+    r->lon = db_cursor_double(c, REP_COL_LON);
+
+    // strncpy with (LEN - 1) ensures the buffer is never overrun;
+    // the memset above already zeroed the last byte, so NUL termination
+    // is guaranteed even if the source string fills the buffer exactly.
     strncpy(r->city,        db_cursor_text(c, REP_COL_CITY),        CITY_LEN - 1);
-    strncpy(r->category,    db_cursor_text(c, REP_COL_CATEGORY),    CAT_LEN  - 1);
+    strncpy(r->category,    db_cursor_text(c, REP_COL_CATEGORY),    CAT_LEN - 1);
     strncpy(r->description, db_cursor_text(c, REP_COL_DESCRIPTION), DESC_LEN - 1);
-    r->status     = (ReportStatus)db_cursor_int64(c, REP_COL_STATUS);
-    r->createdAt  = (time_t)      db_cursor_int64(c, REP_COL_CREATED_AT);
-    r->assignedAt = (time_t)      db_cursor_int64(c, REP_COL_ASSIGNED_AT);
-    r->resolvedAt = (time_t)      db_cursor_int64(c, REP_COL_RESOLVED_AT);
+
+    r->status = (ReportStatus)db_cursor_int64(c, REP_COL_STATUS);
+    r->createdAt = (time_t)db_cursor_int64(c, REP_COL_CREATED_AT);
+    r->assignedAt = (time_t)db_cursor_int64(c, REP_COL_ASSIGNED_AT);
+    r->resolvedAt = (time_t)db_cursor_int64(c, REP_COL_RESOLVED_AT);
 }
 
 /* ── JSON builder ────────────────────────────────────────────────────── */
 
+// Converts a single ActiveReport to a cJSON object. Caller owns the result.
 static cJSON *report_to_cjson(const ActiveReport *r) {
     cJSON *obj = cJSON_CreateObject();
     if (unlikely(!obj)) return NULL;
 
+    // IDs are uint64_t but JSON numbers are doubles; values stay exact
+    // up to 2^53, which is well beyond any realistic row count.
     cJSON_AddNumberToObject(obj, "id",          (double)r->reportId);
     cJSON_AddNumberToObject(obj, "author_id",   (double)r->authorId);
     cJSON_AddNumberToObject(obj, "assigned_to", (double)r->assignedTo);
@@ -94,6 +114,7 @@ static cJSON *report_to_cjson(const ActiveReport *r) {
     cJSON_AddStringToObject(obj, "category",    r->category);
     cJSON_AddStringToObject(obj, "description", r->description);
     cJSON_AddNumberToObject(obj, "status",      (double)r->status);
+    // Timestamps are stored and sent as Unix epoch integers.
     cJSON_AddNumberToObject(obj, "created_at",  (double)r->createdAt);
     cJSON_AddNumberToObject(obj, "assigned_at", (double)r->assignedAt);
     cJSON_AddNumberToObject(obj, "resolved_at", (double)r->resolvedAt);
@@ -101,9 +122,14 @@ static cJSON *report_to_cjson(const ActiveReport *r) {
     return obj;
 }
 
+// Drains the cursor into a JSON array, prints it into buf and closes the cursor.
+// Returns the number of bytes written, or 0 on error.
 static size_t cursor_to_json_array(DbCursor *c, char *buf, size_t max) {
     cJSON *array = cJSON_CreateArray();
-    if (unlikely(!array)) { if (max > 0) buf[0] = '\0'; return 0; }
+    if (unlikely(!array)) {
+        if (max > 0) buf[0] = '\0';
+        return 0;
+    }
 
     while (db_cursor_next(c)) {
         ActiveReport r;
@@ -112,6 +138,9 @@ static size_t cursor_to_json_array(DbCursor *c, char *buf, size_t max) {
     }
     db_cursor_close(c);
 
+    // cJSON_PrintPreallocated writes directly into buf without a malloc;
+    // it returns false if the output would exceed max bytes, in which case
+    // buf is left in an indeterminate state — reset it to an empty string.
     if (!cJSON_PrintPreallocated(array, buf, (int)max, false)) {
         cJSON_Delete(array);
         if (max > 0) buf[0] = '\0';
@@ -123,65 +152,80 @@ static size_t cursor_to_json_array(DbCursor *c, char *buf, size_t max) {
 
 /* ── JSON cache ──────────────────────────────────────────────────────── */
 
-
-
-static int cache_find(const char *city, uint64_t user_id,
-                      bool is_operator, bool is_archived) {
+// Scans the cache for a valid, non-expired entry matching the given key.
+// Evicts stale entries on the fly. Returns the slot index, or -1 on miss.
+static int cache_find(const char *city, uint64_t userId,
+                      bool isOperator, bool isArchived) {
     time_t now = time(NULL);
     for (int i = 0; i < CACHE_MAX_ENTRIES; i++) {
         CacheEntry *e = &g_cache[i];
-        if (!e->cached_at) continue;
-        if (unlikely(now - e->cached_at > CACHE_TTL_SECONDS)) {
-            e->cached_at = 0;
+        if (!e->cachedAt) continue;  // Free slot, skip immediately
+
+        // Lazily evict expired entries encountered during a lookup
+        // rather than running a separate sweep timer.
+        if (unlikely(now - e->cachedAt > CACHE_TTL_SECONDS)) {
+            e->cachedAt = 0;
             continue;
         }
-        if (e->is_operator == is_operator
-            && e->is_archived == is_archived
-            && strncmp(e->city, city, CITY_LEN) == 0
-            && e->user_id == user_id)
+
+        // All four key components must match: role and archive flag
+        // determine which SQL query was used, so they are part of the key.
+        if (e->isOperator == isOperator && e->isArchived == isArchived
+            && strncmp(e->city, city, CITY_LEN) == 0 && e->userId == userId)
             return i;
     }
     return -1;
 }
 
-static void cache_store(const char *city, uint64_t user_id,
-                        bool is_operator, bool is_archived,
-                        const char *json, size_t json_len) {
-    /* Risultati troppo grandi non vengono cachati — serviti dalla query. */
-    if (json_len >= CACHE_JSON_MAX) return;
+// Stores a JSON result in the cache. Silently skips results that exceed
+// CACHE_JSON_MAX to avoid evicting useful entries with oversized payloads.
+static void cache_store(const char *city, uint64_t userId,
+                        bool isOperator, bool isArchived,
+                        const char *json, size_t jsonLen) {
+    if (jsonLen >= CACHE_JSON_MAX) return;
 
-    int    slot        = -1;
-    int    oldest_idx  = 0;
-    time_t oldest_time = g_cache[0].cached_at;
+    int slot = -1;
+    int oldestIdx = 0;
+    time_t oldestTime = g_cache[0].cachedAt;
 
+    // Find a free slot; simultaneously track the oldest entry as a fallback
+    // so that one pass is enough regardless of the outcome.
     for (int i = 0; i < CACHE_MAX_ENTRIES; i++) {
-        if (!g_cache[i].cached_at) { slot = i; break; }
-        if (g_cache[i].cached_at < oldest_time) {
-            oldest_time = g_cache[i].cached_at;
-            oldest_idx  = i;
+        if (!g_cache[i].cachedAt) {
+            slot = i;
+            break;
+        }
+        if (g_cache[i].cachedAt < oldestTime) {
+            oldestTime = g_cache[i].cachedAt;
+            oldestIdx = i;
         }
     }
 
-    if (slot == -1) slot = oldest_idx;
+    // No free slot found: evict the oldest entry (LRU-approximation).
+    if (slot == -1) slot = oldestIdx;
 
-    CacheEntry *e  = &g_cache[slot];
+    CacheEntry *e = &g_cache[slot];
     strncpy(e->city, city, CITY_LEN - 1);
-    e->city[CITY_LEN - 1] = '\0';
-    e->user_id     = user_id;
-    e->is_operator = is_operator;
-    e->is_archived = is_archived;
-    e->json_len    = json_len;
-    memcpy(e->json, json, json_len + 1);
-    e->cached_at   = time(NULL);
+    e->city[CITY_LEN - 1] = '\0';  // Guarantee NUL termination
+    e->userId = userId;
+    e->isOperator = isOperator;
+    e->isArchived = isArchived;
+    e->jsonLen = jsonLen;
+    memcpy(e->json, json, jsonLen + 1);  // +1 to copy the NUL terminator
+    e->cachedAt = time(NULL);
 }
 
 void report_cache_invalidate_city(const char *city, uint64_t authorId) {
     for (int i = 0; i < CACHE_MAX_ENTRIES; i++) {
         CacheEntry *e = &g_cache[i];
-        if (!e->cached_at) continue;
+        if (!e->cachedAt) continue;
         if (strncmp(e->city, city, CITY_LEN) != 0) continue;
-        if (e->is_operator || e->user_id == authorId)
-            e->cached_at = 0;
+
+        // Operator-scoped entries must be invalidated because assigning or
+        // resolving a report changes the operator's active/archived list.
+        // Author-scoped entries must be invalidated because the report's
+        // status changed and is no longer accurate for the citizen's view.
+        if (e->isOperator || e->userId == authorId) e->cachedAt = 0;
     }
 }
 
@@ -189,6 +233,8 @@ void report_cache_invalidate_city(const char *city, uint64_t authorId) {
 
 uint64_t report_insert(uint64_t authorId, double lat, double lon,
                        const char *city, const char *category, const char *desc) {
+    // Format string "lffsssl": l=int64(authorId), f=double(lat), f=double(lon),
+    // s=string(city), s=string(category), s=string(desc), l=int64(timestamp).
     int rc = db_exec(
         "INSERT INTO reports "
         "(author_id, lat, lon, city, category, description, status, created_at) "
@@ -201,6 +247,9 @@ uint64_t report_insert(uint64_t authorId, double lat, double lon,
 }
 
 int report_assign(uint64_t reportId, uint64_t operatorId) {
+    // The WHERE clause is an atomic guard: status = 0 ensures the report is
+    // still active, and assigned_to IS NULL prevents double-assignment in
+    // case two operators click "accept" concurrently.
     int rc = db_exec(
         "UPDATE reports "
         "SET status = 1, assigned_to = ?, assigned_at = ? "
@@ -208,18 +257,22 @@ int report_assign(uint64_t reportId, uint64_t operatorId) {
         "lll",
         (int64_t)operatorId, (int64_t)time(NULL), (int64_t)reportId);
     if (rc != 0) return -1;
-    
+
+    // db_changes() == 0 means the guard condition was not met (already
+    // assigned or not found); return 0 to distinguish from a hard error.
     if (db_changes() == 0) return 0;
 
-    // invalida qui, non nel chiamante
+    // Invalidate here, not in the caller, to keep cache logic centralised.
     ActiveReport r;
-    if (report_get_by_id(reportId, &r))
-        report_cache_invalidate_city(r.city, r.authorId);
+    if (report_get_by_id(reportId, &r)) report_cache_invalidate_city(r.city, r.authorId);
 
     return 1;
 }
 
 int report_resolve(uint64_t reportId, uint64_t operatorId) {
+    // The WHERE clause guards: status = 1 ensures the report is in progress,
+    // and assigned_to = operatorId prevents an operator from resolving
+    // a report that belongs to a different operator.
     int rc = db_exec(
         "UPDATE reports "
         "SET status = 2, resolved_at = ? "
@@ -227,37 +280,34 @@ int report_resolve(uint64_t reportId, uint64_t operatorId) {
         "lll",
         (int64_t)time(NULL), (int64_t)reportId, (int64_t)operatorId);
     if (rc != 0) return -1;
-
     if (db_changes() == 0) return 0;
 
-    // invalida qui, non nel chiamante
+    // Invalidate here, not in the caller, to keep cache logic centralised.
     ActiveReport r;
-    if (report_get_by_id(reportId, &r))
-        report_cache_invalidate_city(r.city, r.authorId);
+    if (report_get_by_id(reportId, &r)) report_cache_invalidate_city(r.city, r.authorId);
 
     return 1;
 }
 
 /* ── Read operations ─────────────────────────────────────────────────── */
 
-
-
 size_t report_get_active_json(char *buf, size_t max,
                               uint64_t userId, const char *city, bool isOperator) {
     int idx = cache_find(city, userId, isOperator, false);
     if (idx >= 0) {
-        memcpy(buf, g_cache[idx].json, g_cache[idx].json_len + 1);
-        return g_cache[idx].json_len;
+        // Cache hit: copy the pre-built JSON directly into the output buffer.
+        memcpy(buf, g_cache[idx].json, g_cache[idx].jsonLen + 1);
+        return g_cache[idx].jsonLen;
     }
 
     DbCursor *c = isOperator
-        /* Operatore: SOLO le segnalazioni assegnate a lui */
+        // Operator: only reports currently assigned to them (status = 1).
         ? db_cursor_open(
               "SELECT " SELECT_COLS " FROM reports "
               "WHERE status = 1 AND assigned_to = ? "
               "ORDER BY assigned_at DESC;",
               "l", (int64_t)userId)
-        /* Cittadino: le sue segnalazioni non ancora risolte */
+        // Citizen: their own reports not yet resolved (status 0 or 1).
         : db_cursor_open(
               "SELECT " SELECT_COLS " FROM reports "
               "WHERE author_id = ? AND status < 2 "
@@ -265,8 +315,8 @@ size_t report_get_active_json(char *buf, size_t max,
               "l", (int64_t)userId);
 
     size_t len = cursor_to_json_array(c, buf, max);
-    if (len > 0)
-        cache_store(city, userId, isOperator, false, buf, len);
+    // Only cache non-empty results; an empty array could be a transient state.
+    if (len > 0) cache_store(city, userId, isOperator, false, buf, len);
 
     return len;
 }
@@ -275,16 +325,18 @@ size_t report_get_archived_json(char *buf, size_t max,
                                 uint64_t userId, const char *city, bool isOperator) {
     int idx = cache_find(city, userId, isOperator, true);
     if (idx >= 0) {
-        memcpy(buf, g_cache[idx].json, g_cache[idx].json_len + 1);
-        return g_cache[idx].json_len;
+        memcpy(buf, g_cache[idx].json, g_cache[idx].jsonLen + 1);
+        return g_cache[idx].jsonLen;
     }
 
     DbCursor *c = isOperator
+        // Operator: all reports they resolved (status = 2, assigned_to = them).
         ? db_cursor_open(
               "SELECT " SELECT_COLS " FROM reports "
               "WHERE assigned_to = ? AND status = 2 "
               "ORDER BY resolved_at DESC;",
               "l", (int64_t)userId)
+        // Citizen: all their reports that were resolved.
         : db_cursor_open(
               "SELECT " SELECT_COLS " FROM reports "
               "WHERE author_id = ? AND status = 2 "
@@ -292,14 +344,13 @@ size_t report_get_archived_json(char *buf, size_t max,
               "l", (int64_t)userId);
 
     size_t len = cursor_to_json_array(c, buf, max);
-    if (likely(len > 0))
-        cache_store(city, userId, isOperator, true, buf, len);
+    if (likely(len > 0)) cache_store(city, userId, isOperator, true, buf, len);
 
     return len;
 }
 
 size_t report_get_all_city_json(char *buf, size_t max, const char *city) {
-    /* Admin view: not cached, no LIMIT (admin sees everything) */
+    // Admin view: not cached, no LIMIT — admin sees every report in the city.
     DbCursor *c = db_cursor_open(
         "SELECT " SELECT_COLS " FROM reports "
         "WHERE city = ? ORDER BY created_at DESC;",
@@ -332,11 +383,12 @@ bool report_to_json(const ActiveReport *r, char *dest, size_t destSize) {
     if (!r || !dest || destSize == 0) return false;
     cJSON *obj = report_to_cjson(r);
     if (!obj) return false;
-    char  *str = cJSON_PrintUnformatted(obj);
+    char *str = cJSON_PrintUnformatted(obj);
     cJSON_Delete(obj);
     if (!str) return false;
     size_t len = strlen(str);
-    bool   ok  = len < destSize;
+    // Strict less-than: we need len + 1 bytes to fit the NUL terminator.
+    bool ok = len < destSize;
     if (ok) memcpy(dest, str, len + 1);
     free(str);
     return ok;

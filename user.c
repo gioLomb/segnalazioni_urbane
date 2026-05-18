@@ -9,19 +9,17 @@
 
 /* ── Salt generation ─────────────────────────────────────────────────── */
 
-/*
- * Fills out[0..SALT_HEX_LEN-1] with 32 cryptographically random hex chars
- * using /dev/urandom.  Falls back to time^pid if the device is unavailable.
- */
+// Fills out[0..SALT_HEX_LEN-1] with 32 cryptographically random hex chars
+// using /dev/urandom. Falls back to time^pid if the device is unavailable.
 static void generate_salt(char *out) {
     static const char hex[] = "0123456789abcdef";
-    unsigned char buf[16];  /* 16 raw bytes → 32 hex chars */
+    unsigned char buf[16];  // 16 raw bytes → 32 hex chars
 
     FILE *f = fopen("/dev/urandom", "rb");
     if (f && fread(buf, 1, sizeof(buf), f) == sizeof(buf)) {
         fclose(f);
         for (int i = 0; i < 16; i++) {
-            out[i * 2]     = hex[buf[i] >> 4];
+            out[i * 2] = hex[buf[i] >> 4];
             out[i * 2 + 1] = hex[buf[i] & 0x0F];
         }
         out[32] = '\0';
@@ -29,7 +27,7 @@ static void generate_salt(char *out) {
     }
     if (f) fclose(f);
 
-    /* Fallback — not cryptographically secure, acceptable for dev environments. */
+    // Fallback: not cryptographically secure, acceptable for dev environments.
     srand((unsigned)time(NULL) ^ (unsigned)getpid());
     for (int i = 0; i < 32; i++)
         out[i] = hex[rand() % 16];
@@ -38,17 +36,13 @@ static void generate_salt(char *out) {
 
 /* ── Password hashing ────────────────────────────────────────────────── */
 
-/*
- * DJB2-derived hash of (salt + plain).
- * Produces exactly 64 hex chars (two 64-bit halves) into dest[PWD_HASH_LEN].
- *
- * NOTE: this is not a cryptographic KDF — for production use bcrypt/Argon2.
- * The salt eliminates rainbow-table and pre-computation attacks even with
- * this fast hash.
- */
+// DJB2-derived hash of (salt + plain), producing 64 hex chars into dest.
+// NOTE: not a cryptographic KDF — for production use bcrypt or Argon2.
+// The random salt eliminates rainbow-table and pre-computation attacks
+// even with this fast hash.
 static void hash_password(const char *salt, const char *plain, char *dest) {
     uint64_t h = 5381;
-    /* Hash salt first, then password — same as hash(salt || plain). */
+    // Hash salt first, then password — equivalent to hash(salt || plain).
     for (const char *p = salt;  *p; p++) h = ((h << 5) + h) + (unsigned char)*p;
     for (const char *p = plain; *p; p++) h = ((h << 5) + h) + (unsigned char)*p;
     snprintf(dest, PWD_HASH_LEN + 1, "%016llx%016llx",
@@ -58,14 +52,16 @@ static void hash_password(const char *salt, const char *plain, char *dest) {
 
 /* ── Constant-time comparison ────────────────────────────────────────── */
 
+// XORs every byte of two PWD_HASH_LEN strings and checks that the result
+// is zero. The volatile prevents the compiler from short-circuiting the loop,
+// which would reintroduce a timing side-channel.
 static int constant_time_compare(const char *a, const char *b) {
     volatile int result = 0;
-
-    for (size_t i = 0; i < PWD_HASH_LEN; i++) {
+    for (size_t i = 0; i < PWD_HASH_LEN; i++)
         result |= ((unsigned char)a[i] ^ (unsigned char)b[i]);
-    }
     return result == 0;
 }
+
 /* ── Setup ───────────────────────────────────────────────────────────── */
 
 int user_setup_table(void) {
@@ -76,7 +72,7 @@ int user_setup_table(void) {
         "  password_hash TEXT    NOT NULL,"
         "  role          INTEGER NOT NULL,"
         "  city          TEXT    NOT NULL,"
-        "  salt          TEXT    NOT NULL"   
+        "  salt          TEXT    NOT NULL"
         ");", NULL);
 }
 
@@ -87,7 +83,7 @@ int user_register(const char *username, const char *plainPassword,
     char salt[SALT_HEX_LEN + 1];
     generate_salt(salt);
 
-    char hash[PWD_HASH_LEN+1];
+    char hash[PWD_HASH_LEN + 1];
     hash_password(salt, plainPassword, hash);
 
     return db_exec(
@@ -98,20 +94,17 @@ int user_register(const char *username, const char *plainPassword,
 
 /* ── Row mapper ──────────────────────────────────────────────────────── */
 
-/*
- * SELECT column order:
- *   0=id  1=username  2=password_hash  3=role  4=city  5=salt
- */
+// Maps the current cursor row to a User.
+// SELECT column order: 0=id 1=username 2=password_hash 3=role 4=city 5=salt
 static void cursor_to_user(DbCursor *c, User *u) {
     memset(u, 0, sizeof(*u));
     u->userId = (uint64_t)db_cursor_int64(c, USER_COL_ID);
-    strncpy(u->username,     db_cursor_text(c, USER_COL_USERNAME),
-            USERNAME_LEN - 1);
-    strncpy(u->passwordHash, db_cursor_text(c, USER_COL_PASSWORD_HASH),
-            PWD_HASH_LEN);
+    strncpy(u->username, db_cursor_text(c, USER_COL_USERNAME), USERNAME_LEN - 1);
+    strncpy(u->passwordHash, db_cursor_text(c, USER_COL_PASSWORD_HASH), PWD_HASH_LEN);
     u->role = (UserRole)db_cursor_int64(c, USER_COL_ROLE);
     strncpy(u->city, db_cursor_text(c, USER_COL_CITY), CITY_LEN - 1);
-    /* salt may be NULL in legacy rows — db_cursor_text returns "" in that case */
+    // db_cursor_text returns "" for NULL columns, so legacy rows with no
+    // salt produce an empty string rather than undefined behaviour.
     strncpy(u->salt, db_cursor_text(c, USER_COL_SALT), SALT_HEX_LEN);
 }
 
@@ -131,16 +124,17 @@ bool user_authenticate(const char *username, const char *plainPassword,
 
     if (!found) return false;
 
-    char login_hash[PWD_HASH_LEN + 1];
+    char loginHash[PWD_HASH_LEN + 1];
 
     if (out->salt[0] != '\0') {
-        /* New path: salted hash */
-        hash_password(out->salt, plainPassword, login_hash);
+        // Salted path: current schema.
+        hash_password(out->salt, plainPassword, loginHash);
     } else {
-        hash_password("", plainPassword, login_hash);
+        // Legacy path: rows created before the salt column was added.
+        hash_password("", plainPassword, loginHash);
     }
 
-    return constant_time_compare(out->passwordHash, login_hash);
+    return constant_time_compare(out->passwordHash, loginHash);
 }
 
 bool user_get_by_id(uint64_t id, User *out) {
@@ -163,48 +157,46 @@ bool user_is_admin(const User *u) {
     return u && u->role == ROLE_ADMIN;
 }
 
-int user_register_admin(const char *username, const char *plainPassword, const char *city) {
-    /* Check uniqueness: only one admin per city */
+int user_register_admin(const char *username, const char *plainPassword,
+                        const char *city) {
+    // Enforce the one-admin-per-city constraint before inserting.
     DbCursor *c = db_cursor_open(
         "SELECT id FROM users WHERE role = 2 AND city = ? LIMIT 1;",
         "s", city);
     bool exists = db_cursor_next(c);
     db_cursor_close(c);
-    if (exists) return -2;  /* -2 = admin già presente per questa città */
+    if (exists) return -2;  // an admin already exists for this city
 
     return user_register(username, plainPassword, city, ROLE_ADMIN);
 }
+
 size_t user_get_operators_json(char *buf, size_t max, const char *city) {
     DbCursor *c = db_cursor_open(
         "SELECT id, username FROM users WHERE role = 1 AND city = ? ORDER BY username;",
         "s", city);
 
     if (!c) {
-        if (max > 2) { strcpy(buf, "[]"); return 2; }
+        if (max > 2) {
+            strcpy(buf, "[]");
+            return 2;
+        }
         return 0;
     }
 
-    // 1. Creiamo l'oggetto radice (un array)
+    // Build the JSON array by iterating the cursor.
     cJSON *root = cJSON_CreateArray();
-
     while (db_cursor_next(c)) {
-        // 2. Creiamo un oggetto per ogni riga
         cJSON *item = cJSON_CreateObject();
-        
-        // Aggiungiamo i campi (cJSON gestisce i tipi correttamente)
         cJSON_AddNumberToObject(item, "id", (double)db_cursor_int64(c, 0));
         cJSON_AddStringToObject(item, "username", db_cursor_text(c, 1));
-        
-        // Lo aggiungiamo all'array
         cJSON_AddItemToArray(root, item);
     }
     db_cursor_close(c);
 
-    // 3. Renderizziamo il JSON direttamente nel buffer fornito
-    // cJSON_PrintPreallocated è l'ideale se hai già un buffer e vuoi evitare allocazioni extra
-    bool success = cJSON_PrintPreallocated(root, buf, (int)max, 0); // 0 = unformatted (senza spazi/invio)
-    
-    cJSON_Delete(root); // Libera la memoria della struttura cJSON
+    // Write directly into the caller's buffer; the 0 flag means compact
+    // (no indentation), which keeps the payload as small as possible.
+    bool ok = cJSON_PrintPreallocated(root, buf, (int)max, 0);
+    cJSON_Delete(root);
 
-    return success ? strlen(buf) : 0;
+    return ok ? strlen(buf) : 0;
 }

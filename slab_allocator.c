@@ -94,7 +94,7 @@ void *slab_pool_alloc(SlabPool *pool) {
     chunk->localFree = *(void **)userPtr;
     chunk->usedCount++;
 
-    // NOTE: memory is NOT zeroed here. conn_manager_alloc() resets every
+    // NOTE: memory is NOT zeroed here. client_manager_alloc() resets every
     // ClientCtx field explicitly, so a full memset would be redundant.
     return userPtr;
 }

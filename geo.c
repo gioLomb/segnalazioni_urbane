@@ -161,3 +161,22 @@ bool geo_contains(const CityGeo *geo, double lat, double lon) {
     return lat >= geo->latMin && lat <= geo->latMax &&
            lon >= geo->lonMin && lon <= geo->lonMax;
 }
+
+void build_map_vars(const char *cityName, MapVars *mv) {
+    CityGeo geo;
+    if (geo_lookup(cityName, &geo)) {
+        // Use the polygon centroid for the initial map centre.
+        snprintf(mv->lat, sizeof(mv->lat), "%.6f", geo.centroidLat);
+        snprintf(mv->lon, sizeof(mv->lon), "%.6f", geo.centroidLon);
+        // Bounds formatted as a Leaflet LatLngBounds literal: [[sw],[ne]].
+        snprintf(mv->bounds, sizeof(mv->bounds),
+                 "[[%.6f,%.6f],[%.6f,%.6f]]",
+                 geo.latMin, geo.lonMin, geo.latMax, geo.lonMax);
+    } else {
+        // City not found in the geo table: fall back to Rome city centre
+        // so the map renders somewhere sensible rather than the null island.
+        snprintf(mv->lat, sizeof(mv->lat), "41.9");
+        snprintf(mv->lon, sizeof(mv->lon), "12.5");
+        snprintf(mv->bounds, sizeof(mv->bounds), "null");
+    }
+}

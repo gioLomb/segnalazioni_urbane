@@ -17,62 +17,90 @@
 #include "geo.h"
 #include "config.h"
 
+// Maximum length for the HTML error block injected into page templates.
 #define ERROR_BLOCK_MAX_LEN 128
-#define ESCAPED_PARAM_LEN 64
+// Maximum length for an HTML-escaped username or city name.
+#define ESCAPED_PARAM_LEN   64
 
 /* ── Session ─────────────────────────────────────────────────────────── */
 
 /**
- * Reads the session cookie from req, verifies it, and fills *u.
- * Returns true if a valid session was found, false otherwise.
+ * @brief Extracts and verifies the session cookie from the request.
+ *
+ * Reads SESSION_COOKIE_NAME from the Cookie header, then delegates to
+ * session_verify() which looks up the token in the session table.
+ *
+ * @param req Incoming HTTP request.
+ * @param u   Populated with the authenticated user's data on success.
+ * @return true if a valid session exists, false if missing or expired.
  */
 bool get_session_user(const HttpRequest *req, User *u);
 
 /* ── Response primitives ─────────────────────────────────────────────── */
 
-/** HTTP 302 redirect. cookie may be NULL. */
+/**
+ * @brief Issues an HTTP 302 redirect.
+ *
+ * @param resp   Response to populate.
+ * @param url    Destination URL written into resp->location.
+ * @param cookie Optional Set-Cookie header value; pass NULL to omit it.
+ */
 void redirect(HttpResponse *resp, const char *url, const char *cookie);
 
-/** Writes {"error":"<msg>"} into resp with the given status code. */
+/**
+ * @brief Writes a JSON error body {"error":"<msg>"} with the given status.
+ *
+ * @param resp   Response to populate.
+ * @param status HTTP status code (e.g. 400, 401, 403, 404).
+ * @param msg    Error message string (not HTML-escaped).
+ */
 void resp_json_error(HttpResponse *resp, int status, const char *msg);
 
-/** Writes <h1><msg></h1> into resp with the given status code. */
+/**
+ * @brief Writes a minimal HTML error body <h1><msg></h1> with the given status.
+ *
+ * @param resp   Response to populate.
+ * @param status HTTP status code.
+ * @param msg    Error message string.
+ */
 void resp_html_error(HttpResponse *resp, int status, const char *msg);
 
 /**
- * Renders a template into resp->body and sets status 200.
- * On tpl_get failure writes a 500 and returns false.
- * Inline because it is called in almost every handler and the
- * compiler can eliminate the call overhead entirely.
+ * @brief Renders a named template into resp->body and sets status 200.
+ *
+ * @pre tplName refers to a file accessible via tpl_get().
+ * @param resp    Response to populate.
+ * @param tplName Path to the template file (used as the cache key).
+ * @param vars    Array of template variable bindings.
+ * @param nVars   Number of elements in vars.
+ * @return true on success, false if the template is not found (sets 500).
  */
-static inline bool resp_render_tpl(HttpResponse   *resp,
-                                   const char     *tpl_name,
-                                   TplVar         *vars,
-                                   int             n_vars) {
-    const Template *tpl = tpl_get(tpl_name);
-    if (unlikely(!tpl)) { resp_html_error(resp, 500, "Server Error"); return false; }
-    int n = tpl_render(tpl, resp->body, RESPONSE_BUFFER_SIZE, vars, n_vars);
-    resp->statusCode = 200;
-    resp->bodyLen    = n > 0 ? (size_t)n : 0;
-    return true;
-}
+bool resp_render_tpl(HttpResponse *resp, const char *tplName,
+                     TplVar *vars, int nVars);
 
 /* ── Page-level error helpers ────────────────────────────────────────── */
 
-/** Renders login.html with ERROR_BLOCK set to msg. */
+/**
+ * @brief Renders login.html with ERROR_BLOCK injected.
+ * @param resp Response to populate.
+ * @param msg  Error message to display inside the page.
+ */
 void login_error(HttpResponse *resp, const char *msg);
 
-/** Renders register.html with ERROR_BLOCK set to msg. */
+/**
+ * @brief Renders register.html with ERROR_BLOCK injected.
+ * @param resp Response to populate.
+ * @param msg  Error message to display inside the page.
+ */
 void register_error(HttpResponse *resp, const char *msg);
 
-/** Renders submit.html with all vars + ERROR_BLOCK set to msg. */
+/**
+ * @brief Renders submit.html with all map variables and ERROR_BLOCK injected.
+ *
+ * @param resp Response to populate.
+ * @param u    Authenticated user; provides USERNAME, CITY and map coordinates.
+ * @param msg  Error message to display inside the page.
+ */
 void submit_error(HttpResponse *resp, const User *u, const char *msg);
-
-/* ── Map vars ────────────────────────────────────────────────────────── */
-
-typedef struct { char lat[32]; char lon[32]; char bounds[128]; } MapVars;
-
-/** Fills mv with geo data for city_name, or falls back to Rome centre. */
-void build_map_vars(const char *city_name, MapVars *mv);
 
 #endif /* ROUTE_HELPERS_H */

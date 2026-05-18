@@ -27,9 +27,9 @@ CFLAGS="-fprofile-arcs -ftest-coverage -O0 -g -Wall -I. -I/usr/include/node -D_G
 CFLAGS="${CFLAGS} -DPORT=${PORT} -DAPP_DB_PATH='\"${DB_FILE}\"'"
 LDFLAGS="-luv -lpthread -lsqlite3 -lcjson -ldl -lrt"
 
-SRCS="http_utils.c server_functions.c report.c route_handler.c template.c \
+SRCS="http_utils.c server.c report.c route_handler.c template.c \
       route_api.c route_pages.c route_helpers.c hash_table.c db.c user.c \
-      session.c slab_allocator.c connection_manager.c geo.c picohttpparser.c"
+      session.c slab_allocator.c client_manager.c geo.c picohttpparser.c"
 
 # Colori ANSI
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'

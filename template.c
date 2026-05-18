@@ -8,25 +8,25 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-/* ── Tipo interno ───────────────────────────────────────────────────── */
+/* ── Internal types ──────────────────────────────────────────────────── */
 
 typedef enum {
-    FRAG_LITERAL,   /* testo statico: copiato verbatim */
-    FRAG_VARIABLE   /* variabile da sostituire, es. "USERNAME" */
+    FRAG_LITERAL,  // Static text: copied verbatim into the output buffer
+    FRAG_VARIABLE  // Placeholder: resolved via key lookup at render time
 } FragType;
 
 typedef struct {
     FragType    type;
-    const char *ptr; /* LITERAL → puntatore in src; VARIABLE → nome chiave */
+    const char *ptr; // LITERAL → pointer into src; VARIABLE → key name in src
     size_t      len;
 } Fragment;
 
 struct Template {
-    char      *path;       /* percorso del file (chiave di lookup) */
-    char      *src;        /* contenuto del file, heap-allocated, NUL-terminated */
-    size_t     src_len;    /* strlen(src) */
-    Fragment  *fragments;  /* array pre-calcolato al caricamento */
-    int        frag_count;
+    char     *path;      // File path used as the lookup key
+    char     *src;       // File contents, heap-allocated, NUL-terminated
+    size_t    srcLen;    // strlen(src)
+    Fragment *fragments; // Pre-computed fragment array, built at load time
+    int       fragCount;
 };
 
 #define MAX_TEMPLATES 64
@@ -34,8 +34,10 @@ struct Template {
 static Template g_pool[MAX_TEMPLATES];
 static int      g_count = 0;
 
-/* ── Helpers ────────────────────────────────────────────────────────── */
+/* ── Helpers ─────────────────────────────────────────────────────────── */
 
+// Linear scan of vars for a key matching key[0..klen-1].
+// Returns the associated value string, or "" if not found.
 static const char *lookup(const char *key, size_t klen,
                           const TplVar *vars, int nvars) {
     for (int i = 0; i < nvars; i++)
@@ -45,6 +47,7 @@ static const char *lookup(const char *key, size_t klen,
     return "";
 }
 
+// Returns a pointer to the first '{{' in [cur, end), or NULL if not found.
 static const char *find_open(const char *cur, const char *end) {
     while (cur < end - 1) {
         cur = memchr(cur, '{', end - cur);
@@ -55,6 +58,7 @@ static const char *find_open(const char *cur, const char *end) {
     return NULL;
 }
 
+// Returns a pointer to the first '}}' in [cur, end), or end if not found.
 static const char *find_close(const char *cur, const char *end) {
     while (cur < end - 1) {
         cur = memchr(cur, '}', end - cur);
@@ -65,52 +69,52 @@ static const char *find_close(const char *cur, const char *end) {
     return end;
 }
 
-/* ── Fragment pre-parser ────────────────────────────────────────────── */
+/* ── Fragment pre-parser ─────────────────────────────────────────────── */
 
-/*
- * Scansiona src una sola volta e costruisce l'array di Fragment.
- * Due passate: la prima conta, la seconda riempie — nessun realloc.
- * I puntatori ptr dei FRAG_LITERAL puntano direttamente dentro src
- * (zero copie); quelli dei FRAG_VARIABLE puntano al nome della chiave
- * nel segmento {{KEY}} dentro src (anch'esso zero copie).
- */
+// Scans src once and builds the Fragment array with two passes:
+// the first counts fragments (no realloc needed), the second fills them.
+// FRAG_LITERAL pointers point directly into src (zero copies);
+// FRAG_VARIABLE pointers point to the key name inside the {{KEY}} span.
 static int parse_fragments(Template *tpl) {
     const char *src = tpl->src;
-    const char *end = src + tpl->src_len;
+    const char *end = src + tpl->srcLen;
     int count = 0;
 
-    /* Prima passata: conta i fragment */
+    // First pass: count fragments.
     const char *cur = src;
     while (cur < end) {
         const char *open = find_open(cur, end);
-        if (!open) { if (cur < end) count++; break; }  /* literal finale */
-        if (open > cur) count++;                         /* literal prima di {{ */
-        count++;                                         /* variable */
+        if (!open) {
+            if (cur < end) count++;  // trailing literal after the last variable
+            break;
+        }
+        if (open > cur) count++;  // literal before this '{{'
+        count++;                  // variable fragment
         const char *ke = find_close(open + 2, end);
         cur = (ke < end) ? ke + 2 : end;
     }
 
     tpl->fragments = malloc((count ? count : 1) * sizeof(Fragment));
     if (!tpl->fragments) return -1;
-    tpl->frag_count = 0;
+    tpl->fragCount = 0;
 
-    /* Seconda passata: riempie i fragment */
+    // Second pass: populate fragments.
     cur = src;
     while (cur < end) {
         const char *open = find_open(cur, end);
         if (!open) {
             if (cur < end)
-                tpl->fragments[tpl->frag_count++] =
+                tpl->fragments[tpl->fragCount++] =
                     (Fragment){ FRAG_LITERAL, cur, (size_t)(end - cur) };
             break;
         }
         if (open > cur)
-            tpl->fragments[tpl->frag_count++] =
+            tpl->fragments[tpl->fragCount++] =
                 (Fragment){ FRAG_LITERAL, cur, (size_t)(open - cur) };
 
         const char *ks = open + 2;
         const char *ke = find_close(ks, end);
-        tpl->fragments[tpl->frag_count++] =
+        tpl->fragments[tpl->fragCount++] =
             (Fragment){ FRAG_VARIABLE, ks, (size_t)(ke - ks) };
         cur = (ke < end) ? ke + 2 : end;
     }
@@ -118,7 +122,7 @@ static int parse_fragments(Template *tpl) {
     return 0;
 }
 
-/* ── Load ───────────────────────────────────────────────────────────── */
+/* ── Load ────────────────────────────────────────────────────────────── */
 
 static int load_one(const char *path) {
     if (g_count >= MAX_TEMPLATES) {
@@ -127,51 +131,68 @@ static int load_one(const char *path) {
     }
 
     int fd = open(path, O_RDONLY);
-    if (fd == -1) { perror(path); return -1; }
+    if (fd == -1) {
+        perror(path);
+        return -1;
+    }
 
     struct stat st;
-    if (fstat(fd, &st) == -1) { close(fd); return -1; }
+    if (fstat(fd, &st) == -1) {
+        close(fd);
+        return -1;
+    }
     size_t fsize = (size_t)st.st_size;
 
+    // Memory-map the file for fast copying; the fd can be closed immediately.
     char *map = mmap(NULL, fsize, PROT_READ, MAP_PRIVATE, fd, 0);
     close(fd);
-    if (map == MAP_FAILED) { perror("mmap"); return -1; }
+    if (map == MAP_FAILED) {
+        perror("mmap");
+        return -1;
+    }
 
+    // Copy into a heap buffer so we own the memory independently of the mapping.
     char *buf = malloc(fsize + 1);
-    if (!buf) { munmap(map, fsize); return -1; }
+    if (!buf) {
+        munmap(map, fsize);
+        return -1;
+    }
     memcpy(buf, map, fsize);
     buf[fsize] = '\0';
     munmap(map, fsize);
 
     char *key = strdup(path);
-    if (!key) { free(buf); return -1; }
+    if (!key) {
+        free(buf);
+        return -1;
+    }
 
-    g_pool[g_count].path      = key;
-    g_pool[g_count].src       = buf;
-    g_pool[g_count].src_len   = fsize;
-    g_pool[g_count].fragments  = NULL;
-    g_pool[g_count].frag_count = 0;
+    g_pool[g_count].path = key;
+    g_pool[g_count].src = buf;
+    g_pool[g_count].srcLen = fsize;
+    g_pool[g_count].fragments = NULL;
+    g_pool[g_count].fragCount = 0;
 
     if (parse_fragments(&g_pool[g_count]) != 0) {
-        free(buf); free(key); return -1;
+        free(buf);
+        free(key);
+        return -1;
     }
 
     printf("template: loaded '%s' (%zu bytes, %d fragments)\n",
-           path, fsize, g_pool[g_count].frag_count);
+           path, fsize, g_pool[g_count].fragCount);
     g_count++;
     return 0;
 }
 
-/* ── API pubblica ───────────────────────────────────────────────────── */
+/* ── Public API ──────────────────────────────────────────────────────── */
 
 int tpl_load_files(const char *first_path, ...) {
     va_list ap;
     va_start(ap, first_path);
     int ret = 0;
-    for (const char *p = first_path; p; p = va_arg(ap, const char *)) {
-        if (load_one(p) != 0)
-            ret = -1;
-    }
+    for (const char *p = first_path; p; p = va_arg(ap, const char *))
+        if (load_one(p) != 0) ret = -1;
     va_end(ap);
     return ret;
 }
@@ -192,30 +213,28 @@ const Template *tpl_get(const char *path) {
     return NULL;
 }
 
-/* ── Rendering ──────────────────────────────────────────────────────── */
+/* ── Rendering ───────────────────────────────────────────────────────── */
 
 int tpl_render(const Template *tpl, char *dest, size_t destSize,
                const TplVar *vars, int nvars) {
     if (!tpl || !dest || !destSize) return -1;
 
-    /*
-     * I fragment sono stati pre-calcolati al caricamento del template:
-     * nessuna scansione di src a runtime, solo un loop lineare sull'array.
-     * FRAG_LITERAL → memcpy diretta; FRAG_VARIABLE → lookup + memcpy.
-     */
+    // The fragment array was pre-computed at load time: no src scanning at
+    // runtime, just a linear pass over fragments.
+    // FRAG_LITERAL → direct memcpy; FRAG_VARIABLE → lookup then memcpy.
     size_t written = 0;
 
-    for (int i = 0; i < tpl->frag_count; i++) {
+    for (int i = 0; i < tpl->fragCount; i++) {
         const Fragment *f = &tpl->fragments[i];
-        const char     *data;
-        size_t          len;
+        const char *data;
+        size_t len;
 
         if (f->type == FRAG_LITERAL) {
             data = f->ptr;
-            len  = f->len;
+            len = f->len;
         } else {
             data = lookup(f->ptr, f->len, vars, nvars);
-            len  = strlen(data);
+            len = strlen(data);
         }
 
         if (written + len + 1 > destSize) {

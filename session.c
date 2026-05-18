@@ -8,28 +8,28 @@
 
 /* ── Internal state ──────────────────────────────────────────────────── */
 
+// Singleton session table; NULL until session_init() is called.
 static Hash_Table *s_sessions = NULL;
 
 /* ── Private helpers ─────────────────────────────────────────────────── */
 
-/**
- * Generates a random hex token of exactly `len` characters.
- * Uses /dev/urandom for cryptographic safety; falls back to
- * time-seeded rand() if the device is unavailable.
- */
+// Generates a random hex token of exactly len characters.
+// Uses /dev/urandom for cryptographic safety; falls back to
+// time-seeded rand() if the device is unavailable.
 static void generate_token(char *out, size_t len) {
     static const char hex[] = "0123456789abcdef";
 
     FILE *f = fopen("/dev/urandom", "rb");
     if (f) {
-        size_t        bytes = len / 2;
+        size_t bytes = len / 2;
         unsigned char buf[TOKEN_HEX_LEN / 2];
         if (bytes > sizeof(buf)) bytes = sizeof(buf);
 
         if (fread(buf, 1, bytes, f) == bytes) {
             fclose(f);
+            // Encode each byte as two hex digits.
             for (size_t i = 0; i < bytes; i++) {
-                out[i * 2]     = hex[buf[i] >> 4];
+                out[i * 2] = hex[buf[i] >> 4];
                 out[i * 2 + 1] = hex[buf[i] & 0x0F];
             }
             out[len] = '\0';
@@ -38,7 +38,8 @@ static void generate_token(char *out, size_t len) {
         fclose(f);
     }
 
-    /* Fallback: not cryptographically secure */
+    // Fallback: time + PID seed is not cryptographically secure, but
+    // acceptable when /dev/urandom is unavailable (e.g. restricted sandbox).
     static int seeded = 0;
     if (!seeded) {
         srand((unsigned)time(NULL) ^ (unsigned)getpid());
@@ -73,17 +74,19 @@ bool session_create(const User *user, char *outToken) {
 
     char token[TOKEN_HEX_LEN + 1];
     User dummy;
-    int  max_tries = 100;
+    int maxTries = 100;
 
-    /* Collision avoidance: ensure the token is not already in use. */
+    // Collision avoidance: regenerate until the token is not already in use.
+    // Collisions are astronomically rare with a 32-char hex token but the
+    // loop makes the guarantee explicit.
     do {
         generate_token(token, TOKEN_HEX_LEN);
-        if (--max_tries <= 0) return false;
+        if (--maxTries <= 0) return false;
     } while (session_verify(token, &dummy));
 
     Session s;
-    s.user       = *user;
-    s.created_at = time(NULL);
+    s.user = *user;
+    s.createdAt = time(NULL);
 
     if (!ht_set(s_sessions, token, strlen(token) + 1, &s, sizeof(s)))
         return false;
@@ -99,8 +102,9 @@ bool session_verify(const char *token, User *outUser) {
     if (!ht_get(s_sessions, (void *)token, strlen(token) + 1, &s, sizeof(s)))
         return false;
 
-    /* Lazy eviction: delete expired sessions on first access. */
-    if (difftime(time(NULL), s.created_at) > SESSION_MAX_AGE) {
+    // Lazy eviction: delete the entry on first access after expiry rather
+    // than running a background sweep, keeping the hot path allocation-free.
+    if (difftime(time(NULL), s.createdAt) > SESSION_MAX_AGE) {
         ht_delete(s_sessions, (void *)token, strlen(token) + 1);
         return false;
     }
