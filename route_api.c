@@ -86,7 +86,7 @@ void route_api_report_status(const HttpRequest *req, HttpResponse *resp) {
 
     uint64_t reportId = (uint64_t)strtoull(ridS, NULL, 10);
     int newStatus = atoi(statS);
-    ActiveReport r;
+    Report r;
 
     // Verify the report exists before checking ownership.
     if (!report_get_by_id(reportId, &r)) {
@@ -133,6 +133,44 @@ void route_api_report_status(const HttpRequest *req, HttpResponse *resp) {
     resp->statusCode = 200;
 }
 
+void route_api_report_feedback(const HttpRequest *req, HttpResponse *resp) {
+    User u = {0};
+    // Only authenticated citizens may submit feedback.
+    if (!get_session_user(req, &u) || user_is_operator(&u) || user_is_admin(&u)) {
+        resp_json_error(resp, 403, "forbidden");
+        return;
+    }
+
+    char ridS[REPORT_ID_PARAM_LEN] = {0}, starsS[4] = {0};
+    get_field(req->body, "report_id=", ridS, sizeof(ridS));
+    get_field(req->body, "stars=",     starsS, sizeof(starsS));
+    if (!ridS[0] || !starsS[0]) {
+        resp_json_error(resp, 400, "missing params");
+        return;
+    }
+
+    uint64_t reportId = (uint64_t)strtoull(ridS, NULL, 10);
+    int stars = atoi(starsS);
+    if (stars < 1 || stars > 5) {
+        resp_json_error(resp, 400, "stars must be 1-5");
+        return;
+    }
+
+    int rc = report_set_feedback(reportId, u.userId, stars);
+    if (rc == 0) {
+        resp_json_error(resp, 409, "feedback already given or report not resolved");
+        return;
+    }
+    if (rc < 0) {
+        resp_json_error(resp, 500, "db error");
+        return;
+    }
+
+    snprintf(resp->body, RESPONSE_BUFFER_SIZE, "{\"ok\":true}");
+    resp->bodyLen = strlen(resp->body);
+    resp->statusCode = 200;
+}
+
 /* ── Admin endpoints ─────────────────────────────────────────────────── */
 
 void route_api_reports_all(const HttpRequest *req, HttpResponse *resp) {
@@ -173,7 +211,7 @@ void route_api_admin_assign(const HttpRequest *req, HttpResponse *resp) {
 
     uint64_t reportId = (uint64_t)strtoull(ridS, NULL, 10);
     uint64_t operatorId = (uint64_t)strtoull(opS, NULL, 10);
-    ActiveReport r;
+    Report r;
 
     if (unlikely(!report_get_by_id(reportId, &r))) {
         resp_json_error(resp, 404, "not found");

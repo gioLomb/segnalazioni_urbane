@@ -54,6 +54,15 @@ void route_api_reports_archived(const HttpRequest *req, HttpResponse *resp);
 void route_api_report_status(const HttpRequest *req, HttpResponse *resp);
 
 /**
+ * @brief Records a citizen's feedback (1-5 stars) on a resolved report.
+ *
+ * Reads report_id and stars from the POST body.
+ * Only the report's author may submit feedback, only once, only when resolved.
+ * Access: citizens only.
+ */
+void route_api_report_feedback(const HttpRequest *req, HttpResponse *resp);
+
+/**
  * @brief Returns all reports for the admin's city as a JSON array.
  *
  * Not cached; includes reports of every status.

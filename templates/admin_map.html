@@ -95,6 +95,18 @@
           </select>
         </div>
         <div>
+          <label>Feedback</label>
+          <select id="f-feedback">
+            <option value="">Tutti</option>
+            <option value="0">Non valutate</option>
+            <option value="1">★ 1</option>
+            <option value="2">★★ 2</option>
+            <option value="3">★★★ 3</option>
+            <option value="4">★★★★ 4</option>
+            <option value="5">★★★★★ 5</option>
+          </select>
+        </div>
+        <div>
           <label>Dal</label>
           <input type="date" id="f-date-from">
         </div>
@@ -147,6 +159,13 @@
         .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
     }
 
+    function starsHtml(n) {
+      var s = '';
+      for (var i = 1; i <= 5; i++)
+        s += '<span style="color:'+(i<=n?'#f59e0b':'#d1d5db')+'">&#9733;</span>';
+      return n > 0 ? s : '<span style="color:#9ca3af;font-size:.8rem">—</span>';
+    }
+
     /* ── Mappa ─────────────────────────────────────────────── */
     var map = L.map('map').setView([41.9,12.5],10);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
@@ -189,6 +208,7 @@
     function getFiltered() {
       var cat      = document.getElementById('f-category').value;
       var status   = document.getElementById('f-status').value;
+      var fb       = document.getElementById('f-feedback').value;
       var dateFrom = document.getElementById('f-date-from').value;
       var dateTo   = document.getElementById('f-date-to').value;
       var fromTs   = dateFrom ? new Date(dateFrom).getTime()/1000 : null;
@@ -196,6 +216,11 @@
       return allReports.filter(function(r) {
         if (cat    && r.category !== cat)                  return false;
         if (status !== '' && r.status !== parseInt(status)) return false;
+        if (fb !== '') {
+          var fbVal = parseInt(fb);
+          if (fbVal === 0 && r.feedback && r.feedback > 0) return false;
+          if (fbVal > 0  && r.feedback !== fbVal)          return false;
+        }
         if (fromTs && r.created_at < fromTs)               return false;
         if (toTs   && r.created_at > toTs)                 return false;
         return true;
@@ -206,6 +231,7 @@
     function resetFilters() {
       document.getElementById('f-category').value  = '';
       document.getElementById('f-status').value    = '';
+      document.getElementById('f-feedback').value  = '';
       document.getElementById('f-date-from').value = '';
       document.getElementById('f-date-to').value   = '';
       render(allReports);
@@ -228,7 +254,7 @@
 
       var h = '<table><thead><tr>'
         +'<th>ID</th><th>Categoria</th><th>Descrizione</th>'
-        +'<th>Stato</th><th>Creata</th><th>Risolta</th><th>Azioni</th>'
+        +'<th>Stato</th><th>Creata</th><th>Risolta</th><th>Feedback</th><th>Azioni</th>'
         +'</tr></thead><tbody>';
 
       reports.forEach(function(r) {
@@ -245,10 +271,13 @@
           acts = '<button class="btn btn-warning btn-sm" '
                + 'onclick="openAssign('+r.id+',\''+esc(r.category)+'\')">&#128100; Assegna</button>';
         } else if (r.status === 1) {
-          acts = '<span style="font-size:.8rem;color:#6b7280">Op. #'+r.assigned_to+'</span>';
+          var opLabel = r.operator_name ? esc(r.operator_name) : ('#'+r.assigned_to);
+          acts = '<span style="font-size:.8rem;color:#6b7280">&#128100; '+opLabel+'</span>';
         } else {
           acts = '<span style="font-size:.8rem;color:#10b981">&#10003; Completato</span>';
         }
+
+        var fbCell = (r.status === 2) ? starsHtml(r.feedback || 0) : '—';
 
         h += '<tr>'
           +'<td>#'+r.id+'</td>'
@@ -257,6 +286,7 @@
           +'<td><span class="badge '+STATUS_CLASS[r.status]+'">'+STATUS[r.status]+'</span></td>'
           +'<td>'+dc+'</td>'
           +'<td>'+dr+'</td>'
+          +'<td>'+fbCell+'</td>'
           +'<td>'+acts+'</td>'
           +'</tr>';
       });

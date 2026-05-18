@@ -5,6 +5,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Home - SegnalaCity</title>
   <link rel="stylesheet" href="/static/common.css">
+  <style>
+    .filters {
+      display:flex; flex-wrap:wrap; gap:.75rem;
+      align-items:flex-end; margin-bottom:1.25rem;
+    }
+    .filters label { font-size:.8rem; font-weight:600; color:#6b7280; display:block; margin-bottom:.2rem; }
+    .filters select, .filters input[type="date"] {
+      padding:.4rem .65rem; border:1px solid #d1d5db; border-radius:7px;
+      font-size:.875rem; background:#fff; cursor:pointer;
+    }
+    .filters .btn-sm { padding:.4rem .9rem; font-size:.85rem; }
+    .stars { color:#f59e0b; font-size:1rem; letter-spacing:1px; white-space:nowrap; }
+    .stars-empty { color:#d1d5db; }
+    .star-btn {
+      background:none; border:none; cursor:pointer;
+      font-size:1.1rem; color:#d1d5db; padding:0 1px;
+      transition: color .15s;
+    }
+    .star-btn:hover, .star-btn.active { color:#f59e0b; }
+  </style>
 </head>
 <body>
 
@@ -32,18 +52,88 @@
         <div class="val" id="s-archived">-</div>
         <div class="lbl">Le mie archiviate</div>
       </div>
-      <!-- <div class="stat-card">
-        <div class="val" id="s-uptime">-</div>
-        <div class="lbl">Uptime server (s)</div>
-      </div> -->
     </div>
 
     <div class="card" style="margin-bottom:1.5rem">
+      <div class="filters">
+        <div>
+          <label>Categoria</label>
+          <select id="f-cat-active">
+            <option value="">Tutte</option>
+            <option>Buche e asfalto</option>
+            <option>Illuminazione</option>
+            <option>Rifiuti</option>
+            <option>Verde pubblico</option>
+            <option>Vandalismo</option>
+            <option>Sicurezza</option>
+            <option>Altro</option>
+          </select>
+        </div>
+        <div>
+          <label>Stato</label>
+          <select id="f-status-active">
+            <option value="">Tutti</option>
+            <option value="0">Attivo</option>
+            <option value="1">In lavorazione</option>
+          </select>
+        </div>
+        <div>
+          <label>Dal</label>
+          <input type="date" id="f-from-active">
+        </div>
+        <div>
+          <label>Al</label>
+          <input type="date" id="f-to-active">
+        </div>
+        <div>
+          <button class="btn btn-primary btn-sm" onclick="applyActiveFilters()">Filtra</button>
+          <button class="btn btn-sm" style="margin-left:.4rem" onclick="resetActiveFilters()">Reset</button>
+        </div>
+      </div>
       <h3 style="margin-bottom:1rem">&#128204; Segnalazioni attive</h3>
       <div id="active-table"><p class="placeholder-text">Caricamento...</p></div>
     </div>
 
     <div class="card">
+      <div class="filters">
+        <div>
+          <label>Categoria</label>
+          <select id="f-cat-arch">
+            <option value="">Tutte</option>
+            <option>Buche e asfalto</option>
+            <option>Illuminazione</option>
+            <option>Rifiuti</option>
+            <option>Verde pubblico</option>
+            <option>Vandalismo</option>
+            <option>Sicurezza</option>
+            <option>Altro</option>
+          </select>
+        </div>
+        <div>
+          <label>Feedback</label>
+          <select id="f-feedback-arch">
+            <option value="">Tutti</option>
+            <option value="0">Non valutate</option>
+            <option value="1">★ 1</option>
+            <option value="2">★★ 2</option>
+            <option value="3">★★★ 3</option>
+            <option value="4">★★★★ 4</option>
+            <option value="5">★★★★★ 5</option>
+          </select>
+        </div>
+        <div>
+          <label>Dal</label>
+          <input type="date" id="f-from-arch">
+        </div>
+        <div>
+          <label>Al</label>
+          <input type="date" id="f-to-arch">
+        </div>
+        <div>
+          <button class="btn btn-primary btn-sm" onclick="applyArchFilters()">Filtra</button>
+          <button class="btn btn-sm" style="margin-left:.4rem" onclick="resetArchFilters()">Reset</button>
+        </div>
+      </div>
       <h3 style="margin-bottom:1rem">&#128190; Segnalazioni archiviate</h3>
       <div id="archived-table"><p class="placeholder-text">Caricamento...</p></div>
     </div>
@@ -52,6 +142,8 @@
 
   <script>
     var STATUS = ['Attivo', 'In lavorazione', 'Risolto'];
+    var allActive   = [];
+    var allArchived = [];
 
     function esc(s) {
       return String(s)
@@ -59,15 +151,58 @@
         .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     }
 
-    function renderTable(reports, containerId) {
-      var c = document.getElementById(containerId);
+    /* ── Stelle ──────────────────────────────────────────────── */
+    function starsHtml(n) {
+      var s = '';
+      for (var i = 1; i <= 5; i++)
+        s += '<span class="legend-dot" style="color:'+(i<=n?'#f59e0b':'#d1d5db')+'">&#9733;</span>';
+      return s;
+    }
+
+    /* Widget stelle interattivo per lasciare feedback */
+    function feedbackWidget(reportId) {
+      var id = 'fb-' + reportId;
+      var html = '<span id="'+id+'" style="white-space:nowrap">';
+      for (var i = 1; i <= 5; i++)
+        html += '<button class="star-btn" data-rid="'+reportId+'" data-stars="'+i+'" onclick="sendFeedback('+reportId+','+i+')">&#9733;</button>';
+      html += '</span>';
+      return html;
+    }
+
+    function sendFeedback(reportId, stars) {
+      fetch('/api/report/feedback', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: 'report_id='+reportId+'&stars='+stars
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (d.ok) {
+          // Aggiorna la riga localmente senza ricaricare tutto
+          var span = document.getElementById('fb-' + reportId);
+          if (span) span.outerHTML = starsHtml(stars);
+          // Aggiorna anche allArchived per coerenza con i filtri
+          for (var i = 0; i < allArchived.length; i++) {
+            if (allArchived[i].id === reportId) { allArchived[i].feedback = stars; break; }
+          }
+        } else {
+          alert(d.error || 'Errore nel salvataggio del feedback.');
+        }
+      })
+      .catch(function() { alert('Errore di rete.'); });
+    }
+
+    /* ── Render attive ───────────────────────────────────────── */
+    function renderActive(reports) {
+      var c = document.getElementById('active-table');
+      document.getElementById('s-active').textContent = reports ? reports.length : 0;
       if (!reports || !reports.length) {
         c.innerHTML = '<p class="placeholder-text">Nessuna segnalazione.</p>';
         return;
       }
       var h = '<table><thead><tr>'
         + '<th>ID</th><th>Categoria</th><th>Descrizione</th>'
-        + '<th>Citta</th><th>Stato</th><th>Data</th>'
+        + '<th>Città</th><th>Stato</th><th>Data</th>'
         + '</tr></thead><tbody>';
       reports.forEach(function(r) {
         var d = new Date(r.created_at * 1000).toLocaleDateString('it-IT');
@@ -84,29 +219,115 @@
       c.innerHTML = h;
     }
 
+    /* ── Render archiviate ───────────────────────────────────── */
+    function renderArchived(reports) {
+      var c = document.getElementById('archived-table');
+      document.getElementById('s-archived').textContent = reports ? reports.length : 0;
+      if (!reports || !reports.length) {
+        c.innerHTML = '<p class="placeholder-text">Nessuna segnalazione.</p>';
+        return;
+      }
+      var h = '<table><thead><tr>'
+        + '<th>ID</th><th>Categoria</th><th>Descrizione</th>'
+        + '<th>Creata</th><th>Risolta</th><th>Feedback</th>'
+        + '</tr></thead><tbody>';
+      reports.forEach(function(r) {
+        var dc = new Date(r.created_at  * 1000).toLocaleDateString('it-IT');
+        var dr = (r.resolved_at && r.resolved_at > 0)
+               ? new Date(r.resolved_at * 1000).toLocaleDateString('it-IT') : '—';
+        var fb = (r.feedback && r.feedback > 0)
+               ? starsHtml(r.feedback)
+               : feedbackWidget(r.id);
+        h += '<tr>'
+          + '<td>#' + r.id + '</td>'
+          + '<td>' + esc(r.category)    + '</td>'
+          + '<td>' + esc(r.description) + '</td>'
+          + '<td>' + dc + '</td>'
+          + '<td>' + dr + '</td>'
+          + '<td>' + fb + '</td>'
+          + '</tr>';
+      });
+      h += '</tbody></table>';
+      c.innerHTML = h;
+    }
+
+    /* ── Filtri attive ───────────────────────────────────────── */
+    function getFilteredActive() {
+      var cat    = document.getElementById('f-cat-active').value;
+      var status = document.getElementById('f-status-active').value;
+      var from   = document.getElementById('f-from-active').value;
+      var to     = document.getElementById('f-to-active').value;
+      var fromTs = from ? new Date(from).getTime()/1000 : null;
+      var toTs   = to   ? new Date(to).getTime()/1000+86399 : null;
+      return allActive.filter(function(r) {
+        if (cat    && r.category !== cat)                    return false;
+        if (status !== '' && r.status !== parseInt(status))  return false;
+        if (fromTs && r.created_at < fromTs)                 return false;
+        if (toTs   && r.created_at > toTs)                   return false;
+        return true;
+      });
+    }
+    function applyActiveFilters() { renderActive(getFilteredActive()); }
+    function resetActiveFilters() {
+      document.getElementById('f-cat-active').value    = '';
+      document.getElementById('f-status-active').value = '';
+      document.getElementById('f-from-active').value   = '';
+      document.getElementById('f-to-active').value     = '';
+      renderActive(allActive);
+    }
+
+    /* ── Filtri archiviate ───────────────────────────────────── */
+    function getFilteredArch() {
+      var cat  = document.getElementById('f-cat-arch').value;
+      var fb   = document.getElementById('f-feedback-arch').value;
+      var from = document.getElementById('f-from-arch').value;
+      var to   = document.getElementById('f-to-arch').value;
+      var fromTs = from ? new Date(from).getTime()/1000 : null;
+      var toTs   = to   ? new Date(to).getTime()/1000+86399 : null;
+      return allArchived.filter(function(r) {
+        if (cat && r.category !== cat) return false;
+        if (fb !== '') {
+          var fbVal = parseInt(fb);
+          if (fbVal === 0 && r.feedback && r.feedback > 0) return false;
+          if (fbVal > 0  && r.feedback !== fbVal)          return false;
+        }
+        if (fromTs && r.created_at < fromTs) return false;
+        if (toTs   && r.created_at > toTs)   return false;
+        return true;
+      });
+    }
+    function applyArchFilters() { renderArchived(getFilteredArch()); }
+    function resetArchFilters() {
+      document.getElementById('f-cat-arch').value      = '';
+      document.getElementById('f-feedback-arch').value = '';
+      document.getElementById('f-from-arch').value     = '';
+      document.getElementById('f-to-arch').value       = '';
+      renderArchived(allArchived);
+    }
+
+    /* ── Caricamento ─────────────────────────────────────────── */
     fetch('/api/reports/active')
       .then(function(r) { return r.json(); })
       .then(function(d) {
-        renderTable(d, 'active-table');
-        document.getElementById('s-active').textContent = Array.isArray(d) ? d.length : '-';
+        allActive = Array.isArray(d) ? d : [];
+        renderActive(allActive);
       })
       .catch(function() {
         document.getElementById('active-table').innerHTML =
-          '<p class="placeholder-text error-text">Errore di caricamento(api/reports/active).</p>';
+          '<p class="placeholder-text error-text">Errore di caricamento.</p>';
       });
 
     fetch('/api/reports/archived')
       .then(function(r) { return r.json(); })
       .then(function(d) {
-        renderTable(d, 'archived-table');
-        document.getElementById('s-archived').textContent = Array.isArray(d) ? d.length : '-';
+        allArchived = Array.isArray(d) ? d : [];
+        renderArchived(allArchived);
+        document.getElementById('s-archived').textContent = allArchived.length;
       })
       .catch(function() {
         document.getElementById('archived-table').innerHTML =
           '<p class="placeholder-text error-text">Errore di caricamento.</p>';
       });
-
-
   </script>
 
 </body>

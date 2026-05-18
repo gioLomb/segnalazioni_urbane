@@ -82,6 +82,45 @@
 
     <div class="card">
       <h3 style="margin-bottom:1rem">&#128190; Archiviate — {{CITY}}</h3>
+      <div class="filters" style="margin-bottom:1rem">
+        <div>
+          <label>Categoria</label>
+          <select id="f-cat-arch">
+            <option value="">Tutte</option>
+            <option>Buche e asfalto</option>
+            <option>Illuminazione</option>
+            <option>Rifiuti</option>
+            <option>Verde pubblico</option>
+            <option>Vandalismo</option>
+            <option>Sicurezza</option>
+            <option>Altro</option>
+          </select>
+        </div>
+        <div>
+          <label>Feedback cittadino</label>
+          <select id="f-feedback-arch">
+            <option value="">Tutti</option>
+            <option value="0">Non valutate</option>
+            <option value="1">★ 1</option>
+            <option value="2">★★ 2</option>
+            <option value="3">★★★ 3</option>
+            <option value="4">★★★★ 4</option>
+            <option value="5">★★★★★ 5</option>
+          </select>
+        </div>
+        <div>
+          <label>Dal</label>
+          <input type="date" id="f-from-arch">
+        </div>
+        <div>
+          <label>Al</label>
+          <input type="date" id="f-to-arch">
+        </div>
+        <div>
+          <button class="btn btn-primary btn-sm" onclick="applyArchFilters()">Filtra</button>
+          <button class="btn btn-sm" style="margin-left:.4rem" onclick="resetArchFilters()">Reset</button>
+        </div>
+      </div>
       <div id="archived-table"><p class="loading">Caricamento...</p></div>
     </div>
 
@@ -91,13 +130,21 @@
   <script>
     var STATUS_CLASS = ['badge-0','badge-1','badge-2'];
 
-    var allActive = [];
-    var markers   = [];
+    var allActive   = [];
+    var allArchived = [];
+    var markers     = [];
 
     function esc(s) {
       return String(s)
         .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
         .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    }
+
+    function starsHtml(n) {
+      var s = '';
+      for (var i = 1; i <= 5; i++)
+        s += '<span style="color:'+(i<=n?'#f59e0b':'#d1d5db')+'">&#9733;</span>';
+      return n > 0 ? s : '<span style="color:#9ca3af;font-size:.8rem">—</span>';
     }
 
     /* ── Mappa ─────────────────────────────────────────────── */
@@ -213,7 +260,7 @@
       }
       var h = '<table><thead><tr>'
         +'<th>ID</th><th>Categoria</th><th>Descrizione</th>'
-        +'<th>Creata</th><th>Risolta</th>'
+        +'<th>Creata</th><th>Risolta</th><th>Feedback</th>'
         +'</tr></thead><tbody>';
       reports.forEach(function(r) {
         var dc = new Date(r.created_at*1000).toLocaleDateString('it-IT');
@@ -225,10 +272,40 @@
           +'<td>'+esc(r.description)+'</td>'
           +'<td>'+dc+'</td>'
           +'<td>'+dr+'</td>'
+          +'<td>'+starsHtml(r.feedback || 0)+'</td>'
           +'</tr>';
       });
       h += '</tbody></table>';
       c.innerHTML = h;
+    }
+
+    /* ── Filtri archiviate ─────────────────────────────────── */
+    function getFilteredArch() {
+      var cat  = document.getElementById('f-cat-arch').value;
+      var fb   = document.getElementById('f-feedback-arch').value;
+      var from = document.getElementById('f-from-arch').value;
+      var to   = document.getElementById('f-to-arch').value;
+      var fromTs = from ? new Date(from).getTime()/1000 : null;
+      var toTs   = to   ? new Date(to).getTime()/1000+86399 : null;
+      return allArchived.filter(function(r) {
+        if (cat && r.category !== cat) return false;
+        if (fb !== '') {
+          var fbVal = parseInt(fb);
+          if (fbVal === 0 && r.feedback && r.feedback > 0) return false;
+          if (fbVal > 0  && r.feedback !== fbVal)          return false;
+        }
+        if (fromTs && r.created_at < fromTs) return false;
+        if (toTs   && r.created_at > toTs)   return false;
+        return true;
+      });
+    }
+    function applyArchFilters() { renderArchived(getFilteredArch()); }
+    function resetArchFilters() {
+      document.getElementById('f-cat-arch').value      = '';
+      document.getElementById('f-feedback-arch').value = '';
+      document.getElementById('f-from-arch').value     = '';
+      document.getElementById('f-to-arch').value       = '';
+      renderArchived(allArchived);
     }
 
     /* ── Caricamento ───────────────────────────────────────── */
@@ -236,7 +313,7 @@
       fetch('/api/reports/active')
         .then(function(r){ return r.json(); })
         .then(function(d){
-          allActive = d;
+          allActive = Array.isArray(d) ? d : [];
           renderActive(getFiltered());
         })
         .catch(function(){
@@ -248,7 +325,10 @@
     function loadArchived() {
       fetch('/api/reports/archived')
         .then(function(r){ return r.json(); })
-        .then(renderArchived)
+        .then(function(d){
+          allArchived = Array.isArray(d) ? d : [];
+          renderArchived(getFilteredArch());
+        })
         .catch(function(){
           document.getElementById('archived-table').innerHTML =
             '<p class="loading">Errore di caricamento.</p>';

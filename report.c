@@ -39,7 +39,7 @@ static CacheEntry g_cache[CACHE_MAX_ENTRIES];
 // requires a matching entry in the enum and in cursor_to_report().
 #define SELECT_COLS \
     "id, author_id, assigned_to, lat, lon, city, category, description, " \
-    "status, created_at, assigned_at, resolved_at"
+    "status, created_at, assigned_at, resolved_at, feedback"
 
 /* ── Setup ───────────────────────────────────────────────────────────── */
 
@@ -57,9 +57,13 @@ int report_setup_table(void) {
             "  status      INTEGER NOT NULL DEFAULT 0,"
             "  created_at  INTEGER NOT NULL,"
             "  assigned_at INTEGER,"          // NULL until assigned
-            "  resolved_at INTEGER"           // NULL until resolved
+            "  resolved_at INTEGER,"          // NULL until resolved
+            "  feedback    INTEGER"           // NULL until citizen rates (1-5)
             ");", NULL) != 0))
         return -1;
+
+    // Add feedback column to existing databases (idempotent migration).
+    // db_exec("ALTER TABLE reports ADD COLUMN feedback INTEGER;", NULL);
 
     // Separate indexes on author, city and status cover the three main
     // query shapes: per-user, per-city (admin) and per-status (operator).
@@ -71,8 +75,8 @@ int report_setup_table(void) {
 
 /* ── Row mapper ──────────────────────────────────────────────────────── */
 
-// Maps the current cursor row to an ActiveReport using the fixed SELECT_COLS order.
-static void cursor_to_report(DbCursor *c, ActiveReport *r) {
+// Maps the current cursor row to an Report using the fixed SELECT_COLS order.
+static void cursor_to_report(DbCursor *c, Report *r) {
     // Zero the struct first so unused padding bytes and any skipped fields
     // don't contain garbage from the slab allocator.
     memset(r, 0, sizeof(*r));
@@ -94,12 +98,13 @@ static void cursor_to_report(DbCursor *c, ActiveReport *r) {
     r->createdAt = (time_t)db_cursor_int64(c, REP_COL_CREATED_AT);
     r->assignedAt = (time_t)db_cursor_int64(c, REP_COL_ASSIGNED_AT);
     r->resolvedAt = (time_t)db_cursor_int64(c, REP_COL_RESOLVED_AT);
+    r->feedback   = (int)db_cursor_int64(c, REP_COL_FEEDBACK);
 }
 
 /* ── JSON builder ────────────────────────────────────────────────────── */
 
-// Converts a single ActiveReport to a cJSON object. Caller owns the result.
-static cJSON *report_to_cjson(const ActiveReport *r) {
+// Converts a single Report to a cJSON object. Caller owns the result.
+static cJSON *report_to_cjson(const Report *r) {
     cJSON *obj = cJSON_CreateObject();
     if (unlikely(!obj)) return NULL;
 
@@ -118,6 +123,8 @@ static cJSON *report_to_cjson(const ActiveReport *r) {
     cJSON_AddNumberToObject(obj, "created_at",  (double)r->createdAt);
     cJSON_AddNumberToObject(obj, "assigned_at", (double)r->assignedAt);
     cJSON_AddNumberToObject(obj, "resolved_at", (double)r->resolvedAt);
+    // feedback: 0 means not yet rated; values 1-5 are citizen star ratings.
+    cJSON_AddNumberToObject(obj, "feedback",    (double)r->feedback);
 
     return obj;
 }
@@ -132,7 +139,7 @@ static size_t cursor_to_json_array(DbCursor *c, char *buf, size_t max) {
     }
 
     while (db_cursor_next(c)) {
-        ActiveReport r;
+        Report r;
         cursor_to_report(c, &r);
         cJSON_AddItemToArray(array, report_to_cjson(&r));
     }
@@ -263,7 +270,7 @@ int report_assign(uint64_t reportId, uint64_t operatorId) {
     if (db_changes() == 0) return 0;
 
     // Invalidate here, not in the caller, to keep cache logic centralised.
-    ActiveReport r;
+    Report r;
     if (report_get_by_id(reportId, &r)) report_cache_invalidate_city(r.city, r.authorId);
 
     return 1;
@@ -283,7 +290,26 @@ int report_resolve(uint64_t reportId, uint64_t operatorId) {
     if (db_changes() == 0) return 0;
 
     // Invalidate here, not in the caller, to keep cache logic centralised.
-    ActiveReport r;
+    Report r;
+    if (report_get_by_id(reportId, &r)) report_cache_invalidate_city(r.city, r.authorId);
+
+    return 1;
+}
+
+int report_set_feedback(uint64_t reportId, uint64_t authorId, int stars) {
+    if (stars < 1 || stars > 5) return -1;
+    // Guard: only the author can rate, only if resolved, and only once.
+    int rc = db_exec(
+        "UPDATE reports "
+        "SET feedback = ? "
+        "WHERE id = ? AND author_id = ? AND status = 2 AND feedback IS NULL;",
+        "lll",
+        (int64_t)stars, (int64_t)reportId, (int64_t)authorId);
+    if (rc != 0) return -1;
+    if (db_changes() == 0) return 0;
+
+    // Invalidate the archived cache so the new feedback is immediately visible.
+    Report r;
     if (report_get_by_id(reportId, &r)) report_cache_invalidate_city(r.city, r.authorId);
 
     return 1;
@@ -350,15 +376,47 @@ size_t report_get_archived_json(char *buf, size_t max,
 }
 
 size_t report_get_all_city_json(char *buf, size_t max, const char *city) {
-    // Admin view: not cached, no LIMIT — admin sees every report in the city.
+    // Admin view: JOIN with users to resolve operator name.
+    // The extra column operator_name sits after all SELECT_COLS fields.
     DbCursor *c = db_cursor_open(
-        "SELECT " SELECT_COLS " FROM reports "
-        "WHERE city = ? ORDER BY created_at DESC;",
+        "SELECT r.id, r.author_id, r.assigned_to, r.lat, r.lon, r.city, "
+        "r.category, r.description, r.status, r.created_at, r.assigned_at, "
+        "r.resolved_at, r.feedback, COALESCE(u.username, '') AS operator_name "
+        "FROM reports r "
+        "LEFT JOIN users u ON u.id = r.assigned_to "
+        "WHERE r.city = ? ORDER BY r.created_at DESC;",
         "s", city);
-    return cursor_to_json_array(c, buf, max);
+
+    if (!c) {
+        if (max > 2) { buf[0]='['; buf[1]=']'; buf[2]='\0'; }
+        return 0;
+    }
+
+    cJSON *array = cJSON_CreateArray();
+    if (!array) { if (max > 0) buf[0] = '\0'; return 0; }
+
+    while (db_cursor_next(c)) {
+        Report r;
+        cursor_to_report(c, &r);
+        cJSON *obj = report_to_cjson(&r);
+        if (!obj) continue;
+        // Column 13: operator_name (extra, not in SELECT_COLS).
+        const char *opName = db_cursor_text(c, 13);
+        cJSON_AddStringToObject(obj, "operator_name", opName ? opName : "");
+        cJSON_AddItemToArray(array, obj);
+    }
+    db_cursor_close(c);
+
+    if (!cJSON_PrintPreallocated(array, buf, (int)max, false)) {
+        cJSON_Delete(array);
+        if (max > 0) buf[0] = '\0';
+        return 0;
+    }
+    cJSON_Delete(array);
+    return strlen(buf);
 }
 
-bool report_get_by_id(uint64_t reportId, ActiveReport *out) {
+bool report_get_by_id(uint64_t reportId, Report *out) {
     if (!out) return false;
     DbCursor *c = db_cursor_open(
         "SELECT " SELECT_COLS " FROM reports WHERE id = ? LIMIT 1;",
@@ -379,7 +437,7 @@ int report_count_active(void) {
 
 /* ── Utility ─────────────────────────────────────────────────────────── */
 
-bool report_to_json(const ActiveReport *r, char *dest, size_t destSize) {
+bool report_to_json(const Report *r, char *dest, size_t destSize) {
     if (!r || !dest || destSize == 0) return false;
     cJSON *obj = report_to_cjson(r);
     if (!obj) return false;

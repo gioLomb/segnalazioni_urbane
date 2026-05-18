@@ -47,7 +47,8 @@ typedef enum {
     REP_COL_STATUS,
     REP_COL_CREATED_AT,
     REP_COL_ASSIGNED_AT,
-    REP_COL_RESOLVED_AT
+    REP_COL_RESOLVED_AT,
+    REP_COL_FEEDBACK
 } ReportCol;
 
 /**
@@ -68,8 +69,9 @@ typedef struct {
     char         city[CITY_LEN];
     char         category[CAT_LEN];
     ReportStatus status;
+    int          feedback;   
     char         description[DESC_LEN];
-} ActiveReport;
+} Report;
 
 /* ── Cache ───────────────────────────────────────────────────────────── */
 
@@ -134,6 +136,20 @@ int report_assign(uint64_t reportId, uint64_t operatorId);
  */
 int report_resolve(uint64_t reportId, uint64_t operatorId);
 
+/**
+ * @brief Records a citizen's feedback (1–5 stars) on a resolved report.
+ *
+ * Only the author of the report may set feedback, and only when the
+ * report has status STATUS_RESOLVED.  Feedback can be set only once
+ * (feedback IS NULL guard prevents overwriting).
+ *
+ * @param reportId ID of the resolved report.
+ * @param authorId ID of the citizen submitting the feedback.
+ * @param stars    Rating from 1 to 5 inclusive.
+ * @return 1 if stored, 0 if guard condition not met, -1 on error.
+ */
+int report_set_feedback(uint64_t reportId, uint64_t authorId, int stars);
+
 /* ── Read operations ─────────────────────────────────────────────────── */
 
 /**
@@ -189,7 +205,7 @@ size_t report_get_all_city_json(char *buf, size_t max, const char *city);
  * @param out      Populated on success.
  * @return true if found, false otherwise.
  */
-bool report_get_by_id(uint64_t reportId, ActiveReport *out);
+bool report_get_by_id(uint64_t reportId, Report *out);
 
 /**
  * @brief Returns the total number of non-resolved reports in the database.
@@ -200,13 +216,13 @@ int report_count_active(void);
 /* ── Utility ─────────────────────────────────────────────────────────── */
 
 /**
- * @brief Serialises a single ActiveReport to a JSON string.
+ * @brief Serialises a single Report to a JSON string.
  *
  * @param r        Source report.
  * @param dest     Output buffer.
  * @param destSize Capacity of dest in bytes.
  * @return true if the JSON fits in dest, false on error or overflow.
  */
-bool report_to_json(const ActiveReport *r, char *dest, size_t destSize);
+bool report_to_json(const Report *r, char *dest, size_t destSize);
 
 #endif /* REPORT_H */
