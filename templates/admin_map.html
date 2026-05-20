@@ -90,8 +90,9 @@
           <select id="f-status">
             <option value="">Tutti</option>
             <option value="0">Attivo</option>
-            <option value="1">In lavorazione</option>
-            <option value="2">Risolto</option>
+            <option value="1">Assegnato</option>
+            <option value="2">In lavorazione</option>
+            <option value="3">Risolto</option>
           </select>
         </div>
         <div>
@@ -144,9 +145,9 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    var STATUS       = ['Attivo','In lavorazione','Risolto'];
-    var STATUS_CLASS = ['badge-0','badge-1','badge-2'];
-    var MARKER_COLOR = ['#3b82f6','#f59e0b','#10b981'];
+    var STATUS       = ['Attivo','Assegnato','In lavorazione','Risolto'];
+    var STATUS_CLASS = ['badge-0','badge-1','badge-2','badge-3'];
+    var MARKER_COLOR = ['#3b82f6','#f59e0b','#f59e0b','#10b981'];
 
     var allReports  = [];
     var operators   = [];
@@ -167,7 +168,7 @@
     }
 
     /* ── Mappa ─────────────────────────────────────────────── */
-    var map = L.map('map').setView([41.9,12.5],10);
+    var map = L.map('map').setView([{{MAP_LAT}},{{MAP_LON}}],11);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
       attribution:'© OpenStreetMap contributors'
     }).addTo(map);
@@ -220,6 +221,7 @@
           var fbVal = parseInt(fb);
           if (fbVal === 0 && r.feedback && r.feedback > 0) return false;
           if (fbVal > 0  && r.feedback !== fbVal)          return false;
+          if (r.status !== 3) return false;
         }
         if (fromTs && r.created_at < fromTs)               return false;
         if (toTs   && r.created_at > toTs)                 return false;
@@ -260,7 +262,8 @@
       reports.forEach(function(r) {
         if      (r.status === 0) active++;
         else if (r.status === 1) progress++;
-        else if (r.status === 2) resolved++;
+        else if (r.status === 2) progress++;
+        else if (r.status === 3) resolved++;
 
         var dc = new Date(r.created_at*1000).toLocaleDateString('it-IT');
         var dr = (r.resolved_at && r.resolved_at > 0)
@@ -272,12 +275,17 @@
                + 'onclick="openAssign('+r.id+',\''+esc(r.category)+'\')">&#128100; Assegna</button>';
         } else if (r.status === 1) {
           var opLabel = r.operator_name ? esc(r.operator_name) : ('#'+r.assigned_to);
+          acts = '<span style="font-size:.8rem;color:#6b7280">&#128100; '+opLabel+'</span>'
+               + ' <button class="btn btn-warning btn-sm" style="margin-left:.4rem" '
+               + 'onclick="openAssign('+r.id+',\''+esc(r.category)+'\')">Riassegna</button>';
+        } else if (r.status === 2) {
+          var opLabel = r.operator_name ? esc(r.operator_name) : ('#'+r.assigned_to);
           acts = '<span style="font-size:.8rem;color:#6b7280">&#128100; '+opLabel+'</span>';
         } else {
           acts = '<span style="font-size:.8rem;color:#10b981">&#10003; Completato</span>';
         }
 
-        var fbCell = (r.status === 2) ? starsHtml(r.feedback || 0) : '—';
+        var fbCell = (r.status === 3) ? starsHtml(r.feedback || 0) : '—';
 
         h += '<tr>'
           +'<td>#'+r.id+'</td>'

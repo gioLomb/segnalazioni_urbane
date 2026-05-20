@@ -79,9 +79,6 @@ int http_response_render(const HttpResponse *resp, bool keepAlive,
 
 /* ── Body & HTML Sanitization Helpers ───────────────────────────────── */
 
-/** @return Pointer locating the functional start of the HTTP payload body. */
-const char *post_body(const char *req);
-
 /** @brief Extracts and URL-decodes an individual key variable from an URL-encoded buffer. */
 void get_field(const char *src, const char *paramName,
                char *dest, size_t max);

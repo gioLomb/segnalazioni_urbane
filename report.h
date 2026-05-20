@@ -5,7 +5,11 @@
  * A report represents a civic issue (e.g. a pothole, broken streetlight)
  * submitted by a citizen and optionally assigned to and resolved by an operator.
  *
- * Status lifecycle:  STATUS_ACTIVE → STATUS_IN_PROGRESS → STATUS_RESOLVED
+ * Status lifecycle:
+ *   STATUS_ACTIVE → STATUS_ASSIGNED → STATUS_IN_PROGRESS → STATUS_RESOLVED
+ *
+ * After admin assigns, the operator must explicitly accept (→ IN_PROGRESS)
+ * or reject (→ ACTIVE, unassigned) before work begins.
  */
 
 #ifndef REPORT_H
@@ -24,9 +28,10 @@
  * @brief Lifecycle status of a report.
  */
 typedef enum {
-    STATUS_ACTIVE      = 0, /**< Submitted, not yet assigned      */
-    STATUS_IN_PROGRESS = 1, /**< Accepted and assigned to operator */
-    STATUS_RESOLVED    = 2  /**< Marked as resolved by operator    */
+    STATUS_ACTIVE      = 0, /**< Submitted, not yet assigned                  */
+    STATUS_ASSIGNED    = 1, /**< Assigned by admin, pending operator response  */
+    STATUS_IN_PROGRESS = 2, /**< Accepted by operator — work in progress       */
+    STATUS_RESOLVED    = 3  /**< Marked as resolved by operator                */
 } ReportStatus;
 
 /**
@@ -113,16 +118,43 @@ uint64_t report_insert(uint64_t authorId, double lat, double lon,
                        const char *city, const char *category, const char *desc);
 
 /**
- * @brief Assigns an active report to an operator.
+ * @brief Assigns an active report to an operator (admin action).
  *
+ * Sets status to STATUS_ASSIGNED and records the operator; the operator
+ * must then call report_accept() or report_reject() to confirm.
  * Only succeeds if the report has status STATUS_ACTIVE and no operator
  * is currently assigned (atomic guard against double-assignment).
  *
  * @param reportId   ID of the report to assign.
- * @param operatorId ID of the operator taking ownership.
+ * @param operatorId ID of the operator being assigned.
  * @return 1 if assigned, 0 if the guard condition was not met, -1 on error.
  */
 int report_assign(uint64_t reportId, uint64_t operatorId);
+
+/**
+ * @brief Accepts an assigned report, moving it to STATUS_IN_PROGRESS.
+ *
+ * Only succeeds if the report has status STATUS_ASSIGNED and is currently
+ * assigned to operatorId.
+ *
+ * @param reportId   ID of the report to accept.
+ * @param operatorId ID of the operator accepting the report.
+ * @return 1 if accepted, 0 if guard condition not met, -1 on error.
+ */
+int report_accept(uint64_t reportId, uint64_t operatorId);
+
+/**
+ * @brief Rejects an assigned report, returning it to STATUS_ACTIVE.
+ *
+ * Clears the operator assignment so the admin can reassign.
+ * Only succeeds if the report has status STATUS_ASSIGNED and is assigned
+ * to operatorId.
+ *
+ * @param reportId   ID of the report to reject.
+ * @param operatorId ID of the operator rejecting the report.
+ * @return 1 if rejected, 0 if guard condition not met, -1 on error.
+ */
+int report_reject(uint64_t reportId, uint64_t operatorId);
 
 /**
  * @brief Marks an in-progress report as resolved.

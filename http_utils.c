@@ -244,7 +244,7 @@ int http_response_render(const HttpResponse * restrict resp, bool keepAlive,
     size_t bodyLen = (resp->statusCode == 302) ? 0 : resp->bodyLen;
     size_t pos = 0;
 
-    // 1. Mandatory headers: status line, Content-Type, Content-Length, Connection
+    // Mandatory headers: status line, Content-Type, Content-Length, Connection
     if (!append_to_buffer(out, outMax, &pos,
             "HTTP/1.1 %d %s\r\n"
             "Content-Type: %s\r\n"
@@ -253,7 +253,7 @@ int http_response_render(const HttpResponse * restrict resp, bool keepAlive,
             resp->statusCode, http_status_msg(resp->statusCode),
             ct, bodyLen, keepAlive ? "keep-alive" : "close")) return -1;
 
-    // 2. Optional headers — emitted only when the field is non-empty
+    // Optional headers — emitted only when the field is non-empty
     if (resp->setCookie[0]) {
         if (!append_to_buffer(out, outMax, &pos, "Set-Cookie: %s\r\n", resp->setCookie)) return -1;
     }
@@ -261,10 +261,10 @@ int http_response_render(const HttpResponse * restrict resp, bool keepAlive,
         if (!append_to_buffer(out, outMax, &pos, "Location: %s\r\n", resp->location)) return -1;
     }
 
-    // 3. Blank line that terminates the header section (CRLFCRLF)
+    // Blank line that terminates the header section (CRLFCRLF)
     if (!append_to_buffer(out, outMax, &pos, "\r\n")) return -1;
 
-    // 4. Body — copied with memcpy because it may contain NUL bytes
+    // Body — copied with memcpy because it may contain NUL bytes
     if (pos + bodyLen > outMax) return -1;
     if (bodyLen) {
         memcpy(out + pos, resp->body, bodyLen);
@@ -276,11 +276,7 @@ int http_response_render(const HttpResponse * restrict resp, bool keepAlive,
 
 /* ── Body / HTML helpers ─────────────────────────────────────────────── */
 
-const char *post_body(const char *req)
-{
-    const char *p = strstr(req, "\r\n\r\n");
-    return p ? p + 4 : NULL;
-}
+
 
 void get_field(const char *src, const char *paramName, char *dest, size_t max)
 {

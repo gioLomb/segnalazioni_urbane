@@ -67,8 +67,15 @@ void route_get_home(const HttpRequest *req, HttpResponse *resp) {
         tplName = "templates/citizen_home.html";
     }
 
-    TplVar vars[] = { { "USERNAME", escUser }, { "CITY", escCity } };
-    resp_render_tpl(resp, tplName, vars, 2);
+    MapVars mv;
+    build_map_vars(u.city, &mv);
+
+    TplVar vars[] = {
+        { "USERNAME",    escUser   }, { "CITY",       escCity   },
+        { "MAP_LAT",     mv.lat    }, { "MAP_LON",    mv.lon    },
+        { "MAP_BOUNDS",  mv.bounds },
+    };
+    resp_render_tpl(resp, tplName, vars, 5);
 }
 
 void route_get_submit(const HttpRequest *req, HttpResponse *resp) {

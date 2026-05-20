@@ -45,13 +45,23 @@ void route_api_reports_active(const HttpRequest *req, HttpResponse *resp);
 void route_api_reports_archived(const HttpRequest *req, HttpResponse *resp);
 
 /**
- * @brief Advances the status of a report (assign or resolve).
+ * @brief Advances the status of a report (resolve only — status=3).
  *
  * Reads report_id and status from the POST body.
- * Dispatches to report_assign() or report_resolve() based on the target status.
+ * Operators may only mark a report as resolved via this endpoint.
+ * Accept/reject go through /api/report/respond.
  * Access: operators only.
  */
 void route_api_report_status(const HttpRequest *req, HttpResponse *resp);
+
+/**
+ * @brief Accepts or rejects an assignment made by an admin.
+ *
+ * Reads report_id and action ("accept"|"reject") from the POST body.
+ * Accept → STATUS_IN_PROGRESS; reject → STATUS_ACTIVE (unassigned).
+ * Access: operators only.
+ */
+void route_api_report_respond(const HttpRequest *req, HttpResponse *resp);
 
 /**
  * @brief Records a citizen's feedback (1-5 stars) on a resolved report.

@@ -128,7 +128,7 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    var STATUS_CLASS = ['badge-0','badge-1','badge-2'];
+    var STATUS_CLASS = ['badge-0','badge-1','badge-2','badge-3'];
 
     var allActive   = [];
     var allArchived = [];
@@ -148,7 +148,7 @@
     }
 
     /* ── Mappa ─────────────────────────────────────────────── */
-    var map = L.map('map').setView([41.9,12.5],10);
+    var map = L.map('map').setView([{{MAP_LAT}},{{MAP_LON}}],11);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
       attribution:'© OpenStreetMap contributors'
     }).addTo(map);
@@ -197,11 +197,25 @@
     }
 
     /* ── Aggiorna stato ────────────────────────────────────── */
-    function updateStatus(reportId, newStatus) {
+    function respondReport(reportId, action) {
+      fetch('/api/report/respond', {
+        method:'POST',
+        headers:{'Content-Type':'application/x-www-form-urlencoded'},
+        body:'report_id='+reportId+'&action='+action
+      })
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        if (d.ok) { loadActive(); loadArchived(); }
+        else alert('Errore: '+(d.error||'sconosciuto'));
+      })
+      .catch(function(){ alert('Errore di rete.'); });
+    }
+
+    function resolveReport(reportId) {
       fetch('/api/report/status', {
         method:'POST',
         headers:{'Content-Type':'application/x-www-form-urlencoded'},
-        body:'report_id='+reportId+'&status='+newStatus
+        body:'report_id='+reportId+'&status=3'
       })
       .then(function(r){ return r.json(); })
       .then(function(d){
@@ -225,23 +239,31 @@
 
       var h = '<table><thead><tr>'
         +'<th>ID</th><th>Categoria</th><th>Descrizione</th>'
-        +'<th>Data</th><th>Azioni</th>'
+        +'<th>Stato</th><th>Data</th><th>Azioni</th>'
         +'</tr></thead><tbody>';
 
       reports.forEach(function(r) {
         var d = new Date(r.created_at*1000).toLocaleDateString('it-IT');
-        /*
-         * La query server restituisce solo status=1 (assegnate a questo operatore).
-         * L'assegnazione spetta esclusivamente all'amministratore comunale:
-         * qui l'operatore può solo segnare il lavoro come risolto.
-         */
-        var acts = '<button class="btn btn-success btn-sm" '
-                 + 'onclick="updateStatus('+r.id+',2)">&#10003; Segna risolto</button>';
+        var statoLabel = r.status === 1 ? 'Assegnato' : 'In lavorazione';
+        var statoClass = r.status === 1 ? 'badge-1' : 'badge-1';
+        var acts;
+        if (r.status === 1) {
+          // STATUS_ASSIGNED: operatore deve accettare o rifiutare
+          acts = '<button class="btn btn-success btn-sm" '
+               + 'onclick="respondReport('+r.id+',\'accept\')" style="margin-right:.4rem">&#10003; Accetta</button>'
+               + '<button class="btn btn-sm" style="background:#ef4444;color:#fff;" '
+               + 'onclick="respondReport('+r.id+',\'reject\')">&#10007; Rifiuta</button>';
+        } else {
+          // STATUS_IN_PROGRESS: operatore può solo risolvere
+          acts = '<button class="btn btn-success btn-sm" '
+               + 'onclick="resolveReport('+r.id+')">&#10003; Segna risolto</button>';
+        }
 
         h += '<tr>'
           +'<td>#'+r.id+'</td>'
           +'<td>'+esc(r.category)+'</td>'
           +'<td>'+esc(r.description)+'</td>'
+          +'<td><span class="badge '+statoClass+'">'+statoLabel+'</span></td>'
           +'<td>'+d+'</td>'
           +'<td>'+acts+'</td>'
           +'</tr>';

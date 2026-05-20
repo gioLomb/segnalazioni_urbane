@@ -256,7 +256,7 @@ uint64_t report_insert(uint64_t authorId, double lat, double lon,
 int report_assign(uint64_t reportId, uint64_t operatorId) {
     // The WHERE clause is an atomic guard: status = 0 ensures the report is
     // still active, and assigned_to IS NULL prevents double-assignment in
-    // case two operators click "accept" concurrently.
+    // case two admins click "assign" concurrently.
     int rc = db_exec(
         "UPDATE reports "
         "SET status = 1, assigned_to = ?, assigned_at = ? "
@@ -276,14 +276,47 @@ int report_assign(uint64_t reportId, uint64_t operatorId) {
     return 1;
 }
 
+int report_accept(uint64_t reportId, uint64_t operatorId) {
+    // Guard: status = 1 (STATUS_ASSIGNED) and assigned to this operator.
+    int rc = db_exec(
+        "UPDATE reports "
+        "SET status = 2 "
+        "WHERE id = ? AND assigned_to = ? AND status = 1;",
+        "ll",
+        (int64_t)reportId, (int64_t)operatorId);
+    if (rc != 0) return -1;
+    if (db_changes() == 0) return 0;
+
+    Report r;
+    if (report_get_by_id(reportId, &r)) report_cache_invalidate_city(r.city, r.authorId);
+    return 1;
+}
+
+int report_reject(uint64_t reportId, uint64_t operatorId) {
+    // Guard: status = 1 (STATUS_ASSIGNED) and assigned to this operator.
+    // Clear assignment so the admin can reassign to another operator.
+    int rc = db_exec(
+        "UPDATE reports "
+        "SET status = 0, assigned_to = NULL, assigned_at = NULL "
+        "WHERE id = ? AND assigned_to = ? AND status = 1;",
+        "ll",
+        (int64_t)reportId, (int64_t)operatorId);
+    if (rc != 0) return -1;
+    if (db_changes() == 0) return 0;
+
+    Report r;
+    if (report_get_by_id(reportId, &r)) report_cache_invalidate_city(r.city, r.authorId);
+    return 1;
+}
+
 int report_resolve(uint64_t reportId, uint64_t operatorId) {
-    // The WHERE clause guards: status = 1 ensures the report is in progress,
+    // The WHERE clause guards: status = 2 ensures the report is in progress,
     // and assigned_to = operatorId prevents an operator from resolving
     // a report that belongs to a different operator.
     int rc = db_exec(
         "UPDATE reports "
-        "SET status = 2, resolved_at = ? "
-        "WHERE id = ? AND assigned_to = ? AND status = 1;",
+        "SET status = 3, resolved_at = ? "
+        "WHERE id = ? AND assigned_to = ? AND status = 2;",
         "lll",
         (int64_t)time(NULL), (int64_t)reportId, (int64_t)operatorId);
     if (rc != 0) return -1;
@@ -302,7 +335,7 @@ int report_set_feedback(uint64_t reportId, uint64_t authorId, int stars) {
     int rc = db_exec(
         "UPDATE reports "
         "SET feedback = ? "
-        "WHERE id = ? AND author_id = ? AND status = 2 AND feedback IS NULL;",
+        "WHERE id = ? AND author_id = ? AND status = 3 AND feedback IS NULL;",
         "lll",
         (int64_t)stars, (int64_t)reportId, (int64_t)authorId);
     if (rc != 0) return -1;
@@ -327,16 +360,17 @@ size_t report_get_active_json(char *buf, size_t max,
     }
 
     DbCursor *c = isOperator
-        // Operator: only reports currently assigned to them (status = 1).
+        // Operator: reports assigned to them, either pending acceptance (1)
+        // or already in progress (2).
         ? db_cursor_open(
               "SELECT " SELECT_COLS " FROM reports "
-              "WHERE status = 1 AND assigned_to = ? "
+              "WHERE assigned_to = ? AND status IN (1, 2) "
               "ORDER BY assigned_at DESC;",
               "l", (int64_t)userId)
-        // Citizen: their own reports not yet resolved (status 0 or 1).
+        // Citizen: their own reports not yet resolved (status 0, 1, or 2).
         : db_cursor_open(
               "SELECT " SELECT_COLS " FROM reports "
-              "WHERE author_id = ? AND status < 2 "
+              "WHERE author_id = ? AND status < 3 "
               "ORDER BY created_at DESC;",
               "l", (int64_t)userId);
 
@@ -356,16 +390,16 @@ size_t report_get_archived_json(char *buf, size_t max,
     }
 
     DbCursor *c = isOperator
-        // Operator: all reports they resolved (status = 2, assigned_to = them).
+        // Operator: all reports they resolved (status = 3, assigned_to = them).
         ? db_cursor_open(
               "SELECT " SELECT_COLS " FROM reports "
-              "WHERE assigned_to = ? AND status = 2 "
+              "WHERE assigned_to = ? AND status = 3 "
               "ORDER BY resolved_at DESC;",
               "l", (int64_t)userId)
         // Citizen: all their reports that were resolved.
         : db_cursor_open(
               "SELECT " SELECT_COLS " FROM reports "
-              "WHERE author_id = ? AND status = 2 "
+              "WHERE author_id = ? AND status = 3 "
               "ORDER BY resolved_at DESC;",
               "l", (int64_t)userId);
 
@@ -429,7 +463,7 @@ bool report_get_by_id(uint64_t reportId, Report *out) {
 
 int report_count_active(void) {
     DbCursor *c = db_cursor_open(
-        "SELECT COUNT(*) FROM reports WHERE status < 2;", NULL);
+        "SELECT COUNT(*) FROM reports WHERE status < 3;", NULL);
     int count = db_cursor_next(c) ? (int)db_cursor_int64(c, 0) : 0;
     db_cursor_close(c);
     return count;

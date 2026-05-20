@@ -11,14 +11,14 @@
 /* ── Internal state ──────────────────────────────────────────────────── */
 
 // Singleton hash table: IPv4 string → RateEntry.
-static Hash_Table *s_rate_table = NULL;
+static Hash_Table *rateTable = NULL;
 
 /* ── Public API ──────────────────────────────────────────────────────── */
 
 int rate_limiter_init(void) {
     extern unsigned long hash_key(const void *, size_t, unsigned long);
-    s_rate_table = ht_create(1024, hash_key);
-    if (!s_rate_table) {
+    rateTable = ht_create(1024, hash_key);
+    if (!rateTable) {
         fprintf(stderr, "Fatal: rate limiter table allocation failed\n");
         return -1;
     }
@@ -26,27 +26,27 @@ int rate_limiter_init(void) {
 }
 
 void rate_limiter_destroy(void) {
-    if (s_rate_table) {
-        ht_destroy(s_rate_table, NULL);
-        s_rate_table = NULL;
+    if (rateTable) {
+        ht_destroy(rateTable, NULL);
+        rateTable = NULL;
     }
 }
 
 int rate_limit_check(const char *ip) {
-    if (unlikely(!ip || !ip[0] || !s_rate_table)) return 1;
+    if (unlikely(!ip || !ip[0] || !rateTable)) return 1;
 
     // Recycle the table when it grows too large; brief amnesia on all IPs
     // is acceptable compared to unbounded memory growth.
-    if (unlikely(s_rate_table->size > 10000)) {
+    if (unlikely(rateTable->size > 10000)) {
         extern unsigned long hash_key(const void *, size_t, unsigned long);
-        ht_destroy(s_rate_table, NULL);
-        s_rate_table = ht_create(1024, hash_key);
-        if (!s_rate_table) return 1;
+        ht_destroy(rateTable, NULL);
+        rateTable = ht_create(1024, hash_key);
+        if (!rateTable) return 1;
     }
 
     RateEntry e = {0};
     time_t now = time(NULL);
-    ht_get(s_rate_table, (void *)ip, strlen(ip) + 1, &e, sizeof(e));
+    ht_get(rateTable, (void *)ip, strlen(ip) + 1, &e, sizeof(e));
 
     // Rotate windows when a full second has elapsed.
     if (unlikely(now - e.windowStartTime >= 1)) {
@@ -62,6 +62,6 @@ int rate_limit_check(const char *ip) {
     int allowed = likely(estimated < RATE_LIMIT_RPS);
 
     if (allowed) e.countCurr++;
-    ht_set(s_rate_table, (void *)ip, strlen(ip) + 1, &e, sizeof(e));
+    ht_set(rateTable, (void *)ip, strlen(ip) + 1, &e, sizeof(e));
     return allowed;
 }
