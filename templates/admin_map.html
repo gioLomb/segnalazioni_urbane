@@ -271,13 +271,13 @@
 
         var acts = '';
         if (r.status === 0) {
-          acts = '<button class="btn btn-warning btn-sm" '
-               + 'onclick="openAssign('+r.id+',\''+esc(r.category)+'\')">&#128100; Assegna</button>';
+          acts = '<button class="btn btn-warning btn-sm btn-assign-trigger" '
+               + 'data-id="'+r.id+'" data-category="'+esc(r.category)+'">&#128100; Assegna</button>';
         } else if (r.status === 1) {
           var opLabel = r.operator_name ? esc(r.operator_name) : ('#'+r.assigned_to);
           acts = '<span style="font-size:.8rem;color:#6b7280">&#128100; '+opLabel+'</span>'
-               + ' <button class="btn btn-warning btn-sm" style="margin-left:.4rem" '
-               + 'onclick="openAssign('+r.id+',\''+esc(r.category)+'\')">Riassegna</button>';
+               + ' <button class="btn btn-warning btn-sm btn-assign-trigger" style="margin-left:.4rem" '
+               + 'data-id="'+r.id+'" data-category="'+esc(r.category)+'">Riassegna</button>';
         } else if (r.status === 2) {
           var opLabel = r.operator_name ? esc(r.operator_name) : ('#'+r.assigned_to);
           acts = '<span style="font-size:.8rem;color:#6b7280">&#128100; '+opLabel+'</span>';
@@ -307,11 +307,21 @@
       document.getElementById('s-total').textContent    = reports.length;
     }
 
+    /* Gestore degli eventi delegato per i pulsanti di assegnazione */
+    document.getElementById('reports-table').addEventListener('click', function(e) {
+      var target = e.target;
+      if (target && target.classList.contains('btn-assign-trigger')) {
+        var reportId = target.getAttribute('data-id');
+        var category = target.getAttribute('data-category');
+        openAssign(reportId, category);
+      }
+    });
+
     /* ── Modal ─────────────────────────────────────────────── */
     function openAssign(reportId, category) {
       assigningId = reportId;
       document.getElementById('modal-report-info').textContent =
-        'Segnalazione #'+reportId+' — '+category;
+        'Segnalazione #' + reportId + ' — ' + category;
       var sel = document.getElementById('operator-select');
       sel.innerHTML = '<option value="">-- Seleziona operatore --</option>';
       operators.forEach(function(op) {
