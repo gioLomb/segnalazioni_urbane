@@ -22,3 +22,5 @@ analisi
 build/
 build
 segnalacity_cov
+Doxyfile
+doc_output/

@@ -143,8 +143,12 @@
 
   <script>
     var STATUS = ['Attivo', 'Assegnato', 'In lavorazione', 'Risolto'];
-    var allActive   = [];
-    var allArchived = [];
+    var allActive    = [];
+    var allArchived  = [];
+    var refreshTimer = null;
+
+    /* Interval between polls while the tab is visible (ms) */
+    var POLL_INTERVAL = 30000;
 
     function esc(s) {
       return String(s)
@@ -306,29 +310,73 @@
       renderArchived(allArchived);
     }
 
-    /* ── Caricamento ─────────────────────────────────────────── */
-    fetch('/api/reports/active')
-      .then(function(r) { return r.json(); })
-      .then(function(d) {
-        allActive = Array.isArray(d) ? d : [];
-        renderActive(allActive);
-      })
-      .catch(function() {
-        document.getElementById('active-table').innerHTML =
-          '<p class="placeholder-text error-text">Errore di caricamento.</p>';
-      });
+    /* ── Data loading ─────────────────────────────────────────────────
+       Named functions (not inline fetches) so scheduleRefresh() can
+       call loadActive() by reference after each polling cycle.
+       loadActive() returns its Promise so the next cycle starts only
+       after the fetch completes, preventing request pile-up.
+       When a report gets resolved it disappears from the active list
+       and appears in archived, so both sections are reloaded together.
+    ──────────────────────────────────────────────────────────────────── */
+    function loadActive() {
+      return fetch('/api/reports/active')
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          allActive = Array.isArray(d) ? d : [];
+          renderActive(getFilteredActive());
+        })
+        .catch(function() {
+          document.getElementById('active-table').innerHTML =
+            '<p class="placeholder-text error-text">Errore di caricamento.</p>';
+        });
+    }
 
-    fetch('/api/reports/archived')
-      .then(function(r) { return r.json(); })
-      .then(function(d) {
-        allArchived = Array.isArray(d) ? d : [];
-        renderArchived(allArchived);
-        document.getElementById('s-archived').textContent = allArchived.length;
-      })
-      .catch(function() {
-        document.getElementById('archived-table').innerHTML =
-          '<p class="placeholder-text error-text">Errore di caricamento.</p>';
-      });
+    function loadArchived() {
+      return fetch('/api/reports/archived')
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          allArchived = Array.isArray(d) ? d : [];
+          renderArchived(getFilteredArch());
+          document.getElementById('s-archived').textContent = allArchived.length;
+        })
+        .catch(function() {
+          document.getElementById('archived-table').innerHTML =
+            '<p class="placeholder-text error-text">Errore di caricamento.</p>';
+        });
+    }
+
+    /* ── Polling — Page Visibility API instead of setInterval ────────
+       scheduleRefresh() uses setTimeout so the next poll only starts
+       after the previous fetch fully resolves, preventing pile-up.
+       Both sections are refreshed together: when a report is resolved
+       it leaves the active list and enters the archived one, so polling
+       only active would leave the archived section stale.
+
+       visibilitychange listener:
+         • Tab hidden  → cancel the pending timeout immediately.
+         • Tab visible → reload both sections right away so the citizen
+                         sees the latest status the moment they return,
+                         then re-arm the cycle.
+    ──────────────────────────────────────────────────────────────────── */
+    function scheduleRefresh() {
+      clearTimeout(refreshTimer);
+      if (!document.hidden) {
+        refreshTimer = setTimeout(function() {
+          Promise.all([loadActive(), loadArchived()]).then(scheduleRefresh);
+        }, POLL_INTERVAL);
+      }
+    }
+
+    document.addEventListener('visibilitychange', function() {
+      if (document.hidden) {
+        clearTimeout(refreshTimer);
+      } else {
+        Promise.all([loadActive(), loadArchived()]).then(scheduleRefresh);
+      }
+    });
+
+    /* Initial load: both sections in parallel, then arm the polling cycle */
+    Promise.all([loadActive(), loadArchived()]).then(scheduleRefresh);
   </script>
 
 </body>

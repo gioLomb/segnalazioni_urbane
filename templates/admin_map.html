@@ -4,11 +4,18 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Dashboard Amministratore - SegnalaCity</title>
+  <!-- Leaflet CSS: map tiles and controls -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <!-- Shared stylesheet: navbar, card, table, badge, btn… -->
   <link rel="stylesheet" href="/static/common.css">
   <style>
+    /* Map container: taller than the operator view for a fuller dashboard feel */
     #map { height: 460px; border-radius: 10px; margin-bottom: 1.5rem; }
+
+    /* Placeholder text shown while data loads asynchronously */
     .loading { color: #9ca3af; font-style: italic; }
+
+    /* Horizontal filter bar; wraps on narrow screens */
     .filters {
       display: flex; flex-wrap: wrap; gap: .75rem;
       align-items: flex-end; margin-bottom: 1.25rem;
@@ -19,11 +26,23 @@
       font-size:.875rem; background:#fff; cursor:pointer;
     }
     .filters .btn-sm { padding:.4rem .9rem; font-size:.85rem; }
+
+    /* ── Map legend ───────────────────────────────────────────────────
+       Coloured dots that explain the meaning of each marker colour.
+       Positioned above the map so it is always immediately visible.
+    ──────────────────────────────────────────────────────────────────── */
     .map-legend { display:flex; gap:1.2rem; margin-bottom:.75rem; font-size:.82rem; flex-wrap:wrap; }
     .legend-dot { width:12px; height:12px; border-radius:50%; display:inline-block; margin-right:4px; vertical-align:middle; }
-    .dot-active   { background:#3b82f6; }
-    .dot-progress { background:#f59e0b; }
-    .dot-resolved { background:#10b981; }
+    .dot-active   { background:#3b82f6; } /* blue   → STATUS_ACTIVE                       */
+    .dot-progress { background:#f59e0b; } /* yellow → STATUS_ASSIGNED / STATUS_IN_PROGRESS */
+    .dot-resolved { background:#10b981; } /* green  → STATUS_RESOLVED                     */
+
+    /* ── Assignment modal ─────────────────────────────────────────────
+       Full-screen semi-transparent overlay + centred dialog box.
+       Hidden by default; the .open class is toggled by openAssign() /
+       closeModal(). Clicking the backdrop (outside the box) also closes
+       the modal via the event listener at the bottom of the script.
+    ──────────────────────────────────────────────────────────────────── */
     .modal-backdrop {
       display:none; position:fixed; inset:0; background:rgba(0,0,0,.45);
       z-index:1000; align-items:center; justify-content:center;
@@ -40,9 +59,11 @@
 </head>
 <body>
 
+  <!-- ── Top navigation bar ── -->
   <nav class="navbar">
     <h1>&#128205; SegnalaCity</h1>
     <div class="nav-right">
+      <!-- {{USERNAME}} injected by route_get_home() in route_pages.c -->
       <span>&#9962; {{USERNAME}} (Amministratore)</span>
       <a href="/logout">Esci</a>
     </div>
@@ -51,9 +72,14 @@
   <div class="page-content">
 
     <div class="page-header">
+      <!-- {{CITY}} injected by the server: the admin's municipality -->
       <h2>&#128202; Dashboard Amministrativa &mdash; {{CITY}}</h2>
     </div>
 
+    <!-- ── Quick stats by status ──────────────────────────────────────
+         All four counters are updated by render() on every load/filter.
+         s-total reflects the number of reports in the current filter view.
+    ──────────────────────────────────────────────────────────────────── -->
     <div class="stat-grid">
       <div class="stat-card"><div class="val" id="s-active">-</div><div class="lbl">Attive</div></div>
       <div class="stat-card"><div class="val" id="s-progress">-</div><div class="lbl">In lavorazione</div></div>
@@ -61,15 +87,33 @@
       <div class="stat-card"><div class="val" id="s-total">-</div><div class="lbl">Totale</div></div>
     </div>
 
+    <!-- ── Map with colour legend ── -->
     <div class="card" style="margin-bottom:1.5rem">
       <div class="map-legend">
         <span><span class="legend-dot dot-active"></span>Attiva</span>
         <span><span class="legend-dot dot-progress"></span>In lavorazione</span>
         <span><span class="legend-dot dot-resolved"></span>Risolta</span>
       </div>
+      <!--
+        Leaflet map container.
+        Initial centre: {{MAP_LAT}}, {{MAP_LON}} — city centroid injected
+        by route_get_home() → build_map_vars() in geo.c.
+        Coloured markers are drawn by drawMarkers() after each data fetch.
+      -->
       <div id="map"></div>
     </div>
 
+    <!-- ════════════════════════════════════════════════════════════
+         TABLE: All reports for the city
+         Data source: GET /api/reports/all → report_get_all_city_json()
+           Returns every report in the admin's city across all statuses.
+
+         Admin actions per status:
+           0 (Active)      → "Assign" button opens the modal
+           1 (Assigned)    → operator shown + "Re-assign" button
+           2 (In progress) → operator shown, read-only
+           3 (Resolved)    → "✓ Completed", read-only
+    ════════════════════════════════════════════════════════════ -->
     <div class="card">
       <div class="filters">
         <div>
@@ -97,6 +141,7 @@
         </div>
         <div>
           <label>Feedback</label>
+          <!-- value="0" means "not yet rated" (feedback IS NULL in the DB) -->
           <select id="f-feedback">
             <option value="">Tutti</option>
             <option value="0">Non valutate</option>
@@ -122,17 +167,28 @@
       </div>
 
       <h3 style="margin-bottom:1rem">&#128203; Tutte le segnalazioni &mdash; {{CITY}}</h3>
+      <!-- Populated by render(); "Loading…" is shown during the initial fetch -->
       <div id="reports-table"><p class="loading">Caricamento...</p></div>
     </div>
 
   </div>
 
-  <!-- Modal assegnazione -->
+  <!-- ════════════════════════════════════════════════════════════
+       MODAL: Operator assignment
+       Opened by the delegated click listener on #reports-table.
+       #operator-select is populated from the in-memory operators list
+       (fetched once at startup by loadOperators()).
+       confirmAssign() sends POST /api/admin/assign; on success the full
+       dataset is reloaded and the modal is closed.
+       Clicking outside the box (on the backdrop) also closes the modal.
+  ════════════════════════════════════════════════════════════ -->
   <div class="modal-backdrop" id="assign-modal">
     <div class="modal-box">
       <h3>&#128100; Assegna operatore</h3>
+      <!-- Shows "Report #<id> — <category>"; written via textContent (no XSS risk) -->
       <p id="modal-report-info" style="margin-bottom:1rem;font-size:.9rem;color:#6b7280"></p>
       <label style="font-size:.85rem;font-weight:600;color:#374151;display:block;margin-bottom:.4rem">Operatore</label>
+      <!-- Populated by openAssign() via the DOM API, never innerHTML -->
       <select id="operator-select">
         <option value="">-- Seleziona operatore --</option>
       </select>
@@ -145,21 +201,51 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
+    /*
+      Status labels and badge CSS classes indexed by numeric ReportStatus.
+      Must stay aligned with the enum in report.h:
+        0 → STATUS_ACTIVE
+        1 → STATUS_ASSIGNED    (admin assigned, awaiting operator acceptance)
+        2 → STATUS_IN_PROGRESS (operator accepted)
+        3 → STATUS_RESOLVED
+    */
     var STATUS       = ['Attivo','Assegnato','In lavorazione','Risolto'];
     var STATUS_CLASS = ['badge-0','badge-1','badge-2','badge-3'];
+    /*
+      Marker colours per status.
+      Assigned (1) and In progress (2) share yellow because both indicate
+      an operator is involved; only the label text distinguishes them.
+    */
     var MARKER_COLOR = ['#3b82f6','#f59e0b','#f59e0b','#10b981'];
 
-    var allReports  = [];
-    var operators   = [];
-    var markers     = [];
-    var assigningId = null;
+    /* ── Module-level state ───────────────────────────────────────────
+       allReports:   full city dataset; all filters run against this array.
+       operators:    operator list fetched once, reused for every modal open.
+       markers:      L.Marker instances currently on the map.
+       assigningId:  numeric ID of the report selected in the modal.
+       refreshTimer: handle returned by setTimeout for the polling cycle;
+                     kept here so it can be cancelled when the tab is hidden.
+    ──────────────────────────────────────────────────────────────────── */
+    var allReports   = [];
+    var operators    = [];
+    var markers      = [];
+    var assigningId  = null;
+    var refreshTimer = null;
 
+    /* Interval between polls while the tab is visible (ms) */
+    var POLL_INTERVAL = 30000;
+
+    /* ── HTML escaping ────────────────────────────────────────────────
+       Sanitises user-controlled strings before inserting them into
+       innerHTML. Assignments via textContent never need this.
+    ──────────────────────────────────────────────────────────────────── */
     function esc(s) {
       return String(s)
         .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
         .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
     }
 
+    /* ── Static star display: coloured up to n, grey beyond ── */
     function starsHtml(n) {
       var s = '';
       for (var i = 1; i <= 5; i++)
@@ -167,12 +253,21 @@
       return n > 0 ? s : '<span style="color:#9ca3af;font-size:.8rem">—</span>';
     }
 
-    /* ── Mappa ─────────────────────────────────────────────── */
+    /* ══════════════════════════════════════════════════════════════
+       LEAFLET MAP
+       {{MAP_LAT}}, {{MAP_LON}}: city centroid injected by route_get_home()
+       → build_map_vars() in geo.c.  Zoom 11 gives a good city overview.
+    ══════════════════════════════════════════════════════════════ */
     var map = L.map('map').setView([{{MAP_LAT}},{{MAP_LON}}],11);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
       attribution:'© OpenStreetMap contributors'
     }).addTo(map);
 
+    /*
+      makeIcon(color): inline SVG pin coloured by status.
+      iconAnchor [11,34]: tip of the pin points at the exact coordinate.
+      popupAnchor [0,-34]: popup opens above the pin head, not below.
+    */
     function makeIcon(color) {
       var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="34" viewBox="0 0 24 36">'
         +'<path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 24 12 24s12-15 12-24C24 5.4 18.6 0 12 0z" fill="'+color+'"/>'
@@ -180,21 +275,28 @@
       return L.divIcon({html:svg,className:'',iconSize:[22,34],iconAnchor:[11,34],popupAnchor:[0,-34]});
     }
 
+    /* Remove all existing markers before redrawing the current dataset */
     function clearMarkers() {
       markers.forEach(function(m){ map.removeLayer(m); });
       markers = [];
     }
 
+    /*
+      drawMarkers(reports): places a coloured pin for every report that has
+      valid coordinates. fitBounds adjusts zoom to show all pins with 30 px
+      padding. Popup content is built with esc() to prevent XSS from stored
+      user text (category, description).
+    */
     function drawMarkers(reports) {
       clearMarkers();
       var bounds = [];
       reports.forEach(function(r) {
-        if (!r.lat && !r.lon) return;
+        if (!r.lat && !r.lon) return; /* no coordinates: skip */
         var mk = L.marker([r.lat,r.lon],{icon:makeIcon(MARKER_COLOR[r.status])}).addTo(map);
         var dc = new Date(r.created_at*1000).toLocaleDateString('it-IT');
         var popup = '<b>#'+r.id+' — '+esc(r.category)+'</b><br>'
           +esc(r.description)+'<br><small>'+STATUS[r.status]+' · Creata: '+dc+'</small>';
-        if (r.status === 2 && r.resolved_at)
+        if (r.status === 3 && r.resolved_at)
           popup += '<br><small>Risolta: '+new Date(r.resolved_at*1000).toLocaleDateString('it-IT')+'</small>';
         mk.bindPopup(popup);
         markers.push(mk);
@@ -205,7 +307,16 @@
       }
     }
 
-    /* ── Filtri ────────────────────────────────────────────── */
+    /* ══════════════════════════════════════════════════════════════
+       FILTERS
+       All filter logic runs against the local cache (allReports) with
+       no additional HTTP requests. The "To" date is extended by 86399 s
+       to include the entire selected day (up to 23:59:59).
+
+       Feedback filter: feedback is only meaningful for resolved reports
+       (status=3), so any feedback filter also implicitly restricts the
+       result set to status=3.
+    ══════════════════════════════════════════════════════════════ */
     function getFiltered() {
       var cat      = document.getElementById('f-category').value;
       var status   = document.getElementById('f-status').value;
@@ -215,16 +326,16 @@
       var fromTs   = dateFrom ? new Date(dateFrom).getTime()/1000 : null;
       var toTs     = dateTo   ? new Date(dateTo).getTime()/1000+86399 : null;
       return allReports.filter(function(r) {
-        if (cat    && r.category !== cat)                  return false;
+        if (cat    && r.category !== cat)                   return false;
         if (status !== '' && r.status !== parseInt(status)) return false;
         if (fb !== '') {
           var fbVal = parseInt(fb);
           if (fbVal === 0 && r.feedback && r.feedback > 0) return false;
           if (fbVal > 0  && r.feedback !== fbVal)          return false;
-          if (r.status !== 3) return false;
+          if (r.status !== 3)                              return false;
         }
-        if (fromTs && r.created_at < fromTs)               return false;
-        if (toTs   && r.created_at > toTs)                 return false;
+        if (fromTs && r.created_at < fromTs)                return false;
+        if (toTs   && r.created_at > toTs)                  return false;
         return true;
       });
     }
@@ -239,7 +350,25 @@
       render(allReports);
     }
 
-    /* ── Render ────────────────────────────────────────────── */
+    /* ══════════════════════════════════════════════════════════════
+       RENDER
+       Rebuilds the table HTML, redraws map markers, and updates the
+       four stat-cards for the currently filtered dataset.
+
+       XSS — "Actions" column:
+         Inline onclick with user-controlled string arguments is unsafe.
+         esc() converts ' to &#39;, but the HTML parser decodes entities
+         before JS executes the handler, so &#39; → ' at runtime, breaking
+         the string context (Stored XSS vector).
+
+         Fix applied here: buttons carry only the server-generated integer
+         ID in data-id (safe to interpolate) and the category in data-category
+         as an HTML attribute (esc() is correct in this context — attribute
+         parsing stops at an unescaped quote, not at &#39;). The delegated
+         listener reads both with getAttribute() and passes them to
+         openAssign(), which writes them exclusively via textContent.
+         No user string ever reaches a JS execution context.
+    ══════════════════════════════════════════════════════════════ */
     function render(reports) {
       drawMarkers(reports);
       var active=0, progress=0, resolved=0;
@@ -260,31 +389,48 @@
         +'</tr></thead><tbody>';
 
       reports.forEach(function(r) {
+        /* Tally counts for the stat-cards */
         if      (r.status === 0) active++;
         else if (r.status === 1) progress++;
         else if (r.status === 2) progress++;
         else if (r.status === 3) resolved++;
 
         var dc = new Date(r.created_at*1000).toLocaleDateString('it-IT');
+        /* resolved_at is 0 for reports not yet resolved */
         var dr = (r.resolved_at && r.resolved_at > 0)
                ? new Date(r.resolved_at*1000).toLocaleDateString('it-IT') : '—';
 
+        /*
+          "Actions" cell.
+          data-id    = server-generated integer → safe to interpolate directly.
+          data-category = user text → escaped for the HTML attribute context with
+                          esc(), which is correct here (attribute parsing ends at
+                          an unescaped quote, not at &#39;).
+          The class .btn-assign-trigger is the hook for the delegated listener.
+        */
         var acts = '';
         if (r.status === 0) {
-          acts = '<button class="btn btn-warning btn-sm btn-assign-trigger" '
-               + 'data-id="'+r.id+'" data-category="'+esc(r.category)+'">&#128100; Assegna</button>';
+          /* Active: admin can assign to an operator */
+          acts = '<button class="btn btn-warning btn-sm btn-assign-trigger"'
+               + ' data-id="'+r.id+'" data-category="'+esc(r.category)+'">'
+               + '&#128100; Assegna</button>';
         } else if (r.status === 1) {
+          /* Assigned, awaiting acceptance: show operator + allow re-assignment */
           var opLabel = r.operator_name ? esc(r.operator_name) : ('#'+r.assigned_to);
           acts = '<span style="font-size:.8rem;color:#6b7280">&#128100; '+opLabel+'</span>'
-               + ' <button class="btn btn-warning btn-sm btn-assign-trigger" style="margin-left:.4rem" '
-               + 'data-id="'+r.id+'" data-category="'+esc(r.category)+'">Riassegna</button>';
+               + ' <button class="btn btn-warning btn-sm btn-assign-trigger" style="margin-left:.4rem"'
+               + ' data-id="'+r.id+'" data-category="'+esc(r.category)+'">'
+               + 'Riassegna</button>';
         } else if (r.status === 2) {
+          /* In progress: operator is working, no admin action available */
           var opLabel = r.operator_name ? esc(r.operator_name) : ('#'+r.assigned_to);
           acts = '<span style="font-size:.8rem;color:#6b7280">&#128100; '+opLabel+'</span>';
         } else {
+          /* Resolved: no further actions */
           acts = '<span style="font-size:.8rem;color:#10b981">&#10003; Completato</span>';
         }
 
+        /* Feedback stars are only meaningful for resolved reports */
         var fbCell = (r.status === 3) ? starsHtml(r.feedback || 0) : '—';
 
         h += '<tr>'
@@ -307,27 +453,54 @@
       document.getElementById('s-total').textContent    = reports.length;
     }
 
-    /* Gestore degli eventi delegato per i pulsanti di assegnazione */
+    /* ══════════════════════════════════════════════════════════════
+       DELEGATED CLICK LISTENER — assignment buttons
+       Registered once on #reports-table at startup; handles every
+       .btn-assign-trigger click regardless of when the button was
+       created, with no need to re-register after each render() call.
+
+       e.target.closest() walks up the DOM in case the click lands on
+       a child element of the button (e.g. an emoji span).
+
+       getAttribute('data-id') returns the numeric ID as a string;
+       getAttribute('data-category') returns the HTML-decoded plain text
+       (the browser decodes &#39; → ' before returning it here, but that
+       is fine because the value goes to textContent, not innerHTML or
+       a JS eval context).
+    ══════════════════════════════════════════════════════════════ */
     document.getElementById('reports-table').addEventListener('click', function(e) {
-      var target = e.target;
-      if (target && target.classList.contains('btn-assign-trigger')) {
-        var reportId = target.getAttribute('data-id');
-        var category = target.getAttribute('data-category');
-        openAssign(reportId, category);
-      }
+      var btn = e.target.closest('.btn-assign-trigger');
+      if (btn) openAssign(btn.getAttribute('data-id'), btn.getAttribute('data-category'));
     });
 
-    /* ── Modal ─────────────────────────────────────────────── */
+    /* ══════════════════════════════════════════════════════════════
+       MODAL — open, confirm, close
+
+       openAssign(reportId, category):
+         Saves reportId in assigningId for use by confirmAssign().
+         Writes the info line via textContent (safe for any string).
+         Repopulates #operator-select via the DOM API (createElement +
+         textContent) — never innerHTML — so operator names are safe too.
+
+       confirmAssign():
+         POSTs to /api/admin/assign → route_api_admin_assign()
+         → report_assign() in report.c.
+         The SQL guard (status=0 AND assigned_to IS NULL) is atomic,
+         preventing double-assignment if two admin sessions act at once.
+
+       closeModal(): removes .open, resets assigningId.
+    ══════════════════════════════════════════════════════════════ */
     function openAssign(reportId, category) {
       assigningId = reportId;
+      /* textContent is the only safe way to display user-controlled strings */
       document.getElementById('modal-report-info').textContent =
         'Segnalazione #' + reportId + ' — ' + category;
       var sel = document.getElementById('operator-select');
       sel.innerHTML = '<option value="">-- Seleziona operatore --</option>';
       operators.forEach(function(op) {
         var o = document.createElement('option');
-        o.value = op.id;
-        o.textContent = op.username;
+        o.value       = op.id;
+        o.textContent = op.username; /* textContent: safe for operator names */
         sel.appendChild(o);
       });
       document.getElementById('assign-modal').classList.add('open');
@@ -355,11 +528,23 @@
       .catch(function(){ alert('Errore di rete.'); });
     }
 
+    /* Click on the backdrop (outside the modal box) closes the modal */
     document.getElementById('assign-modal').addEventListener('click', function(e){
       if (e.target === this) closeModal();
     });
 
-    /* ── Avvio ─────────────────────────────────────────────── */
+    /* ══════════════════════════════════════════════════════════════
+       DATA LOADING
+
+       loadOperators(): fetches the city operator list once at startup.
+         Result stored in `operators`, reused for every modal open with
+         no further HTTP calls.
+
+       loadData(): fetches all city reports, stores them in allReports,
+         then re-renders with the current active filters so the filter
+         state is preserved across refreshes.
+         Returns the fetch Promise so the caller can chain .then().
+    ══════════════════════════════════════════════════════════════ */
     function loadOperators() {
       return fetch('/api/operators')
         .then(function(r){ return r.json(); })
@@ -367,11 +552,11 @@
     }
 
     function loadData() {
-      fetch('/api/reports/all')
+      return fetch('/api/reports/all')
         .then(function(r){ return r.json(); })
         .then(function(d){
           allReports = d;
-          render(getFiltered());
+          render(getFiltered()); /* preserve active filters on refresh */
         })
         .catch(function(){
           document.getElementById('reports-table').innerHTML =
@@ -379,9 +564,56 @@
         });
     }
 
+    /* ══════════════════════════════════════════════════════════════
+       POLLING — Page Visibility API instead of setInterval
+
+       Why not setInterval?
+         • Fires unconditionally every N ms even when the tab is hidden,
+           wasting bandwidth and server resources.
+         • Allows requests to stack up: if a fetch takes longer than the
+           interval a second request fires before the first completes.
+
+       Page Visibility API solution:
+         scheduleRefresh() uses setTimeout (not setInterval) so the next
+         poll only starts after the previous fetch fully resolves,
+         eliminating the pile-up problem.
+
+         A visibilitychange listener:
+           • On hide  → cancel the pending timeout immediately.
+           • On show  → call loadData() right away (admin sees fresh data
+                        the moment they return) then re-arm the cycle.
+
+         This results in zero wasted requests while the tab is in the
+         background and instant data on return, with no server-side changes
+         required.  document.hidden / visibilityState are supported by all
+         modern browsers without a polyfill.
+    ══════════════════════════════════════════════════════════════ */
+
+    function scheduleRefresh() {
+      clearTimeout(refreshTimer);
+      if (!document.hidden) {
+        refreshTimer = setTimeout(function() {
+          loadData().then(scheduleRefresh); /* chain: next cycle starts after fetch */
+        }, POLL_INTERVAL);
+      }
+    }
+
+    document.addEventListener('visibilitychange', function() {
+      if (document.hidden) {
+        clearTimeout(refreshTimer); /* tab went background: pause polling */
+      } else {
+        /* Tab came back to foreground: refresh immediately, then resume cycle */
+        loadData().then(scheduleRefresh);
+      }
+    });
+
+    /* ── Startup ─────────────────────────────────────────────────────
+       Load operators first (needed for the modal), then reports.
+       scheduleRefresh() is chained after the initial loadData() so the
+       first polling cycle starts only once the page has rendered.
+    ──────────────────────────────────────────────────────────────────── */
     loadOperators();
-    loadData();
-    setInterval(loadData, 30000);
+    loadData().then(scheduleRefresh);
   </script>
 
 </body>

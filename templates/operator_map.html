@@ -130,9 +130,13 @@
   <script>
     var STATUS_CLASS = ['badge-0','badge-1','badge-2','badge-3'];
 
-    var allActive   = [];
-    var allArchived = [];
-    var markers     = [];
+    var allActive    = [];
+    var allArchived  = [];
+    var markers      = [];
+    var refreshTimer = null;
+
+    /* Interval between polls while the tab is visible (ms) */
+    var POLL_INTERVAL = 30000;
 
     function esc(s) {
       return String(s)
@@ -332,7 +336,7 @@
 
     /* ── Caricamento ───────────────────────────────────────── */
     function loadActive() {
-      fetch('/api/reports/active')
+      return fetch('/api/reports/active')
         .then(function(r){ return r.json(); })
         .then(function(d){
           allActive = Array.isArray(d) ? d : [];
@@ -357,9 +361,38 @@
         });
     }
 
-    loadActive();
+    /* ── Polling — Page Visibility API instead of setInterval ────────
+       scheduleRefresh() uses setTimeout (not setInterval) so the next
+       poll only starts after the previous fetch fully resolves,
+       preventing request pile-up if the server is slow.
+
+       visibilitychange listener:
+         • Tab hidden  → cancel the pending timeout immediately.
+         • Tab visible → reload right away (operator sees fresh assignments
+                         the moment they return) then re-arm the cycle.
+
+       Zero wasted requests while the tab is in the background;
+       no server-side changes required.
+    ──────────────────────────────────────────────────────────────────── */
+    function scheduleRefresh() {
+      clearTimeout(refreshTimer);
+      if (!document.hidden) {
+        refreshTimer = setTimeout(function() {
+          loadActive().then(scheduleRefresh);
+        }, POLL_INTERVAL);
+      }
+    }
+
+    document.addEventListener('visibilitychange', function() {
+      if (document.hidden) {
+        clearTimeout(refreshTimer);
+      } else {
+        loadActive().then(scheduleRefresh);
+      }
+    });
+
+    loadActive().then(scheduleRefresh);
     loadArchived();
-    setInterval(loadActive, 30000);
   </script>
 
 </body>
