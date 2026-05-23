@@ -1,0 +1,169 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>LCOV - SegnalaCity — Coverage Report - segnalazioni_urbane/route_handler.c</title>
+  <link rel="stylesheet" type="text/css" href="../gcov.css">
+</head>
+
+<body>
+
+          <table width="100%" border=0 cellspacing=0 cellpadding=0>
+            <tr><td class="title">LCOV - code coverage report</td></tr>
+            <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+
+            <tr>
+              <td width="100%">
+                <table cellpadding=1 border=0 width="100%">
+          <tr>
+            <td width="10%" class="headerItem">Current view:</td>
+            <td width="10%" class="headerValue"><a href="../index.html" title="Click to go to top-level">top level</a> - <a href="index.html" title="Click to go to directory segnalazioni_urbane">segnalazioni_urbane</a> - route_handler.c<span style="font-size: 80%;"> (source / <a href="route_handler.c.func-c.html" title="Click to go to function table">functions</a>)</span></td>
+            <td width="5%"></td>
+            <td width="5%"></td>
+            <td width="5%" class="headerCovTableHead">Coverage</td>
+            <td width="5%" class="headerCovTableHead" title="Covered + Uncovered code">Total</td>
+            <td width="5%" class="headerCovTableHead" title="Exercised code only">Hit</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test:</td>
+            <td class="headerValue">SegnalaCity — Coverage Report</td>
+            <td></td>
+            <td class="headerItem">Lines:</td>
+            <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
+            <td class="headerCovTableEntry">16</td>
+            <td class="headerCovTableEntry">16</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test Date:</td>
+            <td class="headerValue">2026-05-23 12:29:43</td>
+            <td></td>
+            <td class="headerItem">Functions:</td>
+            <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
+            <td class="headerCovTableEntry">1</td>
+            <td class="headerCovTableEntry">1</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Legend:</td>
+            <td class="headerValueLeg">            Lines:&nbsp&nbsp&nbsp&nbsp
+            <span class="coverLegendCov">hit</span>
+            <span class="coverLegendNoCov">not hit</span>
+            <br>Branches:
+            <span class="coverLegendCov">+</span> taken
+            <span class="coverLegendNoCov">-</span> not taken
+            <span class="coverLegendNoCov">#</span> not executed
+</td>
+            <td></td>
+            <td class="headerItem">Branches:</td>
+            <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
+            <td class="headerCovTableEntry">8</td>
+            <td class="headerCovTableEntry">8</td>
+          </tr>
+                  <tr><td><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+                </table>
+              </td>
+            </tr>
+
+            <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+          </table>
+
+          <table cellpadding=0 cellspacing=0 border=0>
+            <tr>
+              <td><br></td>
+            </tr>
+            <tr>
+              <td>
+<pre class="sourceHeading">             Branch data     Line data    Source code</pre>
+<pre class="source">
+<span id="L1"><span class="lineNum">       1</span>                 :             : /**</span>
+<span id="L2"><span class="lineNum">       2</span>                 :             :  * @file route_handler.c</span>
+<span id="L3"><span class="lineNum">       3</span>                 :             :  * @brief Dispatch table and handle_request() entry point.</span>
+<span id="L4"><span class="lineNum">       4</span>                 :             :  *</span>
+<span id="L5"><span class="lineNum">       5</span>                 :             :  * This file contains only the routing logic: a static table that maps</span>
+<span id="L6"><span class="lineNum">       6</span>                 :             :  * (method, path) pairs to handler functions, and handle_request() which</span>
+<span id="L7"><span class="lineNum">       7</span>                 :             :  * walks it. All business logic lives in route_pages.c and route_api.c.</span>
+<span id="L8"><span class="lineNum">       8</span>                 :             :  */</span>
+<span id="L9"><span class="lineNum">       9</span>                 :             : </span>
+<span id="L10"><span class="lineNum">      10</span>                 :             : #include &quot;route_handler.h&quot;</span>
+<span id="L11"><span class="lineNum">      11</span>                 :             : #include &quot;route_pages.h&quot;</span>
+<span id="L12"><span class="lineNum">      12</span>                 :             : #include &quot;route_api.h&quot;</span>
+<span id="L13"><span class="lineNum">      13</span>                 :             : #include &quot;route_helpers.h&quot;</span>
+<span id="L14"><span class="lineNum">      14</span>                 :             : #include &lt;string.h&gt;</span>
+<span id="L15"><span class="lineNum">      15</span>                 :             : #include &lt;stdio.h&gt;</span>
+<span id="L16"><span class="lineNum">      16</span>                 :             : </span>
+<span id="L17"><span class="lineNum">      17</span>                 :             : #define NUM_ROUTES (sizeof(routes) / sizeof(routes[0]))</span>
+<span id="L18"><span class="lineNum">      18</span>                 :             : /* ── Dispatch table ──────────────────────────────────────────────────── */</span>
+<span id="L19"><span class="lineNum">      19</span>                 :             : </span>
+<span id="L20"><span class="lineNum">      20</span>                 :             : // Each entry maps an exact (method, path) pair to a handler function.</span>
+<span id="L21"><span class="lineNum">      21</span>                 :             : // Order does not affect correctness but placing frequent routes first</span>
+<span id="L22"><span class="lineNum">      22</span>                 :             : // reduces the average number of comparisons per request.</span>
+<span id="L23"><span class="lineNum">      23</span>                 :             : static const Route routes[] = {</span>
+<span id="L24"><span class="lineNum">      24</span>                 :             :     { .method = &quot;GET&quot;,  .path = &quot;/&quot;,                     .handler = route_get_root             },</span>
+<span id="L25"><span class="lineNum">      25</span>                 :             :     { .method = &quot;GET&quot;,  .path = &quot;/home&quot;,                 .handler = route_get_home             },</span>
+<span id="L26"><span class="lineNum">      26</span>                 :             :     { .method = &quot;GET&quot;,  .path = &quot;/register&quot;,             .handler = route_get_register         },</span>
+<span id="L27"><span class="lineNum">      27</span>                 :             :     { .method = &quot;GET&quot;,  .path = &quot;/submit&quot;,               .handler = route_get_submit           },</span>
+<span id="L28"><span class="lineNum">      28</span>                 :             :     { .method = &quot;GET&quot;,  .path = &quot;/logout&quot;,               .handler = route_get_logout           },</span>
+<span id="L29"><span class="lineNum">      29</span>                 :             :     { .method = &quot;POST&quot;, .path = &quot;/login&quot;,                .handler = route_post_login           },</span>
+<span id="L30"><span class="lineNum">      30</span>                 :             :     { .method = &quot;POST&quot;, .path = &quot;/register&quot;,             .handler = route_post_register        },</span>
+<span id="L31"><span class="lineNum">      31</span>                 :             :     { .method = &quot;POST&quot;, .path = &quot;/submit&quot;,               .handler = route_post_submit          },</span>
+<span id="L32"><span class="lineNum">      32</span>                 :             :     { .method = &quot;GET&quot;,  .path = &quot;/api/cities&quot;,           .handler = route_api_cities           },</span>
+<span id="L33"><span class="lineNum">      33</span>                 :             :     { .method = &quot;GET&quot;,  .path = &quot;/api/reports/active&quot;,   .handler = route_api_reports_active   },</span>
+<span id="L34"><span class="lineNum">      34</span>                 :             :     { .method = &quot;GET&quot;,  .path = &quot;/api/reports/archived&quot;, .handler = route_api_reports_archived },</span>
+<span id="L35"><span class="lineNum">      35</span>                 :             :     { .method = &quot;GET&quot;,  .path = &quot;/api/reports/all&quot;,      .handler = route_api_reports_all      },</span>
+<span id="L36"><span class="lineNum">      36</span>                 :             :     { .method = &quot;GET&quot;,  .path = &quot;/api/operators&quot;,        .handler = route_api_operators        },</span>
+<span id="L37"><span class="lineNum">      37</span>                 :             :     { .method = &quot;POST&quot;, .path = &quot;/api/report/status&quot;,    .handler = route_api_report_status    },</span>
+<span id="L38"><span class="lineNum">      38</span>                 :             :     { .method = &quot;POST&quot;, .path = &quot;/api/report/respond&quot;,   .handler = route_api_report_respond   },</span>
+<span id="L39"><span class="lineNum">      39</span>                 :             :     { .method = &quot;POST&quot;, .path = &quot;/api/report/feedback&quot;,  .handler = route_api_report_feedback  },</span>
+<span id="L40"><span class="lineNum">      40</span>                 :             :     { .method = &quot;POST&quot;, .path = &quot;/api/admin/assign&quot;,     .handler = route_api_admin_assign     },</span>
+<span id="L41"><span class="lineNum">      41</span>                 :             :     { .method = &quot;GET&quot;,  .path = &quot;/static/common.css&quot;,    .handler = route_static_css           }</span>
+<span id="L42"><span class="lineNum">      42</span>                 :             : };</span>
+<span id="L43"><span class="lineNum">      43</span>                 :             : </span>
+<span id="L44"><span class="lineNum">      44</span>                 :             : // static const size_t NUM_ROUTES = sizeof(routes) / sizeof(routes[0]);</span>
+<span id="L45"><span class="lineNum">      45</span>                 :             : </span>
+<span id="L46"><span class="lineNum">      46</span>                 :             : /* ── Public API ──────────────────────────────────────────────────────── */</span>
+<span id="L47"><span class="lineNum">      47</span>                 :             : </span>
+<span id="L48"><span class="lineNum">      48</span>                 :<span class="tlaGNC">         130 : void handle_request(const HttpRequest *req, HttpResponse *resp) {</span></span>
+<span id="L49"><span class="lineNum">      49</span>                 :             :     // Two-phase matching: check path first, then method.</span>
+<span id="L50"><span class="lineNum">      50</span>                 :             :     // This ensures a POST to a GET-only route returns 405, not 404.</span>
+<span id="L51"><span class="lineNum">      51</span>                 :<span class="tlaGNC">         130 :     bool pathFound = false;</span></span>
+<span id="L52"><span class="lineNum">      52</span>                 :             : </span>
+<span id="L53"><span class="lineNum">      53</span>         [<span class="tlaGBC" title="Branch 0 was taken 1535 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 10 times"> + </span>]:<span class="tlaGNC">        1545 :     for (size_t i = 0; i &lt; NUM_ROUTES; i++) {</span></span>
+<span id="L54"><span class="lineNum">      54</span>         [<span class="tlaGBC" title="Branch 0 was taken 1389 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 146 times"> + </span>]:<span class="tlaGNC">        1535 :         if (!http_is_request_path(req, routes[i].path)) continue;</span></span>
+<span id="L55"><span class="lineNum">      55</span>                 :<span class="tlaGNC">         146 :         pathFound = true;</span></span>
+<span id="L56"><span class="lineNum">      56</span>         [<span class="tlaGBC" title="Branch 0 was taken 120 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 26 times"> + </span>]:<span class="tlaGNC">         146 :         if (http_is_request_method(req, routes[i].method)) {</span></span>
+<span id="L57"><span class="lineNum">      57</span>                 :<span class="tlaGNC">         120 :             routes[i].handler(req, resp);</span></span>
+<span id="L58"><span class="lineNum">      58</span>                 :<span class="tlaGNC">         120 :             return;</span></span>
+<span id="L59"><span class="lineNum">      59</span>                 :             :         }</span>
+<span id="L60"><span class="lineNum">      60</span>                 :             :     }</span>
+<span id="L61"><span class="lineNum">      61</span>                 :             : </span>
+<span id="L62"><span class="lineNum">      62</span>         [<span class="tlaGBC" title="Branch 0 was taken 9 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">          10 :     if (pathFound) {</span></span>
+<span id="L63"><span class="lineNum">      63</span>                 :             :         // Path exists but the method is not registered for it.</span>
+<span id="L64"><span class="lineNum">      64</span>                 :<span class="tlaGNC">           9 :         resp_html_error(resp, 405, &quot;405 Method Not Allowed&quot;);</span></span>
+<span id="L65"><span class="lineNum">      65</span>                 :             :     } else {</span>
+<span id="L66"><span class="lineNum">      66</span>                 :             :         // Copy the path into a NUL-terminated buffer for the error message,</span>
+<span id="L67"><span class="lineNum">      67</span>                 :             :         // clamping to URL_BUFFER_SIZE to prevent overrun.</span>
+<span id="L68"><span class="lineNum">      68</span>                 :             :         char path[URL_BUFFER_SIZE + 1];</span>
+<span id="L69"><span class="lineNum">      69</span>                 :<span class="tlaGNC">           1 :         size_t n = req-&gt;pathLen &lt; URL_BUFFER_SIZE ? req-&gt;pathLen : URL_BUFFER_SIZE;</span></span>
+<span id="L70"><span class="lineNum">      70</span>                 :<span class="tlaGNC">           1 :         memcpy(path, req-&gt;path, n);</span></span>
+<span id="L71"><span class="lineNum">      71</span>                 :<span class="tlaGNC">           1 :         path[n] = '\0';</span></span>
+<span id="L72"><span class="lineNum">      72</span>                 :<span class="tlaGNC">           1 :         snprintf(resp-&gt;body, RESPONSE_BUFFER_SIZE,</span></span>
+<span id="L73"><span class="lineNum">      73</span>                 :             :                  &quot;&lt;h1&gt;404 Not Found&lt;/h1&gt;&lt;p&gt;&lt;code&gt;%s&lt;/code&gt; does not exist.&lt;/p&gt;&quot;, path);</span>
+<span id="L74"><span class="lineNum">      74</span>                 :<span class="tlaGNC">           1 :         resp-&gt;statusCode = 404;</span></span>
+<span id="L75"><span class="lineNum">      75</span>                 :<span class="tlaGNC">           1 :         resp-&gt;bodyLen = strlen(resp-&gt;body);</span></span>
+<span id="L76"><span class="lineNum">      76</span>                 :             :     }</span>
+<span id="L77"><span class="lineNum">      77</span>                 :             : }</span>
+        </pre>
+              </td>
+            </tr>
+          </table>
+          <br>
+
+          <table width="100%" border=0 cellspacing=0 cellpadding=0>
+            <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+            <tr><td class="versionInfo">Generated by: <a href="https://github.com//linux-test-project/lcov" target="_parent">LCOV version 2.0-1</a></td></tr>
+          </table>
+          <br>
+
+</body>
+</html>

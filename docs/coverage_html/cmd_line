@@ -1,0 +1,1 @@
+genhtml coverage_filtered.info --output-directory coverage_html --title 'SegnalaCity — Coverage Report' --legend --branch-coverage --rc branch_coverage=1 --quiet

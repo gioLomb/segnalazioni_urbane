@@ -1,0 +1,578 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>LCOV - SegnalaCity — Coverage Report - segnalazioni_urbane/report.c</title>
+  <link rel="stylesheet" type="text/css" href="../gcov.css">
+</head>
+
+<body>
+
+          <table width="100%" border=0 cellspacing=0 cellpadding=0>
+            <tr><td class="title">LCOV - code coverage report</td></tr>
+            <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+
+            <tr>
+              <td width="100%">
+                <table cellpadding=1 border=0 width="100%">
+          <tr>
+            <td width="10%" class="headerItem">Current view:</td>
+            <td width="10%" class="headerValue"><a href="../index.html" title="Click to go to top-level">top level</a> - <a href="index.html" title="Click to go to directory segnalazioni_urbane">segnalazioni_urbane</a> - report.c<span style="font-size: 80%;"> (source / <a href="report.c.func-c.html" title="Click to go to function table">functions</a>)</span></td>
+            <td width="5%"></td>
+            <td width="5%"></td>
+            <td width="5%" class="headerCovTableHead">Coverage</td>
+            <td width="5%" class="headerCovTableHead" title="Covered + Uncovered code">Total</td>
+            <td width="5%" class="headerCovTableHead" title="Exercised code only">Hit</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test:</td>
+            <td class="headerValue">SegnalaCity — Coverage Report</td>
+            <td></td>
+            <td class="headerItem">Lines:</td>
+            <td class="headerCovTableEntryMed">83.0&nbsp;%</td>
+            <td class="headerCovTableEntry">200</td>
+            <td class="headerCovTableEntry">166</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test Date:</td>
+            <td class="headerValue">2026-05-23 12:29:43</td>
+            <td></td>
+            <td class="headerItem">Functions:</td>
+            <td class="headerCovTableEntryMed">89.5&nbsp;%</td>
+            <td class="headerCovTableEntry">19</td>
+            <td class="headerCovTableEntry">17</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Legend:</td>
+            <td class="headerValueLeg">            Lines:&nbsp&nbsp&nbsp&nbsp
+            <span class="coverLegendCov">hit</span>
+            <span class="coverLegendNoCov">not hit</span>
+            <br>Branches:
+            <span class="coverLegendCov">+</span> taken
+            <span class="coverLegendNoCov">-</span> not taken
+            <span class="coverLegendNoCov">#</span> not executed
+</td>
+            <td></td>
+            <td class="headerItem">Branches:</td>
+            <td class="headerCovTableEntryLo">56.1&nbsp;%</td>
+            <td class="headerCovTableEntry">132</td>
+            <td class="headerCovTableEntry">74</td>
+          </tr>
+                  <tr><td><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+                </table>
+              </td>
+            </tr>
+
+            <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+          </table>
+
+          <table cellpadding=0 cellspacing=0 border=0>
+            <tr>
+              <td><br></td>
+            </tr>
+            <tr>
+              <td>
+<pre class="sourceHeading">             Branch data     Line data    Source code</pre>
+<pre class="source">
+<span id="L1"><span class="lineNum">       1</span>                 :             : #include &quot;report.h&quot;</span>
+<span id="L2"><span class="lineNum">       2</span>                 :             : #include &quot;db.h&quot;</span>
+<span id="L3"><span class="lineNum">       3</span>                 :             : #include &lt;cjson/cJSON.h&gt;</span>
+<span id="L4"><span class="lineNum">       4</span>                 :             : #include &lt;stdlib.h&gt;</span>
+<span id="L5"><span class="lineNum">       5</span>                 :             : #include &lt;string.h&gt;</span>
+<span id="L6"><span class="lineNum">       6</span>                 :             : #include &lt;time.h&gt;</span>
+<span id="L7"><span class="lineNum">       7</span>                 :             : #include &quot;http_types.h&quot;</span>
+<span id="L8"><span class="lineNum">       8</span>                 :             : #include &lt;stdio.h&gt;</span>
+<span id="L9"><span class="lineNum">       9</span>                 :             : </span>
+<span id="L10"><span class="lineNum">      10</span>                 :             : #define CACHE_TTL_SECONDS 5</span>
+<span id="L11"><span class="lineNum">      11</span>                 :             : #define CACHE_MAX_ENTRIES 32</span>
+<span id="L12"><span class="lineNum">      12</span>                 :             : </span>
+<span id="L13"><span class="lineNum">      13</span>                 :             : // Results larger than this threshold are not cached but are still served</span>
+<span id="L14"><span class="lineNum">      14</span>                 :             : // from the query — no artificial cap on returned data.</span>
+<span id="L15"><span class="lineNum">      15</span>                 :             : // ~16 KB covers ~15 worst-case reports (full unicode description); normal</span>
+<span id="L16"><span class="lineNum">      16</span>                 :             : // users always fit, users with many reports silently bypass the cache.</span>
+<span id="L17"><span class="lineNum">      17</span>                 :             : // Total footprint: 32 × 16 KB = 512 KB (vs 32 × 256 KB = 8 MB before).</span>
+<span id="L18"><span class="lineNum">      18</span>                 :             : #define CACHE_JSON_MAX (16 * 1024)</span>
+<span id="L19"><span class="lineNum">      19</span>                 :             : </span>
+<span id="L20"><span class="lineNum">      20</span>                 :             : // Internal cache entry: keyed on (city, userId, isOperator, isArchived).</span>
+<span id="L21"><span class="lineNum">      21</span>                 :             : typedef struct {</span>
+<span id="L22"><span class="lineNum">      22</span>                 :             :     char     city[CITY_LEN];</span>
+<span id="L23"><span class="lineNum">      23</span>                 :             :     uint64_t userId;</span>
+<span id="L24"><span class="lineNum">      24</span>                 :             :     bool     isOperator;</span>
+<span id="L25"><span class="lineNum">      25</span>                 :             :     bool     isArchived;</span>
+<span id="L26"><span class="lineNum">      26</span>                 :             :     time_t   cachedAt;   // Unix timestamp of insertion; 0 means slot is free</span>
+<span id="L27"><span class="lineNum">      27</span>                 :             :     size_t   jsonLen;    // Length of json[], excluding the NUL terminator</span>
+<span id="L28"><span class="lineNum">      28</span>                 :             :     char     json[CACHE_JSON_MAX];</span>
+<span id="L29"><span class="lineNum">      29</span>                 :             : } CacheEntry;</span>
+<span id="L30"><span class="lineNum">      30</span>                 :             : </span>
+<span id="L31"><span class="lineNum">      31</span>                 :             : // Declared at file scope so it is zero-initialised by the C runtime:</span>
+<span id="L32"><span class="lineNum">      32</span>                 :             : // every cachedAt starts at 0, meaning all slots are initially free.</span>
+<span id="L33"><span class="lineNum">      33</span>                 :             : static CacheEntry g_cache[CACHE_MAX_ENTRIES];</span>
+<span id="L34"><span class="lineNum">      34</span>                 :             : </span>
+<span id="L35"><span class="lineNum">      35</span>                 :             : /* ── Column order used in every SELECT ────────────────────────────────── */</span>
+<span id="L36"><span class="lineNum">      36</span>                 :             : </span>
+<span id="L37"><span class="lineNum">      37</span>                 :             : // Single source of truth for the SELECT column list.</span>
+<span id="L38"><span class="lineNum">      38</span>                 :             : // ReportCol enum values index into this order, so adding a column here</span>
+<span id="L39"><span class="lineNum">      39</span>                 :             : // requires a matching entry in the enum and in cursor_to_report().</span>
+<span id="L40"><span class="lineNum">      40</span>                 :             : #define SELECT_COLS \</span>
+<span id="L41"><span class="lineNum">      41</span>                 :             :     &quot;id, author_id, assigned_to, lat, lon, city, category, description, &quot; \</span>
+<span id="L42"><span class="lineNum">      42</span>                 :             :     &quot;status, created_at, assigned_at, resolved_at, feedback&quot;</span>
+<span id="L43"><span class="lineNum">      43</span>                 :             : </span>
+<span id="L44"><span class="lineNum">      44</span>                 :             : /* ── Setup ───────────────────────────────────────────────────────────── */</span>
+<span id="L45"><span class="lineNum">      45</span>                 :             : </span>
+<span id="L46"><span class="lineNum">      46</span>                 :<span class="tlaGNC">           1 : int report_setup_table(void) {</span></span>
+<span id="L47"><span class="lineNum">      47</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">           1 :     if (unlikely(db_exec(</span></span>
+<span id="L48"><span class="lineNum">      48</span>                 :             :             &quot;CREATE TABLE IF NOT EXISTS reports (&quot;</span>
+<span id="L49"><span class="lineNum">      49</span>                 :             :             &quot;  id          INTEGER PRIMARY KEY AUTOINCREMENT,&quot;</span>
+<span id="L50"><span class="lineNum">      50</span>                 :             :             &quot;  author_id   INTEGER NOT NULL,&quot;</span>
+<span id="L51"><span class="lineNum">      51</span>                 :             :             &quot;  assigned_to INTEGER,&quot;          // NULL until assigned</span>
+<span id="L52"><span class="lineNum">      52</span>                 :             :             &quot;  lat         REAL    NOT NULL DEFAULT 0,&quot;</span>
+<span id="L53"><span class="lineNum">      53</span>                 :             :             &quot;  lon         REAL    NOT NULL DEFAULT 0,&quot;</span>
+<span id="L54"><span class="lineNum">      54</span>                 :             :             &quot;  city        TEXT    NOT NULL DEFAULT '',&quot;</span>
+<span id="L55"><span class="lineNum">      55</span>                 :             :             &quot;  category    TEXT    NOT NULL DEFAULT '',&quot;</span>
+<span id="L56"><span class="lineNum">      56</span>                 :             :             &quot;  description TEXT    NOT NULL,&quot;</span>
+<span id="L57"><span class="lineNum">      57</span>                 :             :             &quot;  status      INTEGER NOT NULL DEFAULT 0,&quot;</span>
+<span id="L58"><span class="lineNum">      58</span>                 :             :             &quot;  created_at  INTEGER NOT NULL,&quot;</span>
+<span id="L59"><span class="lineNum">      59</span>                 :             :             &quot;  assigned_at INTEGER,&quot;          // NULL until assigned</span>
+<span id="L60"><span class="lineNum">      60</span>                 :             :             &quot;  resolved_at INTEGER,&quot;          // NULL until resolved</span>
+<span id="L61"><span class="lineNum">      61</span>                 :             :             &quot;  feedback    INTEGER&quot;           // NULL until citizen rates (1-5)</span>
+<span id="L62"><span class="lineNum">      62</span>                 :             :             &quot;);&quot;, NULL) != 0))</span>
+<span id="L63"><span class="lineNum">      63</span>                 :<span class="tlaUNC">           0 :         return -1;</span></span>
+<span id="L64"><span class="lineNum">      64</span>                 :             : </span>
+<span id="L65"><span class="lineNum">      65</span>                 :             : </span>
+<span id="L66"><span class="lineNum">      66</span>                 :             :     // Separate indexes on author, city and status cover the three main</span>
+<span id="L67"><span class="lineNum">      67</span>                 :             :     // query shapes: per-user, per-city (admin) and per-status (operator).</span>
+<span id="L68"><span class="lineNum">      68</span>                 :<span class="tlaGNC">           1 :     db_exec(&quot;CREATE INDEX IF NOT EXISTS idx_reports_author ON reports(author_id);&quot;, NULL);</span></span>
+<span id="L69"><span class="lineNum">      69</span>                 :<span class="tlaGNC">           1 :     db_exec(&quot;CREATE INDEX IF NOT EXISTS idx_reports_city ON reports(city);&quot;, NULL);</span></span>
+<span id="L70"><span class="lineNum">      70</span>                 :<span class="tlaGNC">           1 :     db_exec(&quot;CREATE INDEX IF NOT EXISTS idx_reports_status ON reports(status);&quot;, NULL);</span></span>
+<span id="L71"><span class="lineNum">      71</span>                 :<span class="tlaGNC">           1 :     return 0;</span></span>
+<span id="L72"><span class="lineNum">      72</span>                 :             : }</span>
+<span id="L73"><span class="lineNum">      73</span>                 :             : </span>
+<span id="L74"><span class="lineNum">      74</span>                 :             : /* ── Row mapper ──────────────────────────────────────────────────────── */</span>
+<span id="L75"><span class="lineNum">      75</span>                 :             : </span>
+<span id="L76"><span class="lineNum">      76</span>                 :             : // Maps the current cursor row to an Report using the fixed SELECT_COLS order.</span>
+<span id="L77"><span class="lineNum">      77</span>                 :<span class="tlaGNC">          55 : static void cursor_to_report(DbCursor *c, Report *r) {</span></span>
+<span id="L78"><span class="lineNum">      78</span>                 :             :     // Zero the struct first so unused padding bytes and any skipped fields</span>
+<span id="L79"><span class="lineNum">      79</span>                 :             :     // don't contain garbage from the slab allocator.</span>
+<span id="L80"><span class="lineNum">      80</span>                 :<span class="tlaGNC">          55 :     memset(r, 0, sizeof(*r));</span></span>
+<span id="L81"><span class="lineNum">      81</span>                 :             : </span>
+<span id="L82"><span class="lineNum">      82</span>                 :<span class="tlaGNC">          55 :     r-&gt;reportId = (uint64_t)db_cursor_int64(c, REP_COL_ID);</span></span>
+<span id="L83"><span class="lineNum">      83</span>                 :<span class="tlaGNC">          55 :     r-&gt;authorId = (uint64_t)db_cursor_int64(c, REP_COL_AUTHOR_ID);</span></span>
+<span id="L84"><span class="lineNum">      84</span>                 :<span class="tlaGNC">          55 :     r-&gt;assignedTo = (uint64_t)db_cursor_int64(c, REP_COL_ASSIGNED_TO);</span></span>
+<span id="L85"><span class="lineNum">      85</span>                 :<span class="tlaGNC">          55 :     r-&gt;lat = db_cursor_double(c, REP_COL_LAT);</span></span>
+<span id="L86"><span class="lineNum">      86</span>                 :<span class="tlaGNC">          55 :     r-&gt;lon = db_cursor_double(c, REP_COL_LON);</span></span>
+<span id="L87"><span class="lineNum">      87</span>                 :             : </span>
+<span id="L88"><span class="lineNum">      88</span>                 :             :     // strncpy with (LEN - 1) ensures the buffer is never overrun;</span>
+<span id="L89"><span class="lineNum">      89</span>                 :             :     // the memset above already zeroed the last byte, so NUL termination</span>
+<span id="L90"><span class="lineNum">      90</span>                 :             :     // is guaranteed even if the source string fills the buffer exactly.</span>
+<span id="L91"><span class="lineNum">      91</span>                 :<span class="tlaGNC">          55 :     strncpy(r-&gt;city,        db_cursor_text(c, REP_COL_CITY),        CITY_LEN - 1);</span></span>
+<span id="L92"><span class="lineNum">      92</span>                 :<span class="tlaGNC">          55 :     strncpy(r-&gt;category,    db_cursor_text(c, REP_COL_CATEGORY),    CAT_LEN - 1);</span></span>
+<span id="L93"><span class="lineNum">      93</span>                 :<span class="tlaGNC">          55 :     strncpy(r-&gt;description, db_cursor_text(c, REP_COL_DESCRIPTION), DESC_LEN - 1);</span></span>
+<span id="L94"><span class="lineNum">      94</span>                 :             : </span>
+<span id="L95"><span class="lineNum">      95</span>                 :<span class="tlaGNC">          55 :     r-&gt;status = (ReportStatus)db_cursor_int64(c, REP_COL_STATUS);</span></span>
+<span id="L96"><span class="lineNum">      96</span>                 :<span class="tlaGNC">          55 :     r-&gt;createdAt = (time_t)db_cursor_int64(c, REP_COL_CREATED_AT);</span></span>
+<span id="L97"><span class="lineNum">      97</span>                 :<span class="tlaGNC">          55 :     r-&gt;assignedAt = (time_t)db_cursor_int64(c, REP_COL_ASSIGNED_AT);</span></span>
+<span id="L98"><span class="lineNum">      98</span>                 :<span class="tlaGNC">          55 :     r-&gt;resolvedAt = (time_t)db_cursor_int64(c, REP_COL_RESOLVED_AT);</span></span>
+<span id="L99"><span class="lineNum">      99</span>                 :<span class="tlaGNC">          55 :     r-&gt;feedback   = (int)db_cursor_int64(c, REP_COL_FEEDBACK);</span></span>
+<span id="L100"><span class="lineNum">     100</span>                 :<span class="tlaGNC">          55 : }</span></span>
+<span id="L101"><span class="lineNum">     101</span>                 :             : </span>
+<span id="L102"><span class="lineNum">     102</span>                 :             : /* ── JSON builder ────────────────────────────────────────────────────── */</span>
+<span id="L103"><span class="lineNum">     103</span>                 :             : </span>
+<span id="L104"><span class="lineNum">     104</span>                 :             : // Converts a single Report to a cJSON object. Caller owns the result.</span>
+<span id="L105"><span class="lineNum">     105</span>                 :<span class="tlaGNC">          13 : static cJSON *report_to_cjson(const Report *r) {</span></span>
+<span id="L106"><span class="lineNum">     106</span>                 :<span class="tlaGNC">          13 :     cJSON *obj = cJSON_CreateObject();</span></span>
+<span id="L107"><span class="lineNum">     107</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 13 times"> + </span>]:<span class="tlaGNC">          13 :     if (unlikely(!obj)) return NULL;</span></span>
+<span id="L108"><span class="lineNum">     108</span>                 :             : </span>
+<span id="L109"><span class="lineNum">     109</span>                 :             :     // IDs are uint64_t but JSON numbers are doubles; values stay exact</span>
+<span id="L110"><span class="lineNum">     110</span>                 :             :     // up to 2^53, which is well beyond any realistic row count.</span>
+<span id="L111"><span class="lineNum">     111</span>                 :<span class="tlaGNC">          13 :     cJSON_AddNumberToObject(obj, &quot;id&quot;,          (double)r-&gt;reportId);</span></span>
+<span id="L112"><span class="lineNum">     112</span>                 :<span class="tlaGNC">          13 :     cJSON_AddNumberToObject(obj, &quot;author_id&quot;,   (double)r-&gt;authorId);</span></span>
+<span id="L113"><span class="lineNum">     113</span>                 :<span class="tlaGNC">          13 :     cJSON_AddNumberToObject(obj, &quot;assigned_to&quot;, (double)r-&gt;assignedTo);</span></span>
+<span id="L114"><span class="lineNum">     114</span>                 :<span class="tlaGNC">          13 :     cJSON_AddNumberToObject(obj, &quot;lat&quot;,         r-&gt;lat);</span></span>
+<span id="L115"><span class="lineNum">     115</span>                 :<span class="tlaGNC">          13 :     cJSON_AddNumberToObject(obj, &quot;lon&quot;,         r-&gt;lon);</span></span>
+<span id="L116"><span class="lineNum">     116</span>                 :<span class="tlaGNC">          13 :     cJSON_AddStringToObject(obj, &quot;city&quot;,        r-&gt;city);</span></span>
+<span id="L117"><span class="lineNum">     117</span>                 :<span class="tlaGNC">          13 :     cJSON_AddStringToObject(obj, &quot;category&quot;,    r-&gt;category);</span></span>
+<span id="L118"><span class="lineNum">     118</span>                 :<span class="tlaGNC">          13 :     cJSON_AddStringToObject(obj, &quot;description&quot;, r-&gt;description);</span></span>
+<span id="L119"><span class="lineNum">     119</span>                 :<span class="tlaGNC">          13 :     cJSON_AddNumberToObject(obj, &quot;status&quot;,      (double)r-&gt;status);</span></span>
+<span id="L120"><span class="lineNum">     120</span>                 :             :     // Timestamps are stored and sent as Unix epoch integers.</span>
+<span id="L121"><span class="lineNum">     121</span>                 :<span class="tlaGNC">          13 :     cJSON_AddNumberToObject(obj, &quot;created_at&quot;,  (double)r-&gt;createdAt);</span></span>
+<span id="L122"><span class="lineNum">     122</span>                 :<span class="tlaGNC">          13 :     cJSON_AddNumberToObject(obj, &quot;assigned_at&quot;, (double)r-&gt;assignedAt);</span></span>
+<span id="L123"><span class="lineNum">     123</span>                 :<span class="tlaGNC">          13 :     cJSON_AddNumberToObject(obj, &quot;resolved_at&quot;, (double)r-&gt;resolvedAt);</span></span>
+<span id="L124"><span class="lineNum">     124</span>                 :             :     // feedback: 0 means not yet rated; values 1-5 are citizen star ratings.</span>
+<span id="L125"><span class="lineNum">     125</span>                 :<span class="tlaGNC">          13 :     cJSON_AddNumberToObject(obj, &quot;feedback&quot;,    (double)r-&gt;feedback);</span></span>
+<span id="L126"><span class="lineNum">     126</span>                 :             : </span>
+<span id="L127"><span class="lineNum">     127</span>                 :<span class="tlaGNC">          13 :     return obj;</span></span>
+<span id="L128"><span class="lineNum">     128</span>                 :             : }</span>
+<span id="L129"><span class="lineNum">     129</span>                 :             : </span>
+<span id="L130"><span class="lineNum">     130</span>                 :             : // Drains the cursor into a JSON array, prints it into buf and closes the cursor.</span>
+<span id="L131"><span class="lineNum">     131</span>                 :             : // Returns the number of bytes written, or 0 on error.</span>
+<span id="L132"><span class="lineNum">     132</span>                 :<span class="tlaGNC">           8 : static size_t cursor_to_json_array(DbCursor *c, char *buf, size_t max) {</span></span>
+<span id="L133"><span class="lineNum">     133</span>                 :<span class="tlaGNC">           8 :     cJSON *array = cJSON_CreateArray();</span></span>
+<span id="L134"><span class="lineNum">     134</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 8 times"> + </span>]:<span class="tlaGNC">           8 :     if (unlikely(!array)) {</span></span>
+<span id="L135"><span class="lineNum">     135</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         if (max &gt; 0) buf[0] = '\0';</span></span>
+<span id="L136"><span class="lineNum">     136</span>                 :<span class="tlaUNC">           0 :         return 0;</span></span>
+<span id="L137"><span class="lineNum">     137</span>                 :             :     }</span>
+<span id="L138"><span class="lineNum">     138</span>                 :             : </span>
+<span id="L139"><span class="lineNum">     139</span>         [<span class="tlaGBC" title="Branch 0 was taken 7 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 8 times"> + </span>]:<span class="tlaGNC">          15 :     while (db_cursor_next(c)) {</span></span>
+<span id="L140"><span class="lineNum">     140</span>                 :             :         Report r;</span>
+<span id="L141"><span class="lineNum">     141</span>                 :<span class="tlaGNC">           7 :         cursor_to_report(c, &amp;r);</span></span>
+<span id="L142"><span class="lineNum">     142</span>                 :<span class="tlaGNC">           7 :         cJSON_AddItemToArray(array, report_to_cjson(&amp;r));</span></span>
+<span id="L143"><span class="lineNum">     143</span>                 :             :     }</span>
+<span id="L144"><span class="lineNum">     144</span>                 :<span class="tlaGNC">           8 :     db_cursor_close(c);</span></span>
+<span id="L145"><span class="lineNum">     145</span>                 :             : </span>
+<span id="L146"><span class="lineNum">     146</span>                 :             :     // cJSON_PrintPreallocated writes directly into buf without a malloc;</span>
+<span id="L147"><span class="lineNum">     147</span>                 :             :     // it returns false if the output would exceed max bytes, in which case</span>
+<span id="L148"><span class="lineNum">     148</span>                 :             :     // buf is left in an indeterminate state — reset it to an empty string.</span>
+<span id="L149"><span class="lineNum">     149</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 8 times"> + </span>]:<span class="tlaGNC">           8 :     if (!cJSON_PrintPreallocated(array, buf, (int)max, false)) {</span></span>
+<span id="L150"><span class="lineNum">     150</span>                 :<span class="tlaUNC">           0 :         cJSON_Delete(array);</span></span>
+<span id="L151"><span class="lineNum">     151</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         if (max &gt; 0) buf[0] = '\0';</span></span>
+<span id="L152"><span class="lineNum">     152</span>                 :<span class="tlaUNC">           0 :         return 0;</span></span>
+<span id="L153"><span class="lineNum">     153</span>                 :             :     }</span>
+<span id="L154"><span class="lineNum">     154</span>                 :<span class="tlaGNC">           8 :     cJSON_Delete(array);</span></span>
+<span id="L155"><span class="lineNum">     155</span>                 :<span class="tlaGNC">           8 :     return strlen(buf);</span></span>
+<span id="L156"><span class="lineNum">     156</span>                 :             : }</span>
+<span id="L157"><span class="lineNum">     157</span>                 :             : </span>
+<span id="L158"><span class="lineNum">     158</span>                 :             : /* ── JSON cache ──────────────────────────────────────────────────────── */</span>
+<span id="L159"><span class="lineNum">     159</span>                 :             : </span>
+<span id="L160"><span class="lineNum">     160</span>                 :             : // Scans the cache for a valid, non-expired entry matching the given key.</span>
+<span id="L161"><span class="lineNum">     161</span>                 :             : // Evicts stale entries on the fly. Returns the slot index, or -1 on miss.</span>
+<span id="L162"><span class="lineNum">     162</span>                 :<span class="tlaGNC">           9 : static int cache_find(const char *city, uint64_t userId,</span></span>
+<span id="L163"><span class="lineNum">     163</span>                 :             :                       bool isOperator, bool isArchived) {</span>
+<span id="L164"><span class="lineNum">     164</span>                 :<span class="tlaGNC">           9 :     time_t now = time(NULL);</span></span>
+<span id="L165"><span class="lineNum">     165</span>         [<span class="tlaGBC" title="Branch 0 was taken 257 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 8 times"> + </span>]:<span class="tlaGNC">         265 :     for (int i = 0; i &lt; CACHE_MAX_ENTRIES; i++) {</span></span>
+<span id="L166"><span class="lineNum">     166</span>                 :<span class="tlaGNC">         257 :         CacheEntry *e = &amp;g_cache[i];</span></span>
+<span id="L167"><span class="lineNum">     167</span>         [<span class="tlaGBC" title="Branch 0 was taken 245 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 12 times"> + </span>]:<span class="tlaGNC">         257 :         if (!e-&gt;cachedAt) continue;  // Free slot, skip immediately</span></span>
+<span id="L168"><span class="lineNum">     168</span>                 :             : </span>
+<span id="L169"><span class="lineNum">     169</span>                 :             :         // Lazily evict expired entries encountered during a lookup</span>
+<span id="L170"><span class="lineNum">     170</span>                 :             :         // rather than running a separate sweep timer.</span>
+<span id="L171"><span class="lineNum">     171</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 12 times"> + </span>]:<span class="tlaGNC">          12 :         if (unlikely(now - e-&gt;cachedAt &gt; CACHE_TTL_SECONDS)) {</span></span>
+<span id="L172"><span class="lineNum">     172</span>                 :<span class="tlaUNC">           0 :             e-&gt;cachedAt = 0;</span></span>
+<span id="L173"><span class="lineNum">     173</span>                 :<span class="tlaUNC">           0 :             continue;</span></span>
+<span id="L174"><span class="lineNum">     174</span>                 :             :         }</span>
+<span id="L175"><span class="lineNum">     175</span>                 :             : </span>
+<span id="L176"><span class="lineNum">     176</span>                 :             :         // All four key components must match: role and archive flag</span>
+<span id="L177"><span class="lineNum">     177</span>                 :             :         // determine which SQL query was used, so they are part of the key.</span>
+<span id="L178"><span class="lineNum">     178</span>   [<span class="tlaGBC" title="Branch 0 was taken 6 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 6 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 3 times"> + </span>]:<span class="tlaGNC">          12 :         if (e-&gt;isOperator == isOperator &amp;&amp; e-&gt;isArchived == isArchived</span></span>
+<span id="L179"><span class="lineNum">     179</span>   [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaGBC" title="Branch 2 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 3 was taken 2 times"> + </span>]:<span class="tlaGNC">           3 :             &amp;&amp; strncmp(e-&gt;city, city, CITY_LEN) == 0 &amp;&amp; e-&gt;userId == userId)</span></span>
+<span id="L180"><span class="lineNum">     180</span>                 :<span class="tlaGNC">           1 :             return i;</span></span>
+<span id="L181"><span class="lineNum">     181</span>                 :             :     }</span>
+<span id="L182"><span class="lineNum">     182</span>                 :<span class="tlaGNC">           8 :     return -1;</span></span>
+<span id="L183"><span class="lineNum">     183</span>                 :             : }</span>
+<span id="L184"><span class="lineNum">     184</span>                 :             : </span>
+<span id="L185"><span class="lineNum">     185</span>                 :             : // Stores a JSON result in the cache. Silently skips results that exceed</span>
+<span id="L186"><span class="lineNum">     186</span>                 :             : // CACHE_JSON_MAX to avoid evicting useful entries with oversized payloads.</span>
+<span id="L187"><span class="lineNum">     187</span>                 :<span class="tlaGNC">           8 : static void cache_store(const char *city, uint64_t userId,</span></span>
+<span id="L188"><span class="lineNum">     188</span>                 :             :                         bool isOperator, bool isArchived,</span>
+<span id="L189"><span class="lineNum">     189</span>                 :             :                         const char *json, size_t jsonLen) {</span>
+<span id="L190"><span class="lineNum">     190</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 8 times"> + </span>]:<span class="tlaGNC">           8 :     if (jsonLen &gt;= CACHE_JSON_MAX) return;</span></span>
+<span id="L191"><span class="lineNum">     191</span>                 :             : </span>
+<span id="L192"><span class="lineNum">     192</span>                 :<span class="tlaGNC">           8 :     int slot = -1;</span></span>
+<span id="L193"><span class="lineNum">     193</span>                 :<span class="tlaGNC">           8 :     int oldestIdx = 0;</span></span>
+<span id="L194"><span class="lineNum">     194</span>                 :<span class="tlaGNC">           8 :     time_t oldestTime = g_cache[0].cachedAt;</span></span>
+<span id="L195"><span class="lineNum">     195</span>                 :             : </span>
+<span id="L196"><span class="lineNum">     196</span>                 :             :     // Find a free slot; simultaneously track the oldest entry as a fallback</span>
+<span id="L197"><span class="lineNum">     197</span>                 :             :     // so that one pass is enough regardless of the outcome.</span>
+<span id="L198"><span class="lineNum">     198</span>         [<span class="tlaGBC" title="Branch 0 was taken 19 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">          19 :     for (int i = 0; i &lt; CACHE_MAX_ENTRIES; i++) {</span></span>
+<span id="L199"><span class="lineNum">     199</span>         [<span class="tlaGBC" title="Branch 0 was taken 8 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 11 times"> + </span>]:<span class="tlaGNC">          19 :         if (!g_cache[i].cachedAt) {</span></span>
+<span id="L200"><span class="lineNum">     200</span>                 :<span class="tlaGNC">           8 :             slot = i;</span></span>
+<span id="L201"><span class="lineNum">     201</span>                 :<span class="tlaGNC">           8 :             break;</span></span>
+<span id="L202"><span class="lineNum">     202</span>                 :             :         }</span>
+<span id="L203"><span class="lineNum">     203</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 11 times"> + </span>]:<span class="tlaGNC">          11 :         if (g_cache[i].cachedAt &lt; oldestTime) {</span></span>
+<span id="L204"><span class="lineNum">     204</span>                 :<span class="tlaUNC">           0 :             oldestTime = g_cache[i].cachedAt;</span></span>
+<span id="L205"><span class="lineNum">     205</span>                 :<span class="tlaUNC">           0 :             oldestIdx = i;</span></span>
+<span id="L206"><span class="lineNum">     206</span>                 :             :         }</span>
+<span id="L207"><span class="lineNum">     207</span>                 :             :     }</span>
+<span id="L208"><span class="lineNum">     208</span>                 :             : </span>
+<span id="L209"><span class="lineNum">     209</span>                 :             :     // No free slot found: evict the oldest entry (LRU-approximation).</span>
+<span id="L210"><span class="lineNum">     210</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 8 times"> + </span>]:<span class="tlaGNC">           8 :     if (slot == -1) slot = oldestIdx;</span></span>
+<span id="L211"><span class="lineNum">     211</span>                 :             : </span>
+<span id="L212"><span class="lineNum">     212</span>                 :<span class="tlaGNC">           8 :     CacheEntry *e = &amp;g_cache[slot];</span></span>
+<span id="L213"><span class="lineNum">     213</span>                 :<span class="tlaGNC">           8 :     strncpy(e-&gt;city, city, CITY_LEN - 1);</span></span>
+<span id="L214"><span class="lineNum">     214</span>                 :<span class="tlaGNC">           8 :     e-&gt;city[CITY_LEN - 1] = '\0';  // Guarantee NUL termination</span></span>
+<span id="L215"><span class="lineNum">     215</span>                 :<span class="tlaGNC">           8 :     e-&gt;userId = userId;</span></span>
+<span id="L216"><span class="lineNum">     216</span>                 :<span class="tlaGNC">           8 :     e-&gt;isOperator = isOperator;</span></span>
+<span id="L217"><span class="lineNum">     217</span>                 :<span class="tlaGNC">           8 :     e-&gt;isArchived = isArchived;</span></span>
+<span id="L218"><span class="lineNum">     218</span>                 :<span class="tlaGNC">           8 :     e-&gt;jsonLen = jsonLen;</span></span>
+<span id="L219"><span class="lineNum">     219</span>                 :<span class="tlaGNC">           8 :     memcpy(e-&gt;json, json, jsonLen + 1);  // +1 to copy the NUL terminator</span></span>
+<span id="L220"><span class="lineNum">     220</span>                 :<span class="tlaGNC">           8 :     e-&gt;cachedAt = time(NULL);</span></span>
+<span id="L221"><span class="lineNum">     221</span>                 :             : }</span>
+<span id="L222"><span class="lineNum">     222</span>                 :             : </span>
+<span id="L223"><span class="lineNum">     223</span>                 :<span class="tlaGNC">          13 : void report_cache_invalidate_city(const char *city, uint64_t authorId) {</span></span>
+<span id="L224"><span class="lineNum">     224</span>         [<span class="tlaGBC" title="Branch 0 was taken 416 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 13 times"> + </span>]:<span class="tlaGNC">         429 :     for (int i = 0; i &lt; CACHE_MAX_ENTRIES; i++) {</span></span>
+<span id="L225"><span class="lineNum">     225</span>                 :<span class="tlaGNC">         416 :         CacheEntry *e = &amp;g_cache[i];</span></span>
+<span id="L226"><span class="lineNum">     226</span>         [<span class="tlaGBC" title="Branch 0 was taken 408 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 8 times"> + </span>]:<span class="tlaGNC">         416 :         if (!e-&gt;cachedAt) continue;</span></span>
+<span id="L227"><span class="lineNum">     227</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 8 times"> + </span>]:<span class="tlaGNC">           8 :         if (strncmp(e-&gt;city, city, CITY_LEN) != 0) continue;</span></span>
+<span id="L228"><span class="lineNum">     228</span>                 :             : </span>
+<span id="L229"><span class="lineNum">     229</span>                 :             :         // Operator-scoped entries must be invalidated because assigning or</span>
+<span id="L230"><span class="lineNum">     230</span>                 :             :         // resolving a report changes the operator's active/archived list.</span>
+<span id="L231"><span class="lineNum">     231</span>                 :             :         // Author-scoped entries must be invalidated because the report's</span>
+<span id="L232"><span class="lineNum">     232</span>                 :             :         // status changed and is no longer accurate for the citizen's view.</span>
+<span id="L233"><span class="lineNum">     233</span>   [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 5 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 3 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">           8 :         if (e-&gt;isOperator || e-&gt;userId == authorId) e-&gt;cachedAt = 0;</span></span>
+<span id="L234"><span class="lineNum">     234</span>                 :             :     }</span>
+<span id="L235"><span class="lineNum">     235</span>                 :<span class="tlaGNC">          13 : }</span></span>
+<span id="L236"><span class="lineNum">     236</span>                 :             : </span>
+<span id="L237"><span class="lineNum">     237</span>                 :             : /* ── Write operations ────────────────────────────────────────────────── */</span>
+<span id="L238"><span class="lineNum">     238</span>                 :             : </span>
+<span id="L239"><span class="lineNum">     239</span>                 :<span class="tlaGNC">           3 : uint64_t report_insert(uint64_t authorId, double lat, double lon,</span></span>
+<span id="L240"><span class="lineNum">     240</span>                 :             :                        const char *city, const char *category, const char *desc) {</span>
+<span id="L241"><span class="lineNum">     241</span>                 :             :     // Format string &quot;lffsssl&quot;: l=int64(authorId), f=double(lat), f=double(lon),</span>
+<span id="L242"><span class="lineNum">     242</span>                 :             :     // s=string(city), s=string(category), s=string(desc), l=int64(timestamp).</span>
+<span id="L243"><span class="lineNum">     243</span>                 :<span class="tlaGNC">           3 :     int rc = db_exec(</span></span>
+<span id="L244"><span class="lineNum">     244</span>                 :             :         &quot;INSERT INTO reports &quot;</span>
+<span id="L245"><span class="lineNum">     245</span>                 :             :         &quot;(author_id, lat, lon, city, category, description, status, created_at) &quot;</span>
+<span id="L246"><span class="lineNum">     246</span>                 :             :         &quot;VALUES (?,?,?,?,?,?,0,?);&quot;,</span>
+<span id="L247"><span class="lineNum">     247</span>                 :             :         &quot;lffsssl&quot;,</span>
+<span id="L248"><span class="lineNum">     248</span>                 :<span class="tlaGNC">           3 :         (int64_t)authorId, lat, lon, city, category, desc, (int64_t)time(NULL));</span></span>
+<span id="L249"><span class="lineNum">     249</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 3 times"> + </span>]:<span class="tlaGNC">           3 :     if (rc != 0) return 0;</span></span>
+<span id="L250"><span class="lineNum">     250</span>                 :<span class="tlaGNC">           3 :     int64_t id = db_last_insert_id();</span></span>
+<span id="L251"><span class="lineNum">     251</span>                 :<span class="tlaGNC">           3 :     return (id &gt; 0) ? (uint64_t)id : 0;</span></span>
+<span id="L252"><span class="lineNum">     252</span>                 :             : }</span>
+<span id="L253"><span class="lineNum">     253</span>                 :             : </span>
+<span id="L254"><span class="lineNum">     254</span>                 :<span class="tlaGNC">           7 : int report_assign(uint64_t reportId, uint64_t operatorId) {</span></span>
+<span id="L255"><span class="lineNum">     255</span>                 :             :     // The WHERE clause is an atomic guard: status = 0 ensures the report is</span>
+<span id="L256"><span class="lineNum">     256</span>                 :             :     // still active, and assigned_to IS NULL prevents double-assignment in</span>
+<span id="L257"><span class="lineNum">     257</span>                 :             :     // case two admins click &quot;assign&quot; concurrently.</span>
+<span id="L258"><span class="lineNum">     258</span>                 :<span class="tlaGNC">           7 :     int rc = db_exec(</span></span>
+<span id="L259"><span class="lineNum">     259</span>                 :             :         &quot;UPDATE reports &quot;</span>
+<span id="L260"><span class="lineNum">     260</span>                 :             :         &quot;SET status = 1, assigned_to = ?, assigned_at = ? &quot;</span>
+<span id="L261"><span class="lineNum">     261</span>                 :             :         &quot;WHERE id = ? AND status = 0 AND assigned_to IS NULL;&quot;,</span>
+<span id="L262"><span class="lineNum">     262</span>                 :             :         &quot;lll&quot;,</span>
+<span id="L263"><span class="lineNum">     263</span>                 :<span class="tlaGNC">           7 :         (int64_t)operatorId, (int64_t)time(NULL), (int64_t)reportId);</span></span>
+<span id="L264"><span class="lineNum">     264</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 7 times"> + </span>]:<span class="tlaGNC">           7 :     if (rc != 0) return -1;</span></span>
+<span id="L265"><span class="lineNum">     265</span>                 :             : </span>
+<span id="L266"><span class="lineNum">     266</span>                 :             :     // db_changes() == 0 means the guard condition was not met (already</span>
+<span id="L267"><span class="lineNum">     267</span>                 :             :     // assigned or not found); return 0 to distinguish from a hard error.</span>
+<span id="L268"><span class="lineNum">     268</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 5 times"> + </span>]:<span class="tlaGNC">           7 :     if (db_changes() == 0) return 0;</span></span>
+<span id="L269"><span class="lineNum">     269</span>                 :             : </span>
+<span id="L270"><span class="lineNum">     270</span>                 :             :     // Invalidate here, not in the caller, to keep cache logic centralised.</span>
+<span id="L271"><span class="lineNum">     271</span>                 :             :     Report r;</span>
+<span id="L272"><span class="lineNum">     272</span>         [<span class="tlaGBC" title="Branch 0 was taken 5 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           5 :     if (report_get_by_id(reportId, &amp;r)) report_cache_invalidate_city(r.city, r.authorId);</span></span>
+<span id="L273"><span class="lineNum">     273</span>                 :             : </span>
+<span id="L274"><span class="lineNum">     274</span>                 :<span class="tlaGNC">           5 :     return 1;</span></span>
+<span id="L275"><span class="lineNum">     275</span>                 :             : }</span>
+<span id="L276"><span class="lineNum">     276</span>                 :             : </span>
+<span id="L277"><span class="lineNum">     277</span>                 :<span class="tlaGNC">           6 : int report_accept(uint64_t reportId, uint64_t operatorId) {</span></span>
+<span id="L278"><span class="lineNum">     278</span>                 :             :     // Guard: status = 1 (STATUS_ASSIGNED) and assigned to this operator.</span>
+<span id="L279"><span class="lineNum">     279</span>                 :<span class="tlaGNC">           6 :     int rc = db_exec(</span></span>
+<span id="L280"><span class="lineNum">     280</span>                 :             :         &quot;UPDATE reports &quot;</span>
+<span id="L281"><span class="lineNum">     281</span>                 :             :         &quot;SET status = 2 &quot;</span>
+<span id="L282"><span class="lineNum">     282</span>                 :             :         &quot;WHERE id = ? AND assigned_to = ? AND status = 1;&quot;,</span>
+<span id="L283"><span class="lineNum">     283</span>                 :             :         &quot;ll&quot;,</span>
+<span id="L284"><span class="lineNum">     284</span>                 :             :         (int64_t)reportId, (int64_t)operatorId);</span>
+<span id="L285"><span class="lineNum">     285</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 6 times"> + </span>]:<span class="tlaGNC">           6 :     if (rc != 0) return -1;</span></span>
+<span id="L286"><span class="lineNum">     286</span>         [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 3 times"> + </span>]:<span class="tlaGNC">           6 :     if (db_changes() == 0) return 0;</span></span>
+<span id="L287"><span class="lineNum">     287</span>                 :             : </span>
+<span id="L288"><span class="lineNum">     288</span>                 :             :     Report r;</span>
+<span id="L289"><span class="lineNum">     289</span>         [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           3 :     if (report_get_by_id(reportId, &amp;r)) report_cache_invalidate_city(r.city, r.authorId);</span></span>
+<span id="L290"><span class="lineNum">     290</span>                 :<span class="tlaGNC">           3 :     return 1;</span></span>
+<span id="L291"><span class="lineNum">     291</span>                 :             : }</span>
+<span id="L292"><span class="lineNum">     292</span>                 :             : </span>
+<span id="L293"><span class="lineNum">     293</span>                 :<span class="tlaGNC">           4 : int report_reject(uint64_t reportId, uint64_t operatorId) {</span></span>
+<span id="L294"><span class="lineNum">     294</span>                 :             :     // Guard: status = 1 (STATUS_ASSIGNED) and assigned to this operator.</span>
+<span id="L295"><span class="lineNum">     295</span>                 :             :     // Clear assignment so the admin can reassign to another operator.</span>
+<span id="L296"><span class="lineNum">     296</span>                 :<span class="tlaGNC">           4 :     int rc = db_exec(</span></span>
+<span id="L297"><span class="lineNum">     297</span>                 :             :         &quot;UPDATE reports &quot;</span>
+<span id="L298"><span class="lineNum">     298</span>                 :             :         &quot;SET status = 0, assigned_to = NULL, assigned_at = NULL &quot;</span>
+<span id="L299"><span class="lineNum">     299</span>                 :             :         &quot;WHERE id = ? AND assigned_to = ? AND status = 1;&quot;,</span>
+<span id="L300"><span class="lineNum">     300</span>                 :             :         &quot;ll&quot;,</span>
+<span id="L301"><span class="lineNum">     301</span>                 :             :         (int64_t)reportId, (int64_t)operatorId);</span>
+<span id="L302"><span class="lineNum">     302</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 4 times"> + </span>]:<span class="tlaGNC">           4 :     if (rc != 0) return -1;</span></span>
+<span id="L303"><span class="lineNum">     303</span>         [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">           4 :     if (db_changes() == 0) return 0;</span></span>
+<span id="L304"><span class="lineNum">     304</span>                 :             : </span>
+<span id="L305"><span class="lineNum">     305</span>                 :             :     Report r;</span>
+<span id="L306"><span class="lineNum">     306</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           1 :     if (report_get_by_id(reportId, &amp;r)) report_cache_invalidate_city(r.city, r.authorId);</span></span>
+<span id="L307"><span class="lineNum">     307</span>                 :<span class="tlaGNC">           1 :     return 1;</span></span>
+<span id="L308"><span class="lineNum">     308</span>                 :             : }</span>
+<span id="L309"><span class="lineNum">     309</span>                 :             : </span>
+<span id="L310"><span class="lineNum">     310</span>                 :<span class="tlaGNC">           6 : int report_resolve(uint64_t reportId, uint64_t operatorId) {</span></span>
+<span id="L311"><span class="lineNum">     311</span>                 :             :     // The WHERE clause guards: status = 2 ensures the report is in progress,</span>
+<span id="L312"><span class="lineNum">     312</span>                 :             :     // and assigned_to = operatorId prevents an operator from resolving</span>
+<span id="L313"><span class="lineNum">     313</span>                 :             :     // a report that belongs to a different operator.</span>
+<span id="L314"><span class="lineNum">     314</span>                 :<span class="tlaGNC">           6 :     int rc = db_exec(</span></span>
+<span id="L315"><span class="lineNum">     315</span>                 :             :         &quot;UPDATE reports &quot;</span>
+<span id="L316"><span class="lineNum">     316</span>                 :             :         &quot;SET status = 3, resolved_at = ? &quot;</span>
+<span id="L317"><span class="lineNum">     317</span>                 :             :         &quot;WHERE id = ? AND assigned_to = ? AND status = 2;&quot;,</span>
+<span id="L318"><span class="lineNum">     318</span>                 :             :         &quot;lll&quot;,</span>
+<span id="L319"><span class="lineNum">     319</span>                 :<span class="tlaGNC">           6 :         (int64_t)time(NULL), (int64_t)reportId, (int64_t)operatorId);</span></span>
+<span id="L320"><span class="lineNum">     320</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 6 times"> + </span>]:<span class="tlaGNC">           6 :     if (rc != 0) return -1;</span></span>
+<span id="L321"><span class="lineNum">     321</span>         [<span class="tlaGBC" title="Branch 0 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span>]:<span class="tlaGNC">           6 :     if (db_changes() == 0) return 0;</span></span>
+<span id="L322"><span class="lineNum">     322</span>                 :             : </span>
+<span id="L323"><span class="lineNum">     323</span>                 :             :     // Invalidate here, not in the caller, to keep cache logic centralised.</span>
+<span id="L324"><span class="lineNum">     324</span>                 :             :     Report r;</span>
+<span id="L325"><span class="lineNum">     325</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           2 :     if (report_get_by_id(reportId, &amp;r)) report_cache_invalidate_city(r.city, r.authorId);</span></span>
+<span id="L326"><span class="lineNum">     326</span>                 :             : </span>
+<span id="L327"><span class="lineNum">     327</span>                 :<span class="tlaGNC">           2 :     return 1;</span></span>
+<span id="L328"><span class="lineNum">     328</span>                 :             : }</span>
+<span id="L329"><span class="lineNum">     329</span>                 :             : </span>
+<span id="L330"><span class="lineNum">     330</span>                 :<span class="tlaGNC">           5 : int report_set_feedback(uint64_t reportId, uint64_t authorId, int stars) {</span></span>
+<span id="L331"><span class="lineNum">     331</span>   [<span class="tlaGBC" title="Branch 0 was taken 5 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 5 times"> + </span>]:<span class="tlaGNC">           5 :     if (stars &lt; 1 || stars &gt; 5) return -1;</span></span>
+<span id="L332"><span class="lineNum">     332</span>                 :             :     // Guard: only the author can rate, only if resolved, and only once.</span>
+<span id="L333"><span class="lineNum">     333</span>                 :<span class="tlaGNC">           5 :     int rc = db_exec(</span></span>
+<span id="L334"><span class="lineNum">     334</span>                 :             :         &quot;UPDATE reports &quot;</span>
+<span id="L335"><span class="lineNum">     335</span>                 :             :         &quot;SET feedback = ? &quot;</span>
+<span id="L336"><span class="lineNum">     336</span>                 :             :         &quot;WHERE id = ? AND author_id = ? AND status = 3 AND feedback IS NULL;&quot;,</span>
+<span id="L337"><span class="lineNum">     337</span>                 :             :         &quot;lll&quot;,</span>
+<span id="L338"><span class="lineNum">     338</span>                 :             :         (int64_t)stars, (int64_t)reportId, (int64_t)authorId);</span>
+<span id="L339"><span class="lineNum">     339</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 5 times"> + </span>]:<span class="tlaGNC">           5 :     if (rc != 0) return -1;</span></span>
+<span id="L340"><span class="lineNum">     340</span>         [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span>]:<span class="tlaGNC">           5 :     if (db_changes() == 0) return 0;</span></span>
+<span id="L341"><span class="lineNum">     341</span>                 :             : </span>
+<span id="L342"><span class="lineNum">     342</span>                 :             :     // Invalidate the archived cache so the new feedback is immediately visible.</span>
+<span id="L343"><span class="lineNum">     343</span>                 :             :     Report r;</span>
+<span id="L344"><span class="lineNum">     344</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           2 :     if (report_get_by_id(reportId, &amp;r)) report_cache_invalidate_city(r.city, r.authorId);</span></span>
+<span id="L345"><span class="lineNum">     345</span>                 :             : </span>
+<span id="L346"><span class="lineNum">     346</span>                 :<span class="tlaGNC">           2 :     return 1;</span></span>
+<span id="L347"><span class="lineNum">     347</span>                 :             : }</span>
+<span id="L348"><span class="lineNum">     348</span>                 :             : </span>
+<span id="L349"><span class="lineNum">     349</span>                 :             : /* ── Read operations ─────────────────────────────────────────────────── */</span>
+<span id="L350"><span class="lineNum">     350</span>                 :             : </span>
+<span id="L351"><span class="lineNum">     351</span>                 :<span class="tlaGNC">           6 : size_t report_get_active_json(char *buf, size_t max,</span></span>
+<span id="L352"><span class="lineNum">     352</span>                 :             :                               uint64_t userId, const char *city, bool isOperator) {</span>
+<span id="L353"><span class="lineNum">     353</span>                 :<span class="tlaGNC">           6 :     int idx = cache_find(city, userId, isOperator, false);</span></span>
+<span id="L354"><span class="lineNum">     354</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 5 times"> + </span>]:<span class="tlaGNC">           6 :     if (idx &gt;= 0) {</span></span>
+<span id="L355"><span class="lineNum">     355</span>                 :             :         // Cache hit: copy the pre-built JSON directly into the output buffer.</span>
+<span id="L356"><span class="lineNum">     356</span>                 :<span class="tlaGNC">           1 :         memcpy(buf, g_cache[idx].json, g_cache[idx].jsonLen + 1);</span></span>
+<span id="L357"><span class="lineNum">     357</span>                 :<span class="tlaGNC">           1 :         return g_cache[idx].jsonLen;</span></span>
+<span id="L358"><span class="lineNum">     358</span>                 :             :     }</span>
+<span id="L359"><span class="lineNum">     359</span>                 :             : </span>
+<span id="L360"><span class="lineNum">     360</span>                 :             :     DbCursor *c = isOperator</span>
+<span id="L361"><span class="lineNum">     361</span>                 :             :         // Operator: reports assigned to them, either pending acceptance (1)</span>
+<span id="L362"><span class="lineNum">     362</span>                 :             :         // or already in progress (2).</span>
+<span id="L363"><span class="lineNum">     363</span>                 :<span class="tlaGNC">           4 :         ? db_cursor_open(</span></span>
+<span id="L364"><span class="lineNum">     364</span>                 :             :               &quot;SELECT &quot; SELECT_COLS &quot; FROM reports &quot;</span>
+<span id="L365"><span class="lineNum">     365</span>                 :             :               &quot;WHERE assigned_to = ? AND status IN (1, 2) &quot;</span>
+<span id="L366"><span class="lineNum">     366</span>                 :             :               &quot;ORDER BY assigned_at DESC;&quot;,</span>
+<span id="L367"><span class="lineNum">     367</span>                 :             :               &quot;l&quot;, (int64_t)userId)</span>
+<span id="L368"><span class="lineNum">     368</span>                 :             :         // Citizen: their own reports not yet resolved (status 0, 1, or 2).</span>
+<span id="L369"><span class="lineNum">     369</span>         [<span class="tlaGBC" title="Branch 0 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">           5 :         : db_cursor_open(</span></span>
+<span id="L370"><span class="lineNum">     370</span>                 :             :               &quot;SELECT &quot; SELECT_COLS &quot; FROM reports &quot;</span>
+<span id="L371"><span class="lineNum">     371</span>                 :             :               &quot;WHERE author_id = ? AND status &lt; 3 &quot;</span>
+<span id="L372"><span class="lineNum">     372</span>                 :             :               &quot;ORDER BY created_at DESC;&quot;,</span>
+<span id="L373"><span class="lineNum">     373</span>                 :             :               &quot;l&quot;, (int64_t)userId);</span>
+<span id="L374"><span class="lineNum">     374</span>                 :             : </span>
+<span id="L375"><span class="lineNum">     375</span>                 :<span class="tlaGNC">           5 :     size_t len = cursor_to_json_array(c, buf, max);</span></span>
+<span id="L376"><span class="lineNum">     376</span>                 :             :     // Only cache non-empty results; an empty array could be a transient state.</span>
+<span id="L377"><span class="lineNum">     377</span>         [<span class="tlaGBC" title="Branch 0 was taken 5 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           5 :     if (len &gt; 0) cache_store(city, userId, isOperator, false, buf, len);</span></span>
+<span id="L378"><span class="lineNum">     378</span>                 :             : </span>
+<span id="L379"><span class="lineNum">     379</span>                 :<span class="tlaGNC">           5 :     return len;</span></span>
+<span id="L380"><span class="lineNum">     380</span>                 :             : }</span>
+<span id="L381"><span class="lineNum">     381</span>                 :             : </span>
+<span id="L382"><span class="lineNum">     382</span>                 :<span class="tlaGNC">           3 : size_t report_get_archived_json(char *buf, size_t max,</span></span>
+<span id="L383"><span class="lineNum">     383</span>                 :             :                                 uint64_t userId, const char *city, bool isOperator) {</span>
+<span id="L384"><span class="lineNum">     384</span>                 :<span class="tlaGNC">           3 :     int idx = cache_find(city, userId, isOperator, true);</span></span>
+<span id="L385"><span class="lineNum">     385</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 3 times"> + </span>]:<span class="tlaGNC">           3 :     if (idx &gt;= 0) {</span></span>
+<span id="L386"><span class="lineNum">     386</span>                 :<span class="tlaUNC">           0 :         memcpy(buf, g_cache[idx].json, g_cache[idx].jsonLen + 1);</span></span>
+<span id="L387"><span class="lineNum">     387</span>                 :<span class="tlaUNC">           0 :         return g_cache[idx].jsonLen;</span></span>
+<span id="L388"><span class="lineNum">     388</span>                 :             :     }</span>
+<span id="L389"><span class="lineNum">     389</span>                 :             : </span>
+<span id="L390"><span class="lineNum">     390</span>                 :             :     DbCursor *c = isOperator</span>
+<span id="L391"><span class="lineNum">     391</span>                 :             :         // Operator: all reports they resolved (status = 3, assigned_to = them).</span>
+<span id="L392"><span class="lineNum">     392</span>                 :<span class="tlaGNC">           1 :         ? db_cursor_open(</span></span>
+<span id="L393"><span class="lineNum">     393</span>                 :             :               &quot;SELECT &quot; SELECT_COLS &quot; FROM reports &quot;</span>
+<span id="L394"><span class="lineNum">     394</span>                 :             :               &quot;WHERE assigned_to = ? AND status = 3 &quot;</span>
+<span id="L395"><span class="lineNum">     395</span>                 :             :               &quot;ORDER BY resolved_at DESC;&quot;,</span>
+<span id="L396"><span class="lineNum">     396</span>                 :             :               &quot;l&quot;, (int64_t)userId)</span>
+<span id="L397"><span class="lineNum">     397</span>                 :             :         // Citizen: all their reports that were resolved.</span>
+<span id="L398"><span class="lineNum">     398</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span>]:<span class="tlaGNC">           3 :         : db_cursor_open(</span></span>
+<span id="L399"><span class="lineNum">     399</span>                 :             :               &quot;SELECT &quot; SELECT_COLS &quot; FROM reports &quot;</span>
+<span id="L400"><span class="lineNum">     400</span>                 :             :               &quot;WHERE author_id = ? AND status = 3 &quot;</span>
+<span id="L401"><span class="lineNum">     401</span>                 :             :               &quot;ORDER BY resolved_at DESC;&quot;,</span>
+<span id="L402"><span class="lineNum">     402</span>                 :             :               &quot;l&quot;, (int64_t)userId);</span>
+<span id="L403"><span class="lineNum">     403</span>                 :             : </span>
+<span id="L404"><span class="lineNum">     404</span>                 :<span class="tlaGNC">           3 :     size_t len = cursor_to_json_array(c, buf, max);</span></span>
+<span id="L405"><span class="lineNum">     405</span>         [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           3 :     if (likely(len &gt; 0)) cache_store(city, userId, isOperator, true, buf, len);</span></span>
+<span id="L406"><span class="lineNum">     406</span>                 :             : </span>
+<span id="L407"><span class="lineNum">     407</span>                 :<span class="tlaGNC">           3 :     return len;</span></span>
+<span id="L408"><span class="lineNum">     408</span>                 :             : }</span>
+<span id="L409"><span class="lineNum">     409</span>                 :             : </span>
+<span id="L410"><span class="lineNum">     410</span>                 :<span class="tlaGNC">           2 : size_t report_get_all_city_json(char *buf, size_t max, const char *city) {</span></span>
+<span id="L411"><span class="lineNum">     411</span>                 :             :     // Admin view: JOIN with users to resolve operator name.</span>
+<span id="L412"><span class="lineNum">     412</span>                 :             :     // The extra column operator_name sits after all SELECT_COLS fields.</span>
+<span id="L413"><span class="lineNum">     413</span>                 :<span class="tlaGNC">           2 :     DbCursor *c = db_cursor_open(</span></span>
+<span id="L414"><span class="lineNum">     414</span>                 :             :         &quot;SELECT r.id, r.author_id, r.assigned_to, r.lat, r.lon, r.city, &quot;</span>
+<span id="L415"><span class="lineNum">     415</span>                 :             :         &quot;r.category, r.description, r.status, r.created_at, r.assigned_at, &quot;</span>
+<span id="L416"><span class="lineNum">     416</span>                 :             :         &quot;r.resolved_at, r.feedback, COALESCE(u.username, '') AS operator_name &quot;</span>
+<span id="L417"><span class="lineNum">     417</span>                 :             :         &quot;FROM reports r &quot;</span>
+<span id="L418"><span class="lineNum">     418</span>                 :             :         &quot;LEFT JOIN users u ON u.id = r.assigned_to &quot;</span>
+<span id="L419"><span class="lineNum">     419</span>                 :             :         &quot;WHERE r.city = ? ORDER BY r.created_at DESC;&quot;,</span>
+<span id="L420"><span class="lineNum">     420</span>                 :             :         &quot;s&quot;, city);</span>
+<span id="L421"><span class="lineNum">     421</span>                 :             : </span>
+<span id="L422"><span class="lineNum">     422</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span>]:<span class="tlaGNC">           2 :     if (!c) {</span></span>
+<span id="L423"><span class="lineNum">     423</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         if (max &gt; 2) { buf[0]='['; buf[1]=']'; buf[2]='\0'; }</span></span>
+<span id="L424"><span class="lineNum">     424</span>                 :<span class="tlaUNC">           0 :         return 0;</span></span>
+<span id="L425"><span class="lineNum">     425</span>                 :             :     }</span>
+<span id="L426"><span class="lineNum">     426</span>                 :             : </span>
+<span id="L427"><span class="lineNum">     427</span>                 :<span class="tlaGNC">           2 :     cJSON *array = cJSON_CreateArray();</span></span>
+<span id="L428"><span class="lineNum">     428</span>   [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">           2 :     if (!array) { if (max &gt; 0) buf[0] = '\0'; return 0; }</span></span>
+<span id="L429"><span class="lineNum">     429</span>                 :             : </span>
+<span id="L430"><span class="lineNum">     430</span>         [<span class="tlaGBC" title="Branch 0 was taken 6 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span>]:<span class="tlaGNC">           8 :     while (db_cursor_next(c)) {</span></span>
+<span id="L431"><span class="lineNum">     431</span>                 :             :         Report r;</span>
+<span id="L432"><span class="lineNum">     432</span>                 :<span class="tlaGNC">           6 :         cursor_to_report(c, &amp;r);</span></span>
+<span id="L433"><span class="lineNum">     433</span>                 :<span class="tlaGNC">           6 :         cJSON *obj = report_to_cjson(&amp;r);</span></span>
+<span id="L434"><span class="lineNum">     434</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 6 times"> + </span>]:<span class="tlaGNC">           6 :         if (!obj) continue;</span></span>
+<span id="L435"><span class="lineNum">     435</span>                 :             :         // Column 13: operator_name (extra, not in SELECT_COLS).</span>
+<span id="L436"><span class="lineNum">     436</span>                 :<span class="tlaGNC">           6 :         const char *opName = db_cursor_text(c, 13);</span></span>
+<span id="L437"><span class="lineNum">     437</span>         [<span class="tlaGBC" title="Branch 0 was taken 6 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           6 :         cJSON_AddStringToObject(obj, &quot;operator_name&quot;, opName ? opName : &quot;&quot;);</span></span>
+<span id="L438"><span class="lineNum">     438</span>                 :<span class="tlaGNC">           6 :         cJSON_AddItemToArray(array, obj);</span></span>
+<span id="L439"><span class="lineNum">     439</span>                 :             :     }</span>
+<span id="L440"><span class="lineNum">     440</span>                 :<span class="tlaGNC">           2 :     db_cursor_close(c);</span></span>
+<span id="L441"><span class="lineNum">     441</span>                 :             : </span>
+<span id="L442"><span class="lineNum">     442</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span>]:<span class="tlaGNC">           2 :     if (!cJSON_PrintPreallocated(array, buf, (int)max, false)) {</span></span>
+<span id="L443"><span class="lineNum">     443</span>                 :<span class="tlaUNC">           0 :         cJSON_Delete(array);</span></span>
+<span id="L444"><span class="lineNum">     444</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         if (max &gt; 0) buf[0] = '\0';</span></span>
+<span id="L445"><span class="lineNum">     445</span>                 :<span class="tlaUNC">           0 :         return 0;</span></span>
+<span id="L446"><span class="lineNum">     446</span>                 :             :     }</span>
+<span id="L447"><span class="lineNum">     447</span>                 :<span class="tlaGNC">           2 :     cJSON_Delete(array);</span></span>
+<span id="L448"><span class="lineNum">     448</span>                 :<span class="tlaGNC">           2 :     return strlen(buf);</span></span>
+<span id="L449"><span class="lineNum">     449</span>                 :             : }</span>
+<span id="L450"><span class="lineNum">     450</span>                 :             : </span>
+<span id="L451"><span class="lineNum">     451</span>                 :<span class="tlaGNC">          45 : bool report_get_by_id(uint64_t reportId, Report *out) {</span></span>
+<span id="L452"><span class="lineNum">     452</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 45 times"> + </span>]:<span class="tlaGNC">          45 :     if (!out) return false;</span></span>
+<span id="L453"><span class="lineNum">     453</span>                 :<span class="tlaGNC">          45 :     DbCursor *c = db_cursor_open(</span></span>
+<span id="L454"><span class="lineNum">     454</span>                 :             :         &quot;SELECT &quot; SELECT_COLS &quot; FROM reports WHERE id = ? LIMIT 1;&quot;,</span>
+<span id="L455"><span class="lineNum">     455</span>                 :             :         &quot;l&quot;, (int64_t)reportId);</span>
+<span id="L456"><span class="lineNum">     456</span>                 :<span class="tlaGNC">          45 :     bool found = db_cursor_next(c);</span></span>
+<span id="L457"><span class="lineNum">     457</span>         [<span class="tlaGBC" title="Branch 0 was taken 42 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 3 times"> + </span>]:<span class="tlaGNC">          45 :     if (likely(found)) cursor_to_report(c, out);</span></span>
+<span id="L458"><span class="lineNum">     458</span>                 :<span class="tlaGNC">          45 :     db_cursor_close(c);</span></span>
+<span id="L459"><span class="lineNum">     459</span>                 :<span class="tlaGNC">          45 :     return found;</span></span>
+<span id="L460"><span class="lineNum">     460</span>                 :             : }</span>
+<span id="L461"><span class="lineNum">     461</span>                 :             : </span>
+<span id="L462"><span class="lineNum">     462</span>                 :<span class="tlaUNC">           0 : int report_count_active(void) {</span></span>
+<span id="L463"><span class="lineNum">     463</span>                 :<span class="tlaUNC">           0 :     DbCursor *c = db_cursor_open(</span></span>
+<span id="L464"><span class="lineNum">     464</span>                 :             :         &quot;SELECT COUNT(*) FROM reports WHERE status &lt; 3;&quot;, NULL);</span>
+<span id="L465"><span class="lineNum">     465</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     int count = db_cursor_next(c) ? (int)db_cursor_int64(c, 0) : 0;</span></span>
+<span id="L466"><span class="lineNum">     466</span>                 :<span class="tlaUNC">           0 :     db_cursor_close(c);</span></span>
+<span id="L467"><span class="lineNum">     467</span>                 :<span class="tlaUNC">           0 :     return count;</span></span>
+<span id="L468"><span class="lineNum">     468</span>                 :             : }</span>
+<span id="L469"><span class="lineNum">     469</span>                 :             : </span>
+<span id="L470"><span class="lineNum">     470</span>                 :             : /* ── Utility ─────────────────────────────────────────────────────────── */</span>
+<span id="L471"><span class="lineNum">     471</span>                 :             : </span>
+<span id="L472"><span class="lineNum">     472</span>                 :<span class="tlaUNC">           0 : bool report_to_json(const Report *r, char *dest, size_t destSize) {</span></span>
+<span id="L473"><span class="lineNum">     473</span>   [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span><span class="tlaUNC" title="Branch 2 was not executed"> # </span><span class="tlaUNC" title="Branch 3 was not executed"> # </span> :<span class="tlaUNC">           0 :     if (!r || !dest || destSize == 0) return false;</span></span>
+<span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not executed"> # </span><span class="tlaUNC" title="Branch 5 was not executed"> # </span>]
+<span id="L474"><span class="lineNum">     474</span>                 :<span class="tlaUNC">           0 :     cJSON *obj = report_to_cjson(r);</span></span>
+<span id="L475"><span class="lineNum">     475</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (!obj) return false;</span></span>
+<span id="L476"><span class="lineNum">     476</span>                 :<span class="tlaUNC">           0 :     char *str = cJSON_PrintUnformatted(obj);</span></span>
+<span id="L477"><span class="lineNum">     477</span>                 :<span class="tlaUNC">           0 :     cJSON_Delete(obj);</span></span>
+<span id="L478"><span class="lineNum">     478</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (!str) return false;</span></span>
+<span id="L479"><span class="lineNum">     479</span>                 :<span class="tlaUNC">           0 :     size_t len = strlen(str);</span></span>
+<span id="L480"><span class="lineNum">     480</span>                 :             :     // Strict less-than: we need len + 1 bytes to fit the NUL terminator.</span>
+<span id="L481"><span class="lineNum">     481</span>                 :<span class="tlaUNC">           0 :     bool ok = len &lt; destSize;</span></span>
+<span id="L482"><span class="lineNum">     482</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (ok) memcpy(dest, str, len + 1);</span></span>
+<span id="L483"><span class="lineNum">     483</span>                 :<span class="tlaUNC">           0 :     free(str);</span></span>
+<span id="L484"><span class="lineNum">     484</span>                 :<span class="tlaUNC">           0 :     return ok;</span></span>
+<span id="L485"><span class="lineNum">     485</span>                 :             : }</span>
+        </pre>
+              </td>
+            </tr>
+          </table>
+          <br>
+
+          <table width="100%" border=0 cellspacing=0 cellpadding=0>
+            <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+            <tr><td class="versionInfo">Generated by: <a href="https://github.com//linux-test-project/lcov" target="_parent">LCOV version 2.0-1</a></td></tr>
+          </table>
+          <br>
+
+</body>
+</html>

@@ -1,0 +1,97 @@
+NO REPORT CACHE:
+
+
+└─$ wrk -t2 -c100 -d10s -s script.lua http://localhost:8080     
+Running 10s test @ http://localhost:8080
+  2 threads and 100 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency    22.34ms    5.95ms 122.35ms   96.73%
+    Req/Sec     2.27k   304.51     2.52k    93.00%
+  45090 requests in 10.03s, 17.76MB read
+Requests/sec:   4497.30
+Transfer/sec:      1.77MB
+                                                                                                                                                                       
+┌──(kali㉿kali)-[~]
+└─$ wrk -t2 -c100 -d10s -s script.lua http://localhost:8080
+Running 10s test @ http://localhost:8080
+  2 threads and 100 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency    23.31ms    2.66ms  42.02ms   88.68%
+    Req/Sec     2.14k   200.45     2.53k    71.50%
+  42698 requests in 10.03s, 16.82MB read
+Requests/sec:   4258.06
+Transfer/sec:      1.68MB
+
+.....CACHE
+
+└─$ wrk -t2 -c100 -d10s -s script.lua http://localhost:8080     
+Running 10s test @ http://localhost:8080
+  2 threads and 100 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency    12.05ms    4.10ms  71.88ms   95.41%
+    Req/Sec     4.20k   620.01     4.99k    90.00%
+  83531 requests in 10.03s, 45.96MB read
+Requests/sec:   8326.92
+Transfer/sec:      4.58MB
+                                                                                                                                                                       
+┌──(kali㉿kali)-[~]
+└─$ wrk -t2 -c100 -d10s -s script.lua http://localhost:8080
+Running 10s test @ http://localhost:8080
+  2 threads and 100 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency    11.37ms    1.48ms  17.44ms   60.89%
+    Req/Sec     4.37k   256.43     4.94k    63.50%
+  87026 requests in 10.04s, 47.89MB read
+Requests/sec:   8669.23
+Transfer/sec:      4.77MB
+
+ANCHE CON PIÙ UTENTI
+
+└─$ wrk -t2 -c100 -d10s -s script.lua http://localhost:8080
+Running 10s test @ http://localhost:8080
+  2 threads and 100 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency    11.70ms    5.22ms  93.83ms   96.54%
+    Req/Sec     4.38k   663.49     5.05k    92.00%
+  87212 requests in 10.04s, 142.14MB read
+Requests/sec:   8685.89
+Transfer/sec:     14.16MB
+                                                                                                                                                                       
+┌──(kali㉿kali)-[~]
+└─$ nano script.lua                                        
+                                                                                                                                                                       
+┌──(kali㉿kali)-[~]
+└─$ wrk -t2 -c100 -d10s -s script.lua http://localhost:8080
+Running 10s test @ http://localhost:8080
+  2 threads and 100 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency    11.14ms    1.93ms  45.95ms   94.33%
+    Req/Sec     4.48k   325.70     5.09k    72.00%
+  89252 requests in 10.03s, 111.55MB read
+Requests/sec:   8901.63
+Transfer/sec:     11.13MB
+
+---------15/05
+└─$ wrk -t2 -c100 -d10s -s script.lua http://localhost:8080     
+Running 10s test @ http://localhost:8080
+  2 threads and 100 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency     2.72ms    3.06ms  49.49ms   94.88%
+    Req/Sec     9.02k   628.53     9.52k    85.50%
+  180090 requests in 10.06s, 105.20MB read
+Requests/sec:  17897.13
+Transfer/sec:     10.45MB
+                          
+
+                          
+
+
+      16/05                    └─$ wrk -t2 -c100 -d10s -s script.lua http://localhost:8080  
+Running 10s test @ http://localhost:8080
+  2 threads and 100 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency     3.58ms    3.97ms  51.16ms   90.39%
+    Req/Sec     8.50k     1.43k    9.69k    81.00%
+  169573 requests in 10.06s, 253.57MB read
+Requests/sec:  16852.54
+Transfer/sec:     25.20MB

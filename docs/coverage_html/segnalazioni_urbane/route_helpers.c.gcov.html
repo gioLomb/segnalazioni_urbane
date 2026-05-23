@@ -1,0 +1,184 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>LCOV - SegnalaCity — Coverage Report - segnalazioni_urbane/route_helpers.c</title>
+  <link rel="stylesheet" type="text/css" href="../gcov.css">
+</head>
+
+<body>
+
+          <table width="100%" border=0 cellspacing=0 cellpadding=0>
+            <tr><td class="title">LCOV - code coverage report</td></tr>
+            <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+
+            <tr>
+              <td width="100%">
+                <table cellpadding=1 border=0 width="100%">
+          <tr>
+            <td width="10%" class="headerItem">Current view:</td>
+            <td width="10%" class="headerValue"><a href="../index.html" title="Click to go to top-level">top level</a> - <a href="index.html" title="Click to go to directory segnalazioni_urbane">segnalazioni_urbane</a> - route_helpers.c<span style="font-size: 80%;"> (source / <a href="route_helpers.c.func-c.html" title="Click to go to function table">functions</a>)</span></td>
+            <td width="5%"></td>
+            <td width="5%"></td>
+            <td width="5%" class="headerCovTableHead">Coverage</td>
+            <td width="5%" class="headerCovTableHead" title="Covered + Uncovered code">Total</td>
+            <td width="5%" class="headerCovTableHead" title="Exercised code only">Hit</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test:</td>
+            <td class="headerValue">SegnalaCity — Coverage Report</td>
+            <td></td>
+            <td class="headerItem">Lines:</td>
+            <td class="headerCovTableEntryHi">95.7&nbsp;%</td>
+            <td class="headerCovTableEntry">46</td>
+            <td class="headerCovTableEntry">44</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test Date:</td>
+            <td class="headerValue">2026-05-23 12:29:43</td>
+            <td></td>
+            <td class="headerItem">Functions:</td>
+            <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
+            <td class="headerCovTableEntry">8</td>
+            <td class="headerCovTableEntry">8</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Legend:</td>
+            <td class="headerValueLeg">            Lines:&nbsp&nbsp&nbsp&nbsp
+            <span class="coverLegendCov">hit</span>
+            <span class="coverLegendNoCov">not hit</span>
+            <br>Branches:
+            <span class="coverLegendCov">+</span> taken
+            <span class="coverLegendNoCov">-</span> not taken
+            <span class="coverLegendNoCov">#</span> not executed
+</td>
+            <td></td>
+            <td class="headerItem">Branches:</td>
+            <td class="headerCovTableEntryMed">83.3&nbsp;%</td>
+            <td class="headerCovTableEntry">6</td>
+            <td class="headerCovTableEntry">5</td>
+          </tr>
+                  <tr><td><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+                </table>
+              </td>
+            </tr>
+
+            <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+          </table>
+
+          <table cellpadding=0 cellspacing=0 border=0>
+            <tr>
+              <td><br></td>
+            </tr>
+            <tr>
+              <td>
+<pre class="sourceHeading">             Branch data     Line data    Source code</pre>
+<pre class="source">
+<span id="L1"><span class="lineNum">       1</span>                 :             : /**</span>
+<span id="L2"><span class="lineNum">       2</span>                 :             :  * @file route_helpers.c</span>
+<span id="L3"><span class="lineNum">       3</span>                 :             :  * @brief Implementation of session, response, and template helpers.</span>
+<span id="L4"><span class="lineNum">       4</span>                 :             :  */</span>
+<span id="L5"><span class="lineNum">       5</span>                 :             : </span>
+<span id="L6"><span class="lineNum">       6</span>                 :             : #include &quot;route_helpers.h&quot;</span>
+<span id="L7"><span class="lineNum">       7</span>                 :             : #include &lt;string.h&gt;</span>
+<span id="L8"><span class="lineNum">       8</span>                 :             : #include &lt;stdio.h&gt;</span>
+<span id="L9"><span class="lineNum">       9</span>                 :             : </span>
+<span id="L10"><span class="lineNum">      10</span>                 :             : /* ── Session ─────────────────────────────────────────────────────────── */</span>
+<span id="L11"><span class="lineNum">      11</span>                 :             : </span>
+<span id="L12"><span class="lineNum">      12</span>                 :<span class="tlaGNC">          97 : bool get_session_user(const HttpRequest *req, User *u) {</span></span>
+<span id="L13"><span class="lineNum">      13</span>                 :             :     // Extract the session token from the cookie header into a local buffer.</span>
+<span id="L14"><span class="lineNum">      14</span>                 :             :     char token[TOKEN_HEX_LEN + 1];</span>
+<span id="L15"><span class="lineNum">      15</span>                 :<span class="tlaGNC">          97 :     http_request_cookie(req, SESSION_COOKIE_NAME, token, sizeof(token));</span></span>
+<span id="L16"><span class="lineNum">      16</span>                 :             :     // Empty token means the cookie was absent or too short to be valid.</span>
+<span id="L17"><span class="lineNum">      17</span>         [<span class="tlaGBC" title="Branch 0 was taken 9 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 88 times"> + </span>]:<span class="tlaGNC">          97 :     if (!token[0]) return false;</span></span>
+<span id="L18"><span class="lineNum">      18</span>                 :<span class="tlaGNC">          88 :     return session_verify(token, u);</span></span>
+<span id="L19"><span class="lineNum">      19</span>                 :             : }</span>
+<span id="L20"><span class="lineNum">      20</span>                 :             : </span>
+<span id="L21"><span class="lineNum">      21</span>                 :             : /* ── Response primitives ─────────────────────────────────────────────── */</span>
+<span id="L22"><span class="lineNum">      22</span>                 :             : </span>
+<span id="L23"><span class="lineNum">      23</span>                 :<span class="tlaGNC">          23 : void redirect(HttpResponse *resp, const char *url, const char *cookie) {</span></span>
+<span id="L24"><span class="lineNum">      24</span>                 :<span class="tlaGNC">          23 :     resp-&gt;statusCode = 302;</span></span>
+<span id="L25"><span class="lineNum">      25</span>                 :<span class="tlaGNC">          23 :     snprintf(resp-&gt;location, sizeof(resp-&gt;location), &quot;%s&quot;, url);</span></span>
+<span id="L26"><span class="lineNum">      26</span>                 :             :     // cookie is optional: set it only when the caller provides one</span>
+<span id="L27"><span class="lineNum">      27</span>                 :             :     // (e.g. to plant the session token on successful login).</span>
+<span id="L28"><span class="lineNum">      28</span>         [<span class="tlaGBC" title="Branch 0 was taken 8 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 15 times"> + </span>]:<span class="tlaGNC">          23 :     if (cookie) snprintf(resp-&gt;setCookie, sizeof(resp-&gt;setCookie), &quot;%s&quot;, cookie);</span></span>
+<span id="L29"><span class="lineNum">      29</span>                 :<span class="tlaGNC">          23 : }</span></span>
+<span id="L30"><span class="lineNum">      30</span>                 :             : </span>
+<span id="L31"><span class="lineNum">      31</span>                 :<span class="tlaGNC">          52 : void resp_json_error(HttpResponse *resp, int status, const char *msg) {</span></span>
+<span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaGNC">          52 :     resp-&gt;statusCode = status;</span></span>
+<span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaGNC">          52 :     snprintf(resp-&gt;body, RESPONSE_BUFFER_SIZE, &quot;{\&quot;error\&quot;:\&quot;%s\&quot;}&quot;, msg);</span></span>
+<span id="L34"><span class="lineNum">      34</span>                 :<span class="tlaGNC">          52 :     resp-&gt;bodyLen = strlen(resp-&gt;body);</span></span>
+<span id="L35"><span class="lineNum">      35</span>                 :<span class="tlaGNC">          52 : }</span></span>
+<span id="L36"><span class="lineNum">      36</span>                 :             : </span>
+<span id="L37"><span class="lineNum">      37</span>                 :<span class="tlaGNC">           9 : void resp_html_error(HttpResponse *resp, int status, const char *msg) {</span></span>
+<span id="L38"><span class="lineNum">      38</span>                 :<span class="tlaGNC">           9 :     resp-&gt;statusCode = status;</span></span>
+<span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaGNC">           9 :     snprintf(resp-&gt;body, RESPONSE_BUFFER_SIZE, &quot;&lt;h1&gt;%s&lt;/h1&gt;&quot;, msg);</span></span>
+<span id="L40"><span class="lineNum">      40</span>                 :<span class="tlaGNC">           9 :     resp-&gt;bodyLen = strlen(resp-&gt;body);</span></span>
+<span id="L41"><span class="lineNum">      41</span>                 :<span class="tlaGNC">           9 : }</span></span>
+<span id="L42"><span class="lineNum">      42</span>                 :             : </span>
+<span id="L43"><span class="lineNum">      43</span>                 :<span class="tlaGNC">          17 : bool resp_render_tpl(HttpResponse *resp, const char *tplName,</span></span>
+<span id="L44"><span class="lineNum">      44</span>                 :             :                      TplVar *vars, int nVars) {</span>
+<span id="L45"><span class="lineNum">      45</span>                 :<span class="tlaGNC">          17 :     const Template *tpl = tpl_get(tplName);</span></span>
+<span id="L46"><span class="lineNum">      46</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 17 times"> + </span>]:<span class="tlaGNC">          17 :     if (unlikely(!tpl)) {</span></span>
+<span id="L47"><span class="lineNum">      47</span>                 :<span class="tlaUNC">           0 :         resp_html_error(resp, 500, &quot;Server Error&quot;);</span></span>
+<span id="L48"><span class="lineNum">      48</span>                 :<span class="tlaUNC">           0 :         return false;</span></span>
+<span id="L49"><span class="lineNum">      49</span>                 :             :     }</span>
+<span id="L50"><span class="lineNum">      50</span>                 :<span class="tlaGNC">          17 :     int n = tpl_render(tpl, resp-&gt;body, RESPONSE_BUFFER_SIZE, vars, nVars);</span></span>
+<span id="L51"><span class="lineNum">      51</span>                 :<span class="tlaGNC">          17 :     resp-&gt;statusCode = 200;</span></span>
+<span id="L52"><span class="lineNum">      52</span>                 :<span class="tlaGNC">          17 :     resp-&gt;bodyLen = n &gt; 0 ? (size_t)n : 0;</span></span>
+<span id="L53"><span class="lineNum">      53</span>                 :<span class="tlaGNC">          17 :     return true;</span></span>
+<span id="L54"><span class="lineNum">      54</span>                 :             : }</span>
+<span id="L55"><span class="lineNum">      55</span>                 :             : </span>
+<span id="L56"><span class="lineNum">      56</span>                 :             : /* ── Page-level error helpers ────────────────────────────────────────── */</span>
+<span id="L57"><span class="lineNum">      57</span>                 :             : </span>
+<span id="L58"><span class="lineNum">      58</span>                 :<span class="tlaGNC">           3 : void login_error(HttpResponse *resp, const char *msg) {</span></span>
+<span id="L59"><span class="lineNum">      59</span>                 :             :     // Build the HTML error block once and reuse it as a template variable.</span>
+<span id="L60"><span class="lineNum">      60</span>                 :             :     char eb[ERROR_BLOCK_MAX_LEN];</span>
+<span id="L61"><span class="lineNum">      61</span>                 :<span class="tlaGNC">           3 :     make_error_block(msg, eb, sizeof(eb));</span></span>
+<span id="L62"><span class="lineNum">      62</span>                 :<span class="tlaGNC">           3 :     TplVar vars[] = { { &quot;ERROR_BLOCK&quot;, eb } };</span></span>
+<span id="L63"><span class="lineNum">      63</span>                 :<span class="tlaGNC">           3 :     resp_render_tpl(resp, &quot;templates/login.html&quot;, vars, 1);</span></span>
+<span id="L64"><span class="lineNum">      64</span>                 :<span class="tlaGNC">           3 : }</span></span>
+<span id="L65"><span class="lineNum">      65</span>                 :             : </span>
+<span id="L66"><span class="lineNum">      66</span>                 :<span class="tlaGNC">           5 : void register_error(HttpResponse *resp, const char *msg) {</span></span>
+<span id="L67"><span class="lineNum">      67</span>                 :             :     char eb[ERROR_BLOCK_MAX_LEN];</span>
+<span id="L68"><span class="lineNum">      68</span>                 :<span class="tlaGNC">           5 :     make_error_block(msg, eb, sizeof(eb));</span></span>
+<span id="L69"><span class="lineNum">      69</span>                 :<span class="tlaGNC">           5 :     TplVar vars[] = { { &quot;ERROR_BLOCK&quot;, eb } };</span></span>
+<span id="L70"><span class="lineNum">      70</span>                 :<span class="tlaGNC">           5 :     resp_render_tpl(resp, &quot;templates/register.html&quot;, vars, 1);</span></span>
+<span id="L71"><span class="lineNum">      71</span>                 :<span class="tlaGNC">           5 : }</span></span>
+<span id="L72"><span class="lineNum">      72</span>                 :             : </span>
+<span id="L73"><span class="lineNum">      73</span>                 :<span class="tlaGNC">           2 : void submit_error(HttpResponse *resp, const User *u, const char *msg) {</span></span>
+<span id="L74"><span class="lineNum">      74</span>                 :             :     // HTML-escape user-controlled strings before embedding them in the page.</span>
+<span id="L75"><span class="lineNum">      75</span>                 :             :     char escUser[ESCAPED_PARAM_LEN], escCity[ESCAPED_PARAM_LEN];</span>
+<span id="L76"><span class="lineNum">      76</span>                 :<span class="tlaGNC">           2 :     html_escape(u-&gt;username, escUser, sizeof(escUser));</span></span>
+<span id="L77"><span class="lineNum">      77</span>                 :<span class="tlaGNC">           2 :     html_escape(u-&gt;city, escCity, sizeof(escCity));</span></span>
+<span id="L78"><span class="lineNum">      78</span>                 :             : </span>
+<span id="L79"><span class="lineNum">      79</span>                 :             :     // Resolve centroid and bounding box for the Leaflet map initialisation.</span>
+<span id="L80"><span class="lineNum">      80</span>                 :             :     MapVars mv;</span>
+<span id="L81"><span class="lineNum">      81</span>                 :<span class="tlaGNC">           2 :     build_map_vars(u-&gt;city, &amp;mv);</span></span>
+<span id="L82"><span class="lineNum">      82</span>                 :             : </span>
+<span id="L83"><span class="lineNum">      83</span>                 :             :     char eb[ERROR_BLOCK_MAX_LEN];</span>
+<span id="L84"><span class="lineNum">      84</span>                 :<span class="tlaGNC">           2 :     make_error_block(msg, eb, sizeof(eb));</span></span>
+<span id="L85"><span class="lineNum">      85</span>                 :             : </span>
+<span id="L86"><span class="lineNum">      86</span>                 :<span class="tlaGNC">           2 :     TplVar vars[] = {</span></span>
+<span id="L87"><span class="lineNum">      87</span>                 :             :         { &quot;USERNAME&quot;,    escUser   }, { &quot;CITY&quot;,       escCity   },</span>
+<span id="L88"><span class="lineNum">      88</span>                 :             :         { &quot;ERROR_BLOCK&quot;, eb        }, { &quot;MAP_LAT&quot;,    mv.lat    },</span>
+<span id="L89"><span class="lineNum">      89</span>                 :             :         { &quot;MAP_LON&quot;,     mv.lon    }, { &quot;MAP_BOUNDS&quot;, mv.bounds },</span>
+<span id="L90"><span class="lineNum">      90</span>                 :             :     };</span>
+<span id="L91"><span class="lineNum">      91</span>                 :<span class="tlaGNC">           2 :     resp_render_tpl(resp, &quot;templates/submit.html&quot;, vars, 6);</span></span>
+<span id="L92"><span class="lineNum">      92</span>                 :<span class="tlaGNC">           2 : }</span></span>
+        </pre>
+              </td>
+            </tr>
+          </table>
+          <br>
+
+          <table width="100%" border=0 cellspacing=0 cellpadding=0>
+            <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+            <tr><td class="versionInfo">Generated by: <a href="https://github.com//linux-test-project/lcov" target="_parent">LCOV version 2.0-1</a></td></tr>
+          </table>
+          <br>
+
+</body>
+</html>

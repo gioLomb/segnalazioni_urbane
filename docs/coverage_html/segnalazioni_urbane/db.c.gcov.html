@@ -1,0 +1,272 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>LCOV - SegnalaCity — Coverage Report - segnalazioni_urbane/db.c</title>
+  <link rel="stylesheet" type="text/css" href="../gcov.css">
+</head>
+
+<body>
+
+          <table width="100%" border=0 cellspacing=0 cellpadding=0>
+            <tr><td class="title">LCOV - code coverage report</td></tr>
+            <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+
+            <tr>
+              <td width="100%">
+                <table cellpadding=1 border=0 width="100%">
+          <tr>
+            <td width="10%" class="headerItem">Current view:</td>
+            <td width="10%" class="headerValue"><a href="../index.html" title="Click to go to top-level">top level</a> - <a href="index.html" title="Click to go to directory segnalazioni_urbane">segnalazioni_urbane</a> - db.c<span style="font-size: 80%;"> (source / <a href="db.c.func-c.html" title="Click to go to function table">functions</a>)</span></td>
+            <td width="5%"></td>
+            <td width="5%"></td>
+            <td width="5%" class="headerCovTableHead">Coverage</td>
+            <td width="5%" class="headerCovTableHead" title="Covered + Uncovered code">Total</td>
+            <td width="5%" class="headerCovTableHead" title="Exercised code only">Hit</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test:</td>
+            <td class="headerValue">SegnalaCity — Coverage Report</td>
+            <td></td>
+            <td class="headerItem">Lines:</td>
+            <td class="headerCovTableEntryMed">84.5&nbsp;%</td>
+            <td class="headerCovTableEntry">97</td>
+            <td class="headerCovTableEntry">82</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test Date:</td>
+            <td class="headerValue">2026-05-23 12:29:43</td>
+            <td></td>
+            <td class="headerItem">Functions:</td>
+            <td class="headerCovTableEntryHi">92.9&nbsp;%</td>
+            <td class="headerCovTableEntry">14</td>
+            <td class="headerCovTableEntry">13</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Legend:</td>
+            <td class="headerValueLeg">            Lines:&nbsp&nbsp&nbsp&nbsp
+            <span class="coverLegendCov">hit</span>
+            <span class="coverLegendNoCov">not hit</span>
+            <br>Branches:
+            <span class="coverLegendCov">+</span> taken
+            <span class="coverLegendNoCov">-</span> not taken
+            <span class="coverLegendNoCov">#</span> not executed
+</td>
+            <td></td>
+            <td class="headerItem">Branches:</td>
+            <td class="headerCovTableEntryLo">56.5&nbsp;%</td>
+            <td class="headerCovTableEntry">62</td>
+            <td class="headerCovTableEntry">35</td>
+          </tr>
+                  <tr><td><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+                </table>
+              </td>
+            </tr>
+
+            <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+          </table>
+
+          <table cellpadding=0 cellspacing=0 border=0>
+            <tr>
+              <td><br></td>
+            </tr>
+            <tr>
+              <td>
+<pre class="sourceHeading">             Branch data     Line data    Source code</pre>
+<pre class="source">
+<span id="L1"><span class="lineNum">       1</span>                 :             : #include &quot;db.h&quot;</span>
+<span id="L2"><span class="lineNum">       2</span>                 :             : #include &lt;stdio.h&gt;</span>
+<span id="L3"><span class="lineNum">       3</span>                 :             : #include &lt;stdlib.h&gt;</span>
+<span id="L4"><span class="lineNum">       4</span>                 :             : #include &lt;string.h&gt;</span>
+<span id="L5"><span class="lineNum">       5</span>                 :             : #include &lt;stdarg.h&gt;</span>
+<span id="L6"><span class="lineNum">       6</span>                 :             : </span>
+<span id="L7"><span class="lineNum">       7</span>                 :             : // Module-level database handle; NULL when no connection is open.</span>
+<span id="L8"><span class="lineNum">       8</span>                 :             : static sqlite3 *db = NULL;</span>
+<span id="L9"><span class="lineNum">       9</span>                 :             : </span>
+<span id="L10"><span class="lineNum">      10</span>                 :             : // Internal cursor wraps the SQLite prepared statement and a row-ready flag.</span>
+<span id="L11"><span class="lineNum">      11</span>                 :             : struct DbCursor {</span>
+<span id="L12"><span class="lineNum">      12</span>                 :             :     sqlite3_stmt *stmt; // Underlying SQLite prepared statement</span>
+<span id="L13"><span class="lineNum">      13</span>                 :             :     bool hasRow;        // true after a successful sqlite3_step(SQLITE_ROW)</span>
+<span id="L14"><span class="lineNum">      14</span>                 :             : };</span>
+<span id="L15"><span class="lineNum">      15</span>                 :             : </span>
+<span id="L16"><span class="lineNum">      16</span>                 :             : /* ── Lifecycle ───────────────────────────────────────────────────────── */</span>
+<span id="L17"><span class="lineNum">      17</span>                 :             : </span>
+<span id="L18"><span class="lineNum">      18</span>                 :<span class="tlaGNC">           1 : int db_init(const char *path) {</span></span>
+<span id="L19"><span class="lineNum">      19</span>                 :             :     // Close any pre-existing connection before opening a new one.</span>
+<span id="L20"><span class="lineNum">      20</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">           1 :     if (db) sqlite3_close(db);</span></span>
+<span id="L21"><span class="lineNum">      21</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">           1 :     if (sqlite3_open(path, &amp;db) != SQLITE_OK) return -1;</span></span>
+<span id="L22"><span class="lineNum">      22</span>                 :             : </span>
+<span id="L23"><span class="lineNum">      23</span>                 :             :     // WAL mode allows concurrent readers; NORMAL sync balances durability and speed.</span>
+<span id="L24"><span class="lineNum">      24</span>                 :<span class="tlaGNC">           1 :     sqlite3_exec(db, &quot;PRAGMA journal_mode=WAL;&quot;,   NULL, NULL, NULL);</span></span>
+<span id="L25"><span class="lineNum">      25</span>                 :<span class="tlaGNC">           1 :     sqlite3_exec(db, &quot;PRAGMA synchronous=NORMAL;&quot;, NULL, NULL, NULL);</span></span>
+<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC">           1 :     sqlite3_exec(db, &quot;PRAGMA cache_size=-8192;&quot;,   NULL, NULL, NULL);</span></span>
+<span id="L27"><span class="lineNum">      27</span>                 :             : </span>
+<span id="L28"><span class="lineNum">      28</span>                 :<span class="tlaGNC">           1 :     return 0;</span></span>
+<span id="L29"><span class="lineNum">      29</span>                 :             : }</span>
+<span id="L30"><span class="lineNum">      30</span>                 :             : </span>
+<span id="L31"><span class="lineNum">      31</span>                 :<span class="tlaGNC">           1 : void db_close(void) {</span></span>
+<span id="L32"><span class="lineNum">      32</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           1 :     if (db) {</span></span>
+<span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaGNC">           1 :         sqlite3_close(db);</span></span>
+<span id="L34"><span class="lineNum">      34</span>                 :<span class="tlaGNC">           1 :         db = NULL;</span></span>
+<span id="L35"><span class="lineNum">      35</span>                 :             :     }</span>
+<span id="L36"><span class="lineNum">      36</span>                 :<span class="tlaGNC">           1 : }</span></span>
+<span id="L37"><span class="lineNum">      37</span>                 :             : </span>
+<span id="L38"><span class="lineNum">      38</span>                 :<span class="tlaUNC">           0 : const char *db_errmsg(void) {</span></span>
+<span id="L39"><span class="lineNum">      39</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     return db ? sqlite3_errmsg(db) : &quot;no db&quot;;</span></span>
+<span id="L40"><span class="lineNum">      40</span>                 :             : }</span>
+<span id="L41"><span class="lineNum">      41</span>                 :             : </span>
+<span id="L42"><span class="lineNum">      42</span>                 :<span class="tlaGNC">           3 : int64_t db_last_insert_id(void) {</span></span>
+<span id="L43"><span class="lineNum">      43</span>         [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           3 :     return db ? sqlite3_last_insert_rowid(db) : 0;</span></span>
+<span id="L44"><span class="lineNum">      44</span>                 :             : }</span>
+<span id="L45"><span class="lineNum">      45</span>                 :             : </span>
+<span id="L46"><span class="lineNum">      46</span>                 :<span class="tlaGNC">          28 : int db_changes(void) {</span></span>
+<span id="L47"><span class="lineNum">      47</span>         [<span class="tlaGBC" title="Branch 0 was taken 28 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">          28 :     return db ? sqlite3_changes(db) : 0;</span></span>
+<span id="L48"><span class="lineNum">      48</span>                 :             : }</span>
+<span id="L49"><span class="lineNum">      49</span>                 :             : </span>
+<span id="L50"><span class="lineNum">      50</span>                 :             : /* ── Private helpers ─────────────────────────────────────────────────── */</span>
+<span id="L51"><span class="lineNum">      51</span>                 :             : </span>
+<span id="L52"><span class="lineNum">      52</span>                 :             : // Counts '?' placeholders in sql to validate against the format string length.</span>
+<span id="L53"><span class="lineNum">      53</span>                 :<span class="tlaGNC">         115 : static int count_placeholders(const char *sql) {</span></span>
+<span id="L54"><span class="lineNum">      54</span>                 :<span class="tlaGNC">         115 :     int n = 0;</span></span>
+<span id="L55"><span class="lineNum">      55</span>         [<span class="tlaGBC" title="Branch 0 was taken 15560 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 115 times"> + </span>]:<span class="tlaGNC">       15675 :     for (; *sql; sql++){</span></span>
+<span id="L56"><span class="lineNum">      56</span>         [<span class="tlaGBC" title="Branch 0 was taken 194 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 15366 times"> + </span>]:<span class="tlaGNC">       15560 :         if (*sql == '?') n++;</span></span>
+<span id="L57"><span class="lineNum">      57</span>                 :             :     }</span>
+<span id="L58"><span class="lineNum">      58</span>                 :<span class="tlaGNC">         115 :     return n;</span></span>
+<span id="L59"><span class="lineNum">      59</span>                 :             : }</span>
+<span id="L60"><span class="lineNum">      60</span>                 :             : </span>
+<span id="L61"><span class="lineNum">      61</span>                 :             : // Compiles sql into a prepared statement and binds the variadic arguments</span>
+<span id="L62"><span class="lineNum">      62</span>                 :             : // according to fmt. Returns the statement on success, NULL on any error.</span>
+<span id="L63"><span class="lineNum">      63</span>                 :<span class="tlaGNC">         115 : static sqlite3_stmt *prepare(const char *restrict sql,const char *restrict fmt, va_list ap) {</span></span>
+<span id="L64"><span class="lineNum">      64</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 115 times"> + </span>]:<span class="tlaGNC">         115 :     if (unlikely(!db)) return NULL;</span></span>
+<span id="L65"><span class="lineNum">      65</span>                 :             : </span>
+<span id="L66"><span class="lineNum">      66</span>                 :<span class="tlaGNC">         115 :     sqlite3_stmt *stmt = NULL;</span></span>
+<span id="L67"><span class="lineNum">      67</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 115 times"> + </span>]:<span class="tlaGNC">         115 :     if (sqlite3_prepare_v2(db, sql, -1, &amp;stmt, NULL) != SQLITE_OK) return NULL;</span></span>
+<span id="L68"><span class="lineNum">      68</span>                 :             : </span>
+<span id="L69"><span class="lineNum">      69</span>                 :             :     // Guard against mismatches between '?' count and format string length.</span>
+<span id="L70"><span class="lineNum">      70</span>                 :<span class="tlaGNC">         115 :     int placeholders = count_placeholders(sql);</span></span>
+<span id="L71"><span class="lineNum">      71</span>         [<span class="tlaGBC" title="Branch 0 was taken 110 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 5 times"> + </span>]:<span class="tlaGNC">         115 :     int fmtLen = fmt ? (int)strlen(fmt) : 0;</span></span>
+<span id="L72"><span class="lineNum">      72</span>                 :             : </span>
+<span id="L73"><span class="lineNum">      73</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 115 times"> + </span>]:<span class="tlaGNC">         115 :     if (placeholders != fmtLen) {</span></span>
+<span id="L74"><span class="lineNum">      74</span>                 :<span class="tlaUNC">           0 :         fprintf(stderr, &quot;db: bind mismatch — sql has %d '?' but fmt has %d chars\n&quot;,placeholders, fmtLen);</span></span>
+<span id="L75"><span class="lineNum">      75</span>                 :<span class="tlaUNC">           0 :         goto error;</span></span>
+<span id="L76"><span class="lineNum">      76</span>                 :             :     }</span>
+<span id="L77"><span class="lineNum">      77</span>                 :             : </span>
+<span id="L78"><span class="lineNum">      78</span>                 :             :     // Bind each argument in order; SQLite indices are 1-based.</span>
+<span id="L79"><span class="lineNum">      79</span>         [<span class="tlaGBC" title="Branch 0 was taken 194 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 115 times"> + </span>]:<span class="tlaGNC">         309 :     for (int i = 0; i &lt; fmtLen; i++) {</span></span>
+<span id="L80"><span class="lineNum">      80</span>                 :<span class="tlaGNC">         194 :         int rc = SQLITE_OK;</span></span>
+<span id="L81"><span class="lineNum">      81</span>                 :<span class="tlaGNC">         194 :         int idx = i + 1;</span></span>
+<span id="L82"><span class="lineNum">      82</span>                 :             : </span>
+<span id="L83"><span class="lineNum">      83</span>   [<span class="tlaGBC" title="Branch 0 was taken 42 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 5 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 141 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 6 times"> + </span> :<span class="tlaGNC">         194 :         switch (fmt[i]) {</span></span>
+<span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaUNC" title="Branch 5 was not taken"> - </span>]
+<span id="L84"><span class="lineNum">      84</span>                 :<span class="tlaGNC">          42 :         case 's':</span></span>
+<span id="L85"><span class="lineNum">      85</span>                 :<span class="tlaGNC">          42 :             rc = sqlite3_bind_text(stmt, idx, va_arg(ap, char *), -1, SQLITE_TRANSIENT);</span></span>
+<span id="L86"><span class="lineNum">      86</span>                 :<span class="tlaGNC">          42 :             break;</span></span>
+<span id="L87"><span class="lineNum">      87</span>                 :<span class="tlaGNC">           5 :         case 'i':</span></span>
+<span id="L88"><span class="lineNum">      88</span>                 :<span class="tlaGNC">           5 :             rc = sqlite3_bind_int(stmt, idx, va_arg(ap, int));</span></span>
+<span id="L89"><span class="lineNum">      89</span>                 :<span class="tlaGNC">           5 :             break;</span></span>
+<span id="L90"><span class="lineNum">      90</span>                 :<span class="tlaGNC">         141 :         case 'l':</span></span>
+<span id="L91"><span class="lineNum">      91</span>                 :<span class="tlaGNC">         141 :             rc = sqlite3_bind_int64(stmt, idx, va_arg(ap, int64_t));</span></span>
+<span id="L92"><span class="lineNum">      92</span>                 :<span class="tlaGNC">         141 :             break;</span></span>
+<span id="L93"><span class="lineNum">      93</span>                 :<span class="tlaGNC">           6 :         case 'f':</span></span>
+<span id="L94"><span class="lineNum">      94</span>                 :<span class="tlaGNC">           6 :             rc = sqlite3_bind_double(stmt, idx, va_arg(ap, double));</span></span>
+<span id="L95"><span class="lineNum">      95</span>                 :<span class="tlaGNC">           6 :             break;</span></span>
+<span id="L96"><span class="lineNum">      96</span>                 :<span class="tlaUNC">           0 :         case 'n':</span></span>
+<span id="L97"><span class="lineNum">      97</span>                 :<span class="tlaUNC">           0 :             rc = sqlite3_bind_null(stmt, idx);</span></span>
+<span id="L98"><span class="lineNum">      98</span>                 :<span class="tlaUNC">           0 :             break;</span></span>
+<span id="L99"><span class="lineNum">      99</span>                 :<span class="tlaUNC">           0 :         default:</span></span>
+<span id="L100"><span class="lineNum">     100</span>                 :<span class="tlaUNC">           0 :             fprintf(stderr, &quot;db: unknown fmt char '%c'\n&quot;, fmt[i]);</span></span>
+<span id="L101"><span class="lineNum">     101</span>                 :<span class="tlaUNC">           0 :             goto error;</span></span>
+<span id="L102"><span class="lineNum">     102</span>                 :             :         }</span>
+<span id="L103"><span class="lineNum">     103</span>                 :             : </span>
+<span id="L104"><span class="lineNum">     104</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 194 times"> + </span>]:<span class="tlaGNC">         194 :         if (unlikely(rc != SQLITE_OK)) goto error;</span></span>
+<span id="L105"><span class="lineNum">     105</span>                 :             :     }</span>
+<span id="L106"><span class="lineNum">     106</span>                 :             : </span>
+<span id="L107"><span class="lineNum">     107</span>                 :<span class="tlaGNC">         115 :     return stmt;</span></span>
+<span id="L108"><span class="lineNum">     108</span>                 :             : </span>
+<span id="L109"><span class="lineNum">     109</span>                 :<span class="tlaUNC">           0 : error:</span></span>
+<span id="L110"><span class="lineNum">     110</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (stmt) sqlite3_finalize(stmt);</span></span>
+<span id="L111"><span class="lineNum">     111</span>                 :<span class="tlaUNC">           0 :     return NULL;</span></span>
+<span id="L112"><span class="lineNum">     112</span>                 :             : }</span>
+<span id="L113"><span class="lineNum">     113</span>                 :             : </span>
+<span id="L114"><span class="lineNum">     114</span>                 :             : /* ── Execution API ───────────────────────────────────────────────────── */</span>
+<span id="L115"><span class="lineNum">     115</span>                 :             : </span>
+<span id="L116"><span class="lineNum">     116</span>                 :<span class="tlaGNC">          42 : int db_exec(const char *sql, const char *fmt, ...) {</span></span>
+<span id="L117"><span class="lineNum">     117</span>                 :             :     va_list ap;</span>
+<span id="L118"><span class="lineNum">     118</span>                 :<span class="tlaGNC">          42 :     va_start(ap, fmt);</span></span>
+<span id="L119"><span class="lineNum">     119</span>                 :<span class="tlaGNC">          42 :     sqlite3_stmt *stmt = prepare(sql, fmt, ap);</span></span>
+<span id="L120"><span class="lineNum">     120</span>                 :<span class="tlaGNC">          42 :     va_end(ap);</span></span>
+<span id="L121"><span class="lineNum">     121</span>                 :             : </span>
+<span id="L122"><span class="lineNum">     122</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 42 times"> + </span>]:<span class="tlaGNC">          42 :     if (!stmt) return -1;</span></span>
+<span id="L123"><span class="lineNum">     123</span>                 :             : </span>
+<span id="L124"><span class="lineNum">     124</span>                 :             :     // For INSERT/UPDATE/DELETE we expect SQLITE_DONE, not SQLITE_ROW.</span>
+<span id="L125"><span class="lineNum">     125</span>                 :<span class="tlaGNC">          42 :     int rc = sqlite3_step(stmt);</span></span>
+<span id="L126"><span class="lineNum">     126</span>                 :<span class="tlaGNC">          42 :     sqlite3_finalize(stmt);</span></span>
+<span id="L127"><span class="lineNum">     127</span>         [<span class="tlaGBC" title="Branch 0 was taken 41 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">          42 :     return (rc == SQLITE_DONE) ? 0 : -1;</span></span>
+<span id="L128"><span class="lineNum">     128</span>                 :             : }</span>
+<span id="L129"><span class="lineNum">     129</span>                 :             : </span>
+<span id="L130"><span class="lineNum">     130</span>                 :             : /* ── Cursor API ──────────────────────────────────────────────────────── */</span>
+<span id="L131"><span class="lineNum">     131</span>                 :             : </span>
+<span id="L132"><span class="lineNum">     132</span>                 :<span class="tlaGNC">          73 : DbCursor *db_cursor_open(const char *sql, const char *fmt, ...) {</span></span>
+<span id="L133"><span class="lineNum">     133</span>                 :             :     va_list ap;</span>
+<span id="L134"><span class="lineNum">     134</span>                 :<span class="tlaGNC">          73 :     va_start(ap, fmt);</span></span>
+<span id="L135"><span class="lineNum">     135</span>                 :<span class="tlaGNC">          73 :     sqlite3_stmt *stmt = prepare(sql, fmt, ap);</span></span>
+<span id="L136"><span class="lineNum">     136</span>                 :<span class="tlaGNC">          73 :     va_end(ap);</span></span>
+<span id="L137"><span class="lineNum">     137</span>                 :             : </span>
+<span id="L138"><span class="lineNum">     138</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 73 times"> + </span>]:<span class="tlaGNC">          73 :     if (!stmt) return NULL;</span></span>
+<span id="L139"><span class="lineNum">     139</span>                 :             : </span>
+<span id="L140"><span class="lineNum">     140</span>                 :<span class="tlaGNC">          73 :     DbCursor *cursor = malloc(sizeof(*cursor));</span></span>
+<span id="L141"><span class="lineNum">     141</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 73 times"> + </span>]:<span class="tlaGNC">          73 :     if (unlikely(!cursor)) {</span></span>
+<span id="L142"><span class="lineNum">     142</span>                 :<span class="tlaUNC">           0 :         sqlite3_finalize(stmt);</span></span>
+<span id="L143"><span class="lineNum">     143</span>                 :<span class="tlaUNC">           0 :         return NULL;</span></span>
+<span id="L144"><span class="lineNum">     144</span>                 :             :     }</span>
+<span id="L145"><span class="lineNum">     145</span>                 :             : </span>
+<span id="L146"><span class="lineNum">     146</span>                 :<span class="tlaGNC">          73 :     cursor-&gt;stmt = stmt;</span></span>
+<span id="L147"><span class="lineNum">     147</span>                 :<span class="tlaGNC">          73 :     cursor-&gt;hasRow = false;</span></span>
+<span id="L148"><span class="lineNum">     148</span>                 :<span class="tlaGNC">          73 :     return cursor;</span></span>
+<span id="L149"><span class="lineNum">     149</span>                 :             : }</span>
+<span id="L150"><span class="lineNum">     150</span>                 :             : </span>
+<span id="L151"><span class="lineNum">     151</span>                 :<span class="tlaGNC">          90 : bool db_cursor_next(DbCursor *cursor) {</span></span>
+<span id="L152"><span class="lineNum">     152</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 90 times"> + </span>]:<span class="tlaGNC">          90 :     if (!cursor) return false;</span></span>
+<span id="L153"><span class="lineNum">     153</span>                 :             :     // Step the SQLite VM; hasRow is true only when a full data row is ready.</span>
+<span id="L154"><span class="lineNum">     154</span>                 :<span class="tlaGNC">          90 :     cursor-&gt;hasRow = (sqlite3_step(cursor-&gt;stmt) == SQLITE_ROW);</span></span>
+<span id="L155"><span class="lineNum">     155</span>                 :<span class="tlaGNC">          90 :     return cursor-&gt;hasRow;</span></span>
+<span id="L156"><span class="lineNum">     156</span>                 :             : }</span>
+<span id="L157"><span class="lineNum">     157</span>                 :             : </span>
+<span id="L158"><span class="lineNum">     158</span>                 :<span class="tlaGNC">         215 : const char *db_cursor_text(DbCursor *cursor, int col) {</span></span>
+<span id="L159"><span class="lineNum">     159</span>   [<span class="tlaGBC" title="Branch 0 was taken 215 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 215 times"> + </span>]:<span class="tlaGNC">         215 :     if (!cursor || !cursor-&gt;hasRow) return &quot;&quot;;</span></span>
+<span id="L160"><span class="lineNum">     160</span>                 :<span class="tlaGNC">         215 :     const char *res = (const char *)sqlite3_column_text(cursor-&gt;stmt, col);</span></span>
+<span id="L161"><span class="lineNum">     161</span>         [<span class="tlaGBC" title="Branch 0 was taken 215 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">         215 :     return res ? res : &quot;&quot;;</span></span>
+<span id="L162"><span class="lineNum">     162</span>                 :             : }</span>
+<span id="L163"><span class="lineNum">     163</span>                 :             : </span>
+<span id="L164"><span class="lineNum">     164</span>                 :<span class="tlaGNC">         464 : int64_t db_cursor_int64(DbCursor *cursor, int col) {</span></span>
+<span id="L165"><span class="lineNum">     165</span>   [<span class="tlaGBC" title="Branch 0 was taken 464 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 464 times"> + </span>]:<span class="tlaGNC">         464 :     if (!cursor || !cursor-&gt;hasRow) return 0;</span></span>
+<span id="L166"><span class="lineNum">     166</span>                 :<span class="tlaGNC">         464 :     return sqlite3_column_int64(cursor-&gt;stmt, col);</span></span>
+<span id="L167"><span class="lineNum">     167</span>                 :             : }</span>
+<span id="L168"><span class="lineNum">     168</span>                 :             : </span>
+<span id="L169"><span class="lineNum">     169</span>                 :<span class="tlaGNC">         110 : double db_cursor_double(DbCursor *cursor, int col) {</span></span>
+<span id="L170"><span class="lineNum">     170</span>   [<span class="tlaGBC" title="Branch 0 was taken 110 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 110 times"> + </span>]:<span class="tlaGNC">         110 :     if (!cursor || !cursor-&gt;hasRow) return 0.0;</span></span>
+<span id="L171"><span class="lineNum">     171</span>                 :<span class="tlaGNC">         110 :     return sqlite3_column_double(cursor-&gt;stmt, col);</span></span>
+<span id="L172"><span class="lineNum">     172</span>                 :             : }</span>
+<span id="L173"><span class="lineNum">     173</span>                 :             : </span>
+<span id="L174"><span class="lineNum">     174</span>                 :<span class="tlaGNC">          73 : void db_cursor_close(DbCursor *cursor) {</span></span>
+<span id="L175"><span class="lineNum">     175</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 73 times"> + </span>]:<span class="tlaGNC">          73 :     if (!cursor) return;</span></span>
+<span id="L176"><span class="lineNum">     176</span>                 :             :     // Finalise the compiled statement and release the cursor wrapper.</span>
+<span id="L177"><span class="lineNum">     177</span>                 :<span class="tlaGNC">          73 :     sqlite3_finalize(cursor-&gt;stmt);</span></span>
+<span id="L178"><span class="lineNum">     178</span>                 :<span class="tlaGNC">          73 :     free(cursor);</span></span>
+<span id="L179"><span class="lineNum">     179</span>                 :             : }</span>
+        </pre>
+              </td>
+            </tr>
+          </table>
+          <br>
+
+          <table width="100%" border=0 cellspacing=0 cellpadding=0>
+            <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+            <tr><td class="versionInfo">Generated by: <a href="https://github.com//linux-test-project/lcov" target="_parent">LCOV version 2.0-1</a></td></tr>
+          </table>
+          <br>
+
+</body>
+</html>
