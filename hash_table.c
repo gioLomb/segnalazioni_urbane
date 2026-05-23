@@ -195,16 +195,19 @@ static int ht_resize(Hash_Table *table) {
 
 static unsigned long generate_seed(void) {
     unsigned long seed;
-    // Attempt to use system random source for security
     FILE *f = fopen("/dev/urandom", "rb");
-    if (f) {
-        (void) fread(&seed, sizeof(seed), 1, f);
+    if (!f) goto fallback;
+
+    if (fread(&seed, sizeof(seed), 1, f) != 1) {
         fclose(f);
-    } else {
-        // Fallback to time if /dev/urandom is unavailable
-        seed = (unsigned long)time(NULL);
+        goto fallback;
     }
+
+    fclose(f);
     return seed;
+
+fallback:
+    return (unsigned long)time(NULL);
 }
 
 static inline int keys_equal(const void *a, size_t aSize,

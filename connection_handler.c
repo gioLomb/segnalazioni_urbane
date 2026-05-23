@@ -24,6 +24,15 @@
 #include <stdlib.h>
 #include <arpa/inet.h>
 
+/* ── Forward declarations ────────────────────────────────────────────── */
+
+static void send_response(ClientCtx *ctx, const HttpResponse *resp, bool keepAlive);
+static void on_write_complete(uv_write_t *req, int status);
+static void on_timeout(uv_timer_t *handle);
+static void on_close(uv_handle_t *handle);
+static void get_peer_ip(uv_tcp_t *tcp, char *ip, size_t len);
+static int  setup_client(uv_stream_t *server);
+
 /* ── Private types ───────────────────────────────────────────────────── */
 
 // WriteReq bundles the libuv write request with the response bytes in a
@@ -40,16 +49,6 @@ typedef struct {
 // Shared scratch buffer for handle_request() output. Safe because the event
 // loop is single-threaded: only one request is dispatched at a time.
 static char g_response_buffer[RESPONSE_BUFFER_SIZE];
-
-/* ── Forward declarations ────────────────────────────────────────────── */
-
-static void send_response(ClientCtx *ctx, const HttpResponse *resp, bool keepAlive);
-static void on_write_complete(uv_write_t *req, int status);
-static void on_timeout(uv_timer_t *handle);
-static void on_close(uv_handle_t *handle);
-static void get_peer_ip(uv_tcp_t *tcp, char *ip, size_t len);
-static int  setup_client(uv_stream_t *server);
-
 
 
 
@@ -84,10 +83,11 @@ static void send_response(ClientCtx *ctx, const HttpResponse *resp, bool keepAli
 static void get_peer_ip(uv_tcp_t *tcp, char *ip, size_t len) {
     struct sockaddr_in peer;
     int plen = sizeof(peer);
-    if (uv_tcp_getpeername(tcp, (struct sockaddr *)&peer, &plen) == 0)
+    if (uv_tcp_getpeername(tcp, (struct sockaddr *)&peer, &plen) == 0){
         uv_inet_ntop(AF_INET, &peer.sin_addr, ip, len);
-    else
+    }else{
         ip[0] = '\0';
+    }
 }
 
 

@@ -110,31 +110,35 @@ static void cursor_to_user(DbCursor *c, User *u) {
 
 /* ── Read operations ─────────────────────────────────────────────────── */
 
-bool user_authenticate(const char *username, const char *plainPassword,
+bool user_authenticate(const char *username,
+                       const char *plainPassword,
                        User *out) {
-    if (!username || !plainPassword || !out) return false;
+    if (!username || !plainPassword || !out)
+        return false;
 
     DbCursor *c = db_cursor_open(
-        "SELECT id, username, password_hash, role, city, salt"
-        " FROM users WHERE username = ?;",
+        "SELECT id, username, password_hash, role, city, salt "
+        "FROM users WHERE username = ?;",
         "s", username);
+
     bool found = db_cursor_next(c);
-    if (found) cursor_to_user(c, out);
+    if (found)
+        cursor_to_user(c, out);
+
     db_cursor_close(c);
 
-    if (!found) return false;
+    if (!found)
+        return false;
 
     char loginHash[PWD_HASH_LEN + 1];
 
-    if (out->salt[0] != '\0') {
-        // Salted path: current schema.
-        hash_password(out->salt, plainPassword, loginHash);
-    } else {
-        // Legacy path: rows created before the salt column was added.
-        hash_password("", plainPassword, loginHash);
-    }
+    // Salted password
+    hash_password(out->salt, plainPassword, loginHash);
 
-    return constant_time_compare(out->passwordHash, loginHash);
+    return constant_time_compare(
+        out->passwordHash,
+        loginHash
+    );
 }
 
 bool user_get_by_id(uint64_t id, User *out) {
@@ -176,6 +180,7 @@ size_t user_get_operators_json(char *buf, size_t max, const char *city) {
         "s", city);
 
     if (!c) {
+        // Make empty array
         if (max > 2) {
             strcpy(buf, "[]");
             return 2;

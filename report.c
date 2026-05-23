@@ -62,8 +62,6 @@ int report_setup_table(void) {
             ");", NULL) != 0))
         return -1;
 
-    // Add feedback column to existing databases (idempotent migration).
-    // db_exec("ALTER TABLE reports ADD COLUMN feedback INTEGER;", NULL);
 
     // Separate indexes on author, city and status cover the three main
     // query shapes: per-user, per-city (admin) and per-status (operator).

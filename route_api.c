@@ -144,9 +144,15 @@ void route_api_report_respond(const HttpRequest *req, HttpResponse *resp) {
         return;
     }
 
+    /* Validate action early so the rest of the function can treat it as binary */
+    bool isAccept = strncmp(action, "accept", 6) == 0;
+    if (!isAccept && strncmp(action, "reject", 6) != 0) {
+        resp_json_error(resp, 400, "action must be accept or reject");
+        return;
+    }
+
     uint64_t reportId = (uint64_t)strtoull(reportIds, NULL, 10);
     Report r;
-
     if (!report_get_by_id(reportId, &r)) {
         resp_json_error(resp, 404, "not found");
         return;
@@ -156,25 +162,12 @@ void route_api_report_respond(const HttpRequest *req, HttpResponse *resp) {
         return;
     }
 
-    int rc;
-    if (strncmp(action, "accept", 6) == 0) {
-        rc = report_accept(reportId, u.userId);
-        if (rc == 0) { resp_json_error(resp, 409, "not assigned to you or wrong status"); return; }
-    } else if (strncmp(action, "reject", 6) == 0) {
-        rc = report_reject(reportId, u.userId);
-        if (rc == 0) { resp_json_error(resp, 409, "not assigned to you or wrong status"); return; }
-    } else {
-        resp_json_error(resp, 400, "action must be accept or reject");
-        return;
-    }
-
-    if (unlikely(rc < 0)) {
-        resp_json_error(resp, 500, "db error");
-        return;
-    }
+    int rc = isAccept ? report_accept(reportId, u.userId) : report_reject(reportId, u.userId);
+    if (rc ==  0) { resp_json_error(resp, 409, "not assigned to you or wrong status"); return; }
+    if (unlikely(rc < 0)) { resp_json_error(resp, 500, "db error"); return; }
 
     snprintf(resp->body, RESPONSE_BUFFER_SIZE, "{\"ok\":true}");
-    resp->bodyLen = strlen(resp->body);
+    resp->bodyLen    = strlen(resp->body);
     resp->statusCode = 200;
 }
 
