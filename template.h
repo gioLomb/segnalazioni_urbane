@@ -6,8 +6,8 @@
  * Placeholders use {{KEY}} syntax; substitution is driven by a TplVar array.
  *
  * Usage:
- *   tpl_load_files("templates/login.html", "templates/common.css", NULL);
- *   const Template *tpl = tpl_get("templates/login.html");
+ *   tpl_load_files(TPL_LOGIN, TPL_CSS, NULL);
+ *   const Template *tpl = tpl_get(TPL_LOGIN);
  *   tpl_render(tpl, buf, sizeof(buf), vars, nVars);
  */
 

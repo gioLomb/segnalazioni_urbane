@@ -10,11 +10,6 @@
 #define CACHE_TTL_SECONDS 5
 #define CACHE_MAX_ENTRIES 32
 
-// Results larger than this threshold are not cached but are still served
-// from the query — no artificial cap on returned data.
-// ~16 KB covers ~15 worst-case reports (full unicode description); normal
-// users always fit, users with many reports silently bypass the cache.
-// Total footprint: 32 × 16 KB = 512 KB (vs 32 × 256 KB = 8 MB before).
 #define CACHE_JSON_MAX (16 * 1024)
 
 // Internal cache entry: keyed on (city, userId, isOperator, isArchived).

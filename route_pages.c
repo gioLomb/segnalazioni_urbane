@@ -37,13 +37,13 @@ void route_get_root(const HttpRequest *req, HttpResponse *resp) {
         return;
     }
     TplVar vars[] = { { "ERROR_BLOCK", "" } };
-    resp_render_tpl(resp, "templates/login.html", vars, 1);
+    resp_render_tpl(resp, TPL_LOGIN, vars, 1);
 }
 
 void route_get_register(const HttpRequest *req, HttpResponse *resp) {
     (void)req;
     TplVar vars[] = { { "ERROR_BLOCK", "" } };
-    resp_render_tpl(resp, "templates/register.html", vars, 1);
+    resp_render_tpl(resp, TPL_REGISTER, vars, 1);
 }
 
 void route_get_home(const HttpRequest *req, HttpResponse *resp) {
@@ -60,11 +60,11 @@ void route_get_home(const HttpRequest *req, HttpResponse *resp) {
     // Select the template that matches the user's role.
     const char *tplName;
     if (user_is_admin(&u)) {
-        tplName = "templates/admin_map.html";
+        tplName = TPL_ADMIN_MAP;
     } else if (user_is_operator(&u)) {
-        tplName = "templates/operator_map.html";
+        tplName = TPL_OPERATOR_MAP;
     } else {
-        tplName = "templates/citizen_home.html";
+        tplName = TPL_CITIZEN_HOME;
     }
 
     MapVars mv;
@@ -102,7 +102,7 @@ void route_get_submit(const HttpRequest *req, HttpResponse *resp) {
         { "ERROR_BLOCK", ""        }, { "MAP_LAT",    mv.lat    },
         { "MAP_LON",     mv.lon    }, { "MAP_BOUNDS", mv.bounds },
     };
-    resp_render_tpl(resp, "templates/submit.html", vars, 6);
+    resp_render_tpl(resp, TPL_SUBMIT, vars, 6);
 }
 
 void route_get_logout(const HttpRequest *req, HttpResponse *resp) {
@@ -235,7 +235,7 @@ void route_static_css(const HttpRequest *req, HttpResponse *resp) {
     (void)req;
     // Served via the template cache so it benefits from mmap-backed delivery
     // and the same hot-path as HTML templates.
-    const Template *tpl = tpl_get("templates/common.css");
+    const Template *tpl = tpl_get(TPL_CSS);
     if (unlikely(!tpl)) {
         resp_html_error(resp, 404, "CSS not found");
         return;

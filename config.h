@@ -38,7 +38,18 @@
 #define likely(x)   __builtin_expect(!!(x), 1)
 #define unlikely(x) __builtin_expect(!!(x), 0)
 
-#define GEO_JSON_PATH    "data/comuni.geojson"
-#define CITIES_JSON_PATH "data/cities.json"
+/* ── Paths ──────────────────────────────────────────────────────────── */
+#define DATA_DIR         "data/"
+#define TEMPLATES_DIR    "templates/"
 
+#define GEO_JSON_PATH    DATA_DIR      "comuni.geojson"
+#define CITIES_JSON_PATH DATA_DIR      "cities.json"
+
+#define TPL_LOGIN        TEMPLATES_DIR "login.html"
+#define TPL_REGISTER     TEMPLATES_DIR "register.html"
+#define TPL_SUBMIT       TEMPLATES_DIR "submit.html"
+#define TPL_CITIZEN_HOME TEMPLATES_DIR "citizen_home.html"
+#define TPL_OPERATOR_MAP TEMPLATES_DIR "operator_map.html"
+#define TPL_ADMIN_MAP    TEMPLATES_DIR "admin_map.html"
+#define TPL_CSS          TEMPLATES_DIR "common.css"
 #endif /* CONFIG_H */

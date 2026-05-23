@@ -118,13 +118,13 @@ static int init_db(void) {
 }
 
 static int init_templates(void) {
-    if (tpl_load_files("templates/login.html",
-                       "templates/register.html",
-                       "templates/citizen_home.html",
-                       "templates/operator_map.html",
-                       "templates/submit.html",
-                       "templates/common.css",
-                       "templates/admin_map.html",
+    if (tpl_load_files(TPL_LOGIN,
+                       TPL_REGISTER,
+                       TPL_CITIZEN_HOME,
+                       TPL_OPERATOR_MAP,
+                       TPL_SUBMIT,
+                       TPL_CSS,
+                       TPL_ADMIN_MAP,
                        NULL) != 0) {
         fprintf(stderr, "Fatal: failed to load core templates\n");
         return -1;

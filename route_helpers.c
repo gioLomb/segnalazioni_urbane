@@ -60,14 +60,14 @@ void login_error(HttpResponse *resp, const char *msg) {
     char eb[ERROR_BLOCK_MAX_LEN];
     make_error_block(msg, eb, sizeof(eb));
     TplVar vars[] = { { "ERROR_BLOCK", eb } };
-    resp_render_tpl(resp, "templates/login.html", vars, 1);
+    resp_render_tpl(resp, TPL_LOGIN, vars, 1);
 }
 
 void register_error(HttpResponse *resp, const char *msg) {
     char eb[ERROR_BLOCK_MAX_LEN];
     make_error_block(msg, eb, sizeof(eb));
     TplVar vars[] = { { "ERROR_BLOCK", eb } };
-    resp_render_tpl(resp, "templates/register.html", vars, 1);
+    resp_render_tpl(resp, TPL_REGISTER, vars, 1);
 }
 
 void submit_error(HttpResponse *resp, const User *u, const char *msg) {
@@ -88,5 +88,5 @@ void submit_error(HttpResponse *resp, const User *u, const char *msg) {
         { "ERROR_BLOCK", eb        }, { "MAP_LAT",    mv.lat    },
         { "MAP_LON",     mv.lon    }, { "MAP_BOUNDS", mv.bounds },
     };
-    resp_render_tpl(resp, "templates/submit.html", vars, 6);
+    resp_render_tpl(resp, TPL_SUBMIT, vars, 6);
 }

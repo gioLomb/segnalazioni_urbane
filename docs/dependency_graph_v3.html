@@ -1,0 +1,212 @@
+
+<h2 class="sr-only">Grafo delle dipendenze — 18 sorgenti .c e 20 header .h</h2>
+<style>
+:root{
+  --dfc:#378ADD;--dsc:#042C53;--dtc:#000000;
+  --dfh:#1D9E75;--dsh:#04342C;--dth:#000000;
+  --dfb:#BA7517;--dsb:#412402;--dtb:#000000;
+  --dlc:#2a5c8a;--dlh:#1a5c40;
+}
+@media(prefers-color-scheme:dark){:root{
+  --dfc:#0C447C;--dsc:#85B7EB;--dtc:#e8f4ff;
+  --dfh:#085041;--dsh:#5DCAA5;--dth:#e0f7f0;
+  --dfb:#633806;--dsb:#EF9F27;--dtb:#fff3dc;
+  --dlc:#7aafd4;--dlh:#5DCAA5;
+}}
+</style>
+<div id="wrap" style="position:relative;width:100%;height:700px;border:0.5px solid #ccc;border-radius:12px;overflow:hidden;background:#f9f9f9;">
+  <div style="position:absolute;top:10px;left:12px;display:flex;gap:12px;z-index:10;align-items:center;background:#fff;padding:5px 10px;border-radius:6px;border:0.5px solid #ccc;">
+    <span style="font-size:11px;color:#444;display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:50%;border:2px solid #042C53;background:#378ADD;flex-shrink:0"></span>.c source</span>
+    <span style="font-size:11px;color:#444;display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:50%;border:2px solid #04342C;background:#1D9E75;flex-shrink:0"></span>.h header</span>
+    <span style="font-size:11px;color:#444;display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:50%;border:2px solid #412402;background:#BA7517;flex-shrink:0"></span>config.h</span>
+    <span style="font-size:11px;color:#888;">— solid · - - h→h</span>
+  </div>
+  <div style="position:absolute;bottom:10px;right:12px;font-size:11px;color:#888;z-index:10;">scroll to zoom · drag nodes · click to focus</div>
+  <div id="tip" style="position:absolute;background:#fff;border:0.5px solid #aaa;border-radius:8px;padding:8px 11px;font-size:12px;color:#111;pointer-events:none;opacity:0;z-index:20;max-width:210px;line-height:1.6;transition:opacity 0.12s;"></div>
+  <svg id="dg" width="100%" height="100%" style="cursor:grab;"></svg>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script>
+const W=700,H=700;
+const svg=d3.select('#dg').attr('viewBox',`0 0 ${W} ${H}`);
+const defs=svg.append('defs');
+
+defs.append('marker').attr('id','arr-c').attr('viewBox','0 0 10 10').attr('refX',7).attr('refY',5)
+  .attr('markerWidth',7).attr('markerHeight',7).attr('orient','auto-start-reverse')
+  .append('path').attr('d','M1.5 1.5L8.5 5L1.5 8.5').attr('fill','none')
+  .attr('stroke','context-stroke').attr('stroke-width',1.8)
+  .attr('stroke-linecap','round').attr('stroke-linejoin','round');
+
+defs.append('marker').attr('id','arr-h').attr('viewBox','0 0 10 10').attr('refX',7).attr('refY',5)
+  .attr('markerWidth',7).attr('markerHeight',7).attr('orient','auto-start-reverse')
+  .append('path').attr('d','M1.5 1.5L8.5 5L1.5 8.5').attr('fill','none')
+  .attr('stroke','context-stroke').attr('stroke-width',1.8)
+  .attr('stroke-linecap','round').attr('stroke-linejoin','round');
+
+const nodes=[
+  {id:"client_manager.c",t:"c"},{id:"connection_handler.c",t:"c"},{id:"db.c",t:"c"},
+  {id:"geo.c",t:"c"},{id:"hash_table.c",t:"c"},{id:"http_utils.c",t:"c"},
+  {id:"picohttpparser.c",t:"c"},{id:"rate_limiter.c",t:"c"},{id:"report.c",t:"c"},
+  {id:"route_api.c",t:"c"},{id:"route_handler.c",t:"c"},{id:"route_helpers.c",t:"c"},
+  {id:"route_pages.c",t:"c"},{id:"server.c",t:"c"},{id:"session.c",t:"c"},
+  {id:"slab_allocator.c",t:"c"},{id:"template.c",t:"c"},{id:"user.c",t:"c"},
+  {id:"client_manager.h",t:"h"},{id:"connection_handler.h",t:"h"},{id:"db.h",t:"h"},
+  {id:"geo.h",t:"h"},{id:"hash_table.h",t:"h"},{id:"http_types.h",t:"h"},
+  {id:"http_utils.h",t:"h"},{id:"picohttpparser.h",t:"h"},{id:"rate_limiter.h",t:"h"},
+  {id:"report.h",t:"h"},{id:"route_api.h",t:"h"},{id:"route_handler.h",t:"h"},
+  {id:"route_helpers.h",t:"h"},{id:"route_pages.h",t:"h"},{id:"server.h",t:"h"},
+  {id:"session.h",t:"h"},{id:"slab_allocator.h",t:"h"},{id:"template.h",t:"h"},
+  {id:"user.h",t:"h"},{id:"config.h",t:"base"},
+];
+
+const rawLinks=[
+  ["client_manager.c","client_manager.h","c"],["client_manager.c","slab_allocator.h","c"],
+  ["connection_handler.c","connection_handler.h","c"],["connection_handler.c","route_handler.h","c"],
+  ["connection_handler.c","rate_limiter.h","c"],["connection_handler.c","server.h","c"],
+  ["db.c","db.h","c"],["geo.c","geo.h","c"],["geo.c","hash_table.h","c"],
+  ["hash_table.c","hash_table.h","c"],["http_utils.c","http_utils.h","c"],
+  ["http_utils.c","picohttpparser.h","c"],["picohttpparser.c","picohttpparser.h","c"],
+  ["rate_limiter.c","rate_limiter.h","c"],["report.c","report.h","c"],
+  ["report.c","db.h","c"],["report.c","http_types.h","c"],
+  ["route_api.c","route_api.h","c"],["route_api.c","route_helpers.h","c"],
+  ["route_api.c","report.h","c"],["route_api.c","user.h","c"],["route_api.c","db.h","c"],
+  ["route_handler.c","route_handler.h","c"],["route_handler.c","route_pages.h","c"],
+  ["route_handler.c","route_api.h","c"],["route_handler.c","route_helpers.h","c"],
+  ["route_helpers.c","route_helpers.h","c"],["route_pages.c","route_pages.h","c"],
+  ["route_pages.c","route_helpers.h","c"],["route_pages.c","user.h","c"],
+  ["route_pages.c","report.h","c"],["route_pages.c","geo.h","c"],
+  ["server.c","server.h","c"],["server.c","rate_limiter.h","c"],
+  ["server.c","connection_handler.h","c"],["server.c","template.h","c"],
+  ["server.c","user.h","c"],["server.c","report.h","c"],["server.c","geo.h","c"],
+  ["server.c","session.h","c"],["server.c","db.h","c"],["server.c","client_manager.h","c"],
+  ["session.c","session.h","c"],["session.c","hash_table.h","c"],
+  ["slab_allocator.c","slab_allocator.h","c"],["template.c","template.h","c"],
+  ["user.c","user.h","c"],["user.c","db.h","c"],
+  ["client_manager.h","config.h","h"],
+  ["connection_handler.h","config.h","h"],["connection_handler.h","client_manager.h","h"],
+  ["connection_handler.h","http_utils.h","h"],
+  ["db.h","config.h","h"],["http_types.h","config.h","h"],
+  ["http_types.h","picohttpparser.h","h"],["http_utils.h","http_types.h","h"],
+  ["rate_limiter.h","config.h","h"],["rate_limiter.h","hash_table.h","h"],
+  ["report.h","config.h","h"],["route_api.h","http_types.h","h"],
+  ["route_handler.h","http_types.h","h"],["route_handler.h","http_utils.h","h"],
+  ["route_handler.h","config.h","h"],["route_helpers.h","http_types.h","h"],
+  ["route_helpers.h","http_utils.h","h"],["route_helpers.h","template.h","h"],
+  ["route_helpers.h","user.h","h"],["route_helpers.h","session.h","h"],
+  ["route_helpers.h","geo.h","h"],["route_helpers.h","config.h","h"],
+  ["route_pages.h","http_types.h","h"],["server.h","config.h","h"],
+  ["server.h","hash_table.h","h"],["session.h","config.h","h"],
+  ["session.h","user.h","h"],
+];
+const links=rawLinks.map(([s,t,lt])=>({source:s,target:t,lt}));
+
+nodes.forEach(d=>{ d.rx=Math.max(d.id.length*3.35+12,34); d.ry=14; });
+nodes.forEach((d,i)=>{
+  const a=(i/nodes.length)*2*Math.PI;
+  d.x=W/2+Math.cos(a)*240; d.y=H/2+Math.sin(a)*220;
+});
+
+const sim=d3.forceSimulation(nodes)
+  .force('link',d3.forceLink(links).id(d=>d.id).distance(d=>d.lt==='c'?95:75).strength(0.5))
+  .force('charge',d3.forceManyBody().strength(-260))
+  .force('center',d3.forceCenter(W/2,H/2))
+  .force('collide',d3.forceCollide(d=>d.rx+10))
+  .force('x',d3.forceX(W/2).strength(0.04))
+  .force('y',d3.forceY(H/2).strength(0.04));
+
+const g=svg.append('g');
+svg.call(d3.zoom().scaleExtent([0.2,5]).on('zoom',e=>g.attr('transform',e.transform)));
+
+const lnk=g.append('g').selectAll('line').data(links).join('line')
+  .style('stroke',d=>d.lt==='c'?'var(--dlc)':'var(--dlh)')
+  .attr('stroke-width',d=>d.lt==='c'?1.8:1.4)
+  .attr('stroke-dasharray',d=>d.lt==='h'?'5 3':null)
+  .attr('fill','none')
+  .attr('marker-end',d=>d.lt==='c'?'url(#arr-c)':'url(#arr-h)');
+
+function eR(node,angle){
+  const c=Math.cos(angle),s=Math.sin(angle);
+  return (node.rx*node.ry)/Math.sqrt((node.ry*c)**2+(node.rx*s)**2);
+}
+
+const fillMap  ={c:'var(--dfc)',h:'var(--dfh)',base:'var(--dfb)'};
+const strokeMap={c:'var(--dsc)',h:'var(--dsh)',base:'var(--dsb)'};
+const textMap  ={c:'var(--dtc)',h:'var(--dth)',base:'var(--dtb)'};
+
+const nodeG=g.append('g').selectAll('g').data(nodes).join('g')
+  .style('cursor','pointer')
+  .call(d3.drag()
+    .on('start',(e,d)=>{if(!e.active)sim.alphaTarget(0.3).restart();d.fx=d.x;d.fy=d.y;})
+    .on('drag',(e,d)=>{d.fx=e.x;d.fy=e.y;})
+    .on('end',(e,d)=>{if(!e.active)sim.alphaTarget(0);d.fx=null;d.fy=null;}));
+
+nodeG.append('ellipse')
+  .attr('rx',d=>d.rx).attr('ry',d=>d.ry)
+  .style('fill',d=>fillMap[d.t])
+  .style('stroke',d=>strokeMap[d.t])
+  .attr('stroke-width',1.8);
+
+nodeG.append('text')
+  .text(d=>d.id)
+  .attr('text-anchor','middle')
+  .attr('dominant-baseline','central')
+  .style('font-size','10.5px')
+  .style('font-weight','700')
+  .style('font-family','monospace')
+  .style('fill',d=>textMap[d.t])
+  .attr('pointer-events','none');
+
+const tip=document.getElementById('tip');
+const wrap=document.getElementById('wrap');
+
+nodeG.on('mouseover',(e,d)=>{
+  const out=rawLinks.filter(l=>l[0]===d.id).length;
+  const inn=rawLinks.filter(l=>l[1]===d.id).length;
+  tip.innerHTML=`<strong>${d.id}</strong><br><span style="color:#555">includes: ${out} &nbsp;·&nbsp; included by: ${inn}</span>`;
+  tip.style.opacity='1';
+}).on('mousemove',e=>{
+  const r=wrap.getBoundingClientRect();
+  let x=e.clientX-r.left+14,y=e.clientY-r.top+14;
+  if(x+215>r.width)x-=225;
+  if(y+70>r.height)y-=80;
+  tip.style.left=x+'px';tip.style.top=y+'px';
+}).on('mouseout',()=>{tip.style.opacity='0';});
+
+let sel=null;
+nodeG.on('click',(e,d)=>{
+  e.stopPropagation();
+  if(sel===d.id){
+    sel=null;
+    nodeG.style('opacity',1);lnk.style('opacity',1);
+  } else {
+    sel=d.id;
+    const nb=new Set([d.id]);
+    links.forEach(l=>{
+      const s=l.source.id||l.source,t=l.target.id||l.target;
+      if(s===d.id)nb.add(t);
+      if(t===d.id)nb.add(s);
+    });
+    nodeG.style('opacity',n=>nb.has(n.id)?1:0.15);
+    lnk.style('opacity',l=>{
+      const s=l.source.id||l.source,t=l.target.id||l.target;
+      return(s===d.id||t===d.id)?1:0.05;
+    });
+  }
+});
+svg.on('click',()=>{sel=null;nodeG.style('opacity',1);lnk.style('opacity',1);});
+
+sim.on('tick',()=>{
+  lnk.each(function(d){
+    const sx=d.source.x,sy=d.source.y,tx=d.target.x,ty=d.target.y;
+    const dx=tx-sx,dy=ty-sy;
+    if(!dx&&!dy)return;
+    const a=Math.atan2(dy,dx);
+    const r1=eR(d.source,a);
+    const r2=eR(d.target,a)+5;
+    d3.select(this)
+      .attr('x1',sx+Math.cos(a)*r1).attr('y1',sy+Math.sin(a)*r1)
+      .attr('x2',tx-Math.cos(a)*r2).attr('y2',ty-Math.sin(a)*r2);
+  });
+  nodeG.attr('transform',d=>`translate(${d.x},${d.y})`);
+});
+</script>
