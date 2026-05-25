@@ -15,7 +15,7 @@
 #include "config.h"
 #include "hash_table.h"
 
-#define RATE_LIMIT_RPS    10000    /* max requests/sec per IP (TODO: tune)*/
+#define RATE_LIMIT_RPS    100    /* max requests/sec per IP (TODO: tune)*/
 #define DEBUG_RATE_LIMIT  0        /* set to 1 to enforce rate limiting   */
 
 

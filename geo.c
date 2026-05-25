@@ -75,6 +75,8 @@ static int load_geojson(const char *path, Hash_Table *ht, const char *citiesOut)
     close(fd);
     if (data == MAP_FAILED) { perror("mmap"); return -1; }
 
+    // Parse directly from the mapped buffer — no extra copy needed.
+    // munmap as soon as cJSON is done: the tree lives on the heap from here on.
     cJSON *root = cJSON_ParseWithLength(data, size);
     munmap((void *)data, size);
 
@@ -84,6 +86,8 @@ static int load_geojson(const char *path, Hash_Table *ht, const char *citiesOut)
     }
 
     cJSON *features = cJSON_GetObjectItem(root, "features");
+
+    // Only allocate the names array if the caller actually wants the output file.
     cJSON *citiesArr = citiesOut ? cJSON_CreateArray() : NULL;
     int loaded = 0, skipped = 0;
 
@@ -109,6 +113,7 @@ static int load_geojson(const char *path, Hash_Table *ht, const char *citiesOut)
 
     // Write the optional city-name JSON array to disk.
     if (citiesArr) {
+        // Compact (no whitespace) — suitable for direct HTTP serving.
         char *json = cJSON_PrintUnformatted(citiesArr);
         cJSON_Delete(citiesArr);
         if (json) {
@@ -119,7 +124,7 @@ static int load_geojson(const char *path, Hash_Table *ht, const char *citiesOut)
             } else {
                 perror(citiesOut);
             }
-            free(json);
+            free(json);  // cJSON_Print* allocates with malloc; caller must free.
         }
     }
 

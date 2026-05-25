@@ -32,7 +32,6 @@ typedef struct __attribute__((aligned(64))) ClientCtx {
     char        *buffer;              /**< Receive buffer; NULL until first read */
 } ClientCtx;
 
-/* ── Lifecycle ───────────────────────────────────────────────────────── */
 
 /**
  * @brief Initialises the internal slab pool and resets global state.
@@ -48,7 +47,6 @@ int client_manager_init(void);
  */
 void client_manager_destroy(void);
 
-/* ── Per-connection alloc / release ─────────────────────────────────── */
 
 /**
  * @brief Allocates a zeroed ClientCtx from the slab pool.

@@ -29,8 +29,7 @@
  * @brief Representation of an incoming HTTP request.
  * @note String fields are NOT null-terminated; use their length fields.
  */
-typedef struct
-{
+typedef struct{
     const char *method;     /**< HTTP Method string slice (e.g., "GET") */
     size_t methodLen;       /**< Length of the method string slice */
     const char *path;       /**< Resource path string slice (e.g., "/index") */
@@ -48,8 +47,7 @@ typedef struct
 /**
  * @brief Representation of an outgoing HTTP response.
  */
-typedef struct
-{
+typedef struct{
     int statusCode;         /**< HTTP Status Code (e.g., 200, 404, 302) */
     const char *contentType; /**If left NULL, http_response_render() infers it */
     char *body;             /**< Pre-allocated pointer to the output message body */

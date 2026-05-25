@@ -33,7 +33,7 @@ typedef struct {
 typedef struct {
     char lat[COORDINATE_STR_LEN];     /**< Centroid latitude as a decimal string                      */
     char lon[COORDINATE_STR_LEN];     /**< Centroid longitude as a decimal string                     */
-    char bounds[COORDINATE_STR_LEN * 4]; /**< Leaflet bounds [[latMin,lonMin],[latMax,lonMax]], or "null" */
+    char bounds[COORDINATE_STR_LEN * 4]; /**< bounds [[latMin,lonMin],[latMax,lonMax]], or "null" */
 } MapVars;
 
 /**

@@ -35,11 +35,11 @@ unsigned long hash_key(const void *key, size_t keySize, unsigned long seed) {
     unsigned long h = seed;
     for (size_t i = 0; i < keySize; i++) {
         h ^= data[i];
-        h *= 0x5bd1e995UL;
+        h *= MURMUR_MUL;
         h ^= h >> 15;
     }
     h ^= h >> 13;
-    h *= 0x85ebca6bUL;
+    h *= MURMUR_FIN;
     h ^= h >> 16;
     return h;
 }
@@ -184,7 +184,7 @@ int main(void) {
     assert(server_bind(loop, &server, &sig) == 0 && "Fatal: server_bind");
 
     printf("SegnalaCity listening on port %d\n", PORT);
-    uv_run(loop, UV_RUN_DEFAULT);
+    uv_run(loop, UV_RUN_DEFAULT); //Start listening for events
 
     server_shutdown(loop, &server, &sig);
     return EXIT_SUCCESS;

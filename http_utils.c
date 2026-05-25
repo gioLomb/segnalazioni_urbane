@@ -7,8 +7,7 @@
 /* ── Internal helpers ────────────────────────────────────────────────── */
 
 /* Converts a single hex digit character to its numeric value (0–15). */
-static inline int hex_val(char c)
-{
+static inline int hex_val(char c){
     if (c >= '0' && c <= '9') return c - '0';
     if (c >= 'a' && c <= 'f') return c - 'a' + 10;
     if (c >= 'A' && c <= 'F') return c - 'A' + 10;
@@ -21,8 +20,7 @@ static inline int hex_val(char c)
  * '%XX' sequences are decoded; '+' is mapped to a space.
  * A decoded NUL byte (%00) terminates the loop as a safety measure.
  */
-static void url_decode(const char * restrict src, char * restrict dest, size_t max)
-{
+static void url_decode(const char * restrict src, char * restrict dest, size_t max){
     size_t i = 0;
     while (*src && *src != '&' && *src != ' ' && *src != '\r' && *src != '\n'
            && i < max - 1) {
@@ -43,8 +41,7 @@ static void url_decode(const char * restrict src, char * restrict dest, size_t m
 }
 
 /* Returns the standard reason-phrase for the most common HTTP status codes. */
-static const char *http_status_msg(int code)
-{
+static const char *http_status_msg(int code){
     switch (code) {
         case 200: return "OK";
         case 302: return "Found";
@@ -64,8 +61,7 @@ static const char *http_status_msg(int code)
  * Returns override directly if it is non-NULL and non-empty;
  * otherwise infers the type from the first byte of body.
  */
-static const char *infer_contentType(const char *body, const char *override)
-{
+static const char *infer_contentType(const char *body, const char *override){
     if (override && override[0])                    return override;
     if (body && body[0] == '<')                     return "text/html; charset=utf-8";
     if (body && (body[0] == '{' || body[0] == '[')) return "application/json";
@@ -74,13 +70,12 @@ static const char *infer_contentType(const char *body, const char *override)
 
 /* ── Request parsing ─────────────────────────────────────────────────── */
 
-bool http_is_request_complete(const char *buf, size_t len)
-{
+bool http_is_request_complete(const char *buf, size_t len){
     struct phr_header headers[HTTP_MAX_HEADERS];
-    size_t            numHeaders = HTTP_MAX_HEADERS;
-    const char       *method, *path;
-    size_t            methodLen, pathLen;
-    int               minorVersion;
+    size_t numHeaders = HTTP_MAX_HEADERS;
+    const char *method, *path;
+    size_t methodLen, pathLen;
+    int minorVersion;
 
     int r = phr_parse_request(buf, len,
                               &method, &methodLen,
@@ -118,8 +113,7 @@ bool http_is_request_complete(const char *buf, size_t len)
     return true;
 }
 
-bool http_request_parse(const char *raw, size_t rawLen, HttpRequest *req)
-{
+bool http_request_parse(const char *raw, size_t rawLen, HttpRequest *req){
     memset(req, 0, sizeof(*req));
     req->numHeaders = HTTP_MAX_HEADERS;
 
@@ -146,8 +140,7 @@ bool http_request_parse(const char *raw, size_t rawLen, HttpRequest *req)
 
 const char *http_request_header(const HttpRequest *req,
                                 const char        *name,
-                                size_t            *valueLenOut)
-{
+                                size_t            *valueLenOut){
     size_t nlen = strlen(name);
     for (size_t i = 0; i < req->numHeaders; i++) {
         if (req->headers[i].name_len == nlen &&
@@ -159,8 +152,7 @@ const char *http_request_header(const HttpRequest *req,
     return NULL;
 }
 
-void http_request_cookie(const HttpRequest *req, const char *name, char *dest, size_t max)
-{
+void http_request_cookie(const HttpRequest *req, const char *name, char *dest, size_t max){
     dest[0] = '\0';
 
     size_t cookieLen = 0;
@@ -191,20 +183,17 @@ void http_request_cookie(const HttpRequest *req, const char *name, char *dest, s
     }
 }
 
-bool http_is_request_path(const HttpRequest *req, const char *path)
-{
+bool http_is_request_path(const HttpRequest *req, const char *path){
     size_t plen = strlen(path);
     return req->pathLen == plen && memcmp(req->path, path, plen) == 0;
 }
 
-bool http_is_request_method(const HttpRequest *req, const char *method)
-{
+bool http_is_request_method(const HttpRequest *req, const char *method){
     size_t mlen = strlen(method);
     return req->methodLen == mlen && memcmp(req->method, method, mlen) == 0;
 }
 
-bool http_request_contains_keepalive(const HttpRequest *req)
-{
+bool http_request_contains_keepalive(const HttpRequest *req){
     size_t vlen = 0;
     const char *val = http_request_header(req, "connection", &vlen);
     return val && vlen >= 10 && strncasecmp(val, "keep-alive", 10) == 0;
@@ -219,8 +208,7 @@ bool http_request_contains_keepalive(const HttpRequest *req)
  * vsnprintf returns the bytes it *would* have written — if >= remaining
  * the output was truncated and we treat that as an error.
  */
-static inline bool append_to_buffer(char *out, size_t outMax, size_t *pos, const char *fmt, ...)
-{
+static inline bool append_to_buffer(char *out, size_t outMax, size_t *pos, const char *fmt, ...){
     va_list ap;
     va_start(ap, fmt);
 
@@ -236,8 +224,7 @@ static inline bool append_to_buffer(char *out, size_t outMax, size_t *pos, const
 }
 
 int http_response_render(const HttpResponse * restrict resp, bool keepAlive,
-                         char * restrict out, size_t outMax)
-{
+                         char * restrict out, size_t outMax){
     const char *ct = infer_contentType(resp->body, resp->contentType);
 
     // Redirect responses carry no body
@@ -278,8 +265,7 @@ int http_response_render(const HttpResponse * restrict resp, bool keepAlive,
 
 
 
-void get_field(const char *src, const char *paramName, char *dest, size_t max)
-{
+void get_field(const char *src, const char *paramName, char *dest, size_t max){
     dest[0] = '\0';
     if (unlikely(!src || !paramName)) return;
 
@@ -296,8 +282,7 @@ void get_field(const char *src, const char *paramName, char *dest, size_t max)
     }
 }
 
-void html_escape(const char * restrict src, char * restrict dest, size_t max)
-{
+void html_escape(const char * restrict src, char * restrict dest, size_t max){
     size_t i = 0;
     // Reserve enough room for the longest entity (&quot; = 6 bytes) plus NUL
     while (*src && i + 7 < max) {
@@ -314,8 +299,7 @@ void html_escape(const char * restrict src, char * restrict dest, size_t max)
     dest[i] = '\0';
 }
 
-void make_error_block(const char *msg, char *dest, size_t max)
-{
+void make_error_block(const char *msg, char *dest, size_t max){
     if (unlikely(!msg || !msg[0])) { dest[0] = '\0'; return; }
     snprintf(dest, max, "<div class='alert alert-err'>%s</div>", msg);
 }

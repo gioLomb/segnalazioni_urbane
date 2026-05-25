@@ -245,16 +245,5 @@ bool report_get_by_id(uint64_t reportId, Report *out);
  */
 int report_count_active(void);
 
-/* ── Utility ─────────────────────────────────────────────────────────── */
-
-/**
- * @brief Serialises a single Report to a JSON string.
- *
- * @param r        Source report.
- * @param dest     Output buffer.
- * @param destSize Capacity of dest in bytes.
- * @return true if the JSON fits in dest, false on error or overflow.
- */
-bool report_to_json(const Report *r, char *dest, size_t destSize);
 
 #endif /* REPORT_H */

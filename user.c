@@ -13,7 +13,7 @@
 // using /dev/urandom. Falls back to time^pid if the device is unavailable.
 static void generate_salt(char *out) {
     static const char hex[] = "0123456789abcdef";
-    unsigned char buf[16];  // 16 raw bytes → 32 hex chars
+    unsigned char buf[SALT_RAW_LEN];  // 16 raw bytes → 32 hex chars
 
     FILE *f = fopen("/dev/urandom", "rb");
     if (f && fread(buf, 1, sizeof(buf), f) == sizeof(buf)) {

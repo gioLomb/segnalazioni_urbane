@@ -220,7 +220,7 @@ void route_post_submit(const HttpRequest *req, HttpResponse *resp) {
     if (geo_lookup(u.city, &geo) && !geo_contains(&geo, lat, lon))
         return submit_error(resp, &u, "Le coordinate non appartengono alla tua città.");
 
-    // Fall back to "Altro" when the category field is empty or not submitted.
+    // Fallback to "Altro" when the category field is empty or not submitted.
     uint64_t rid = report_insert(u.userId, lat, lon, u.city,
                                  category[0] ? category : "Altro", desc);
     if (rid == 0)
@@ -228,8 +228,6 @@ void route_post_submit(const HttpRequest *req, HttpResponse *resp) {
 
     redirect(resp, "/home", NULL);
 }
-
-/* ── Static assets ───────────────────────────────────────────────────── */
 
 void route_static_css(const HttpRequest *req, HttpResponse *resp) {
     (void)req;

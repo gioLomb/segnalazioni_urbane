@@ -126,9 +126,7 @@ void route_api_report_status(const HttpRequest *req, HttpResponse *resp) {
     resp->statusCode = 200;
 }
 
-/* Accept or reject an assignment (operator action).
- * POST body: report_id=<id>&action=accept|reject
- */
+
 void route_api_report_respond(const HttpRequest *req, HttpResponse *resp) {
     User u = {0};
     if (!get_session_user(req, &u) || !user_is_operator(&u)) {
@@ -136,6 +134,7 @@ void route_api_report_respond(const HttpRequest *req, HttpResponse *resp) {
         return;
     }
 
+    // Extracting form fields
     char reportIds[REPORT_ID_PARAM_LEN] = {0}, action[8] = {0};
     get_field(req->body, "report_id=", reportIds, sizeof(reportIds));
     get_field(req->body, "action=",    action,    sizeof(action));
@@ -239,6 +238,7 @@ void route_api_admin_assign(const HttpRequest *req, HttpResponse *resp) {
         return;
     }
 
+    // Extracting form fields
     char reportIds[REPORT_ID_PARAM_LEN] = {0}, operatorIds[OPERATOR_ID_PARAM_LEN] = {0};
     get_field(req->body, "report_id=",   reportIds, sizeof(reportIds));
     get_field(req->body, "operator_id=", operatorIds,  sizeof(operatorIds));

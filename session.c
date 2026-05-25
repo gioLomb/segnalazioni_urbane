@@ -6,9 +6,7 @@
 #include <time.h>
 #include <unistd.h>
 
-/* ── Internal state ──────────────────────────────────────────────────── */
 
-// Singleton session table; NULL until session_init() is called.
 static Hash_Table *s_sessions = NULL;
 
 /* ── Private helpers ─────────────────────────────────────────────────── */
@@ -74,15 +72,17 @@ bool session_create(const User *user, char *outToken) {
 
     char token[TOKEN_HEX_LEN + 1];
     User dummy;
-    int maxTries = 100;
 
     // Collision avoidance: regenerate until the token is not already in use.
     // Collisions are astronomically rare with a 32-char hex token but the
     // loop makes the guarantee explicit.
-    do {
+    int tries;
+    for (tries = 0; tries < SESSION_CREATE_MAX_TRIES; tries++) {
         generate_token(token, TOKEN_HEX_LEN);
-        if (--maxTries <= 0) return false;
-    } while (session_verify(token, &dummy));
+        if (!session_verify(token, &dummy))
+            break;
+    }
+    if (tries == SESSION_CREATE_MAX_TRIES) return false;
 
     Session s;
     s.user = *user;

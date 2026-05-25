@@ -29,7 +29,7 @@
 /* BUFFER_SIZE          - per-connection request accumulation buffer.
  * RESPONSE_BUFFER_SIZE - heap-allocated per-request response buffer;
  *                        must be large enough for the biggest HTML page. */
-#define BUFFER_SIZE          (1 << 13)  /* 8 KB   */
+#define CLIENT_BUFFER_SIZE          (1 << 13)  /* 8 KB   */
 #define RESPONSE_BUFFER_SIZE (1 << 18)  /* 256 KB */
 #define URL_BUFFER_SIZE      (1 << 10)
 #define PARAM_KEY_SIZE       (1 << 6)

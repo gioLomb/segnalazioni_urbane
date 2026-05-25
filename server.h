@@ -13,7 +13,10 @@
 #define MAX_HEADER_STR_LEN 512
 // Buffer size for numeric strings (content-length, port numbers, etc.).
 #define MAX_NUMBER_LEN     24
-
+// MurmurHash2 mix multiplier — chosen for its avalanche properties.
+#define MURMUR_MUL   0x5bd1e995UL
+// MurmurHash3 finalizer multiplier — breaks up residual bit patterns.
+#define MURMUR_FIN   0x85ebca6bUL
 
 /**
  * @brief MurmurHash-inspired hash function used by every Hash_Table instance.

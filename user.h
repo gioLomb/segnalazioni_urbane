@@ -19,7 +19,7 @@
 #define PWD_PLAIN_LEN 128
 #define SALT_HEX_LEN  32  // 16 random bytes encoded as 32 hex characters
 #define CITY_LEN      32
-
+#define SALT_RAW_LEN 16
 /**
  * @brief Role assigned to every registered user.
  */

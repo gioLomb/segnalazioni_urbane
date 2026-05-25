@@ -24,6 +24,8 @@
 #define SESSION_COOKIE_NAME "sid"
 /** Maximum session lifetime: 24 hours in seconds. */
 #define SESSION_MAX_AGE     (24 * 60 * 60)
+/**Maximum tries for creating a token session */
+#define SESSION_CREATE_MAX_TRIES 5
 
 /**
  * @brief Session record stored in the internal hash table.

@@ -462,19 +462,3 @@ int report_count_active(void) {
     return count;
 }
 
-/* ── Utility ─────────────────────────────────────────────────────────── */
-
-bool report_to_json(const Report *r, char *dest, size_t destSize) {
-    if (!r || !dest || destSize == 0) return false;
-    cJSON *obj = report_to_cjson(r);
-    if (!obj) return false;
-    char *str = cJSON_PrintUnformatted(obj);
-    cJSON_Delete(obj);
-    if (!str) return false;
-    size_t len = strlen(str);
-    // Strict less-than: we need len + 1 bytes to fit the NUL terminator.
-    bool ok = len < destSize;
-    if (ok) memcpy(dest, str, len + 1);
-    free(str);
-    return ok;
-}

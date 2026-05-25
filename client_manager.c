@@ -2,15 +2,10 @@
 #include "slab_allocator.h"
 #include <string.h>
 
-
-
-/* ── Module state ────────────────────────────────────────────────────── */
-
 static SlabPool clientPool;             // Slab pool for ClientCtx allocation
 static ClientCtx *ptrActiveClientsHead; // Head of the doubly-linked active list
 static int activeClientsCount;          // Current number of live connections
 
-/* ── Lifecycle ───────────────────────────────────────────────────────── */
 
 int client_manager_init(void) {
     // Initialise the slab with ClientCtx-sized blocks and 64 slots per chunk.
@@ -23,7 +18,6 @@ void client_manager_destroy(void) {
     activeClientsCount = 0;
 }
 
-/* ── Per-connection alloc / release ─────────────────────────────────── */
 
 ClientCtx *client_manager_alloc(void) {
     ClientCtx *ctx = slab_pool_alloc(&clientPool);

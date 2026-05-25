@@ -1,6 +1,6 @@
 #include "hash_table.h"
 
-/* ── Static prototypes ───────────────────────────────────────────────── */
+/* ── Forward declarations ───────────────────────────────────────────────── */
 
 static Entry *create_entry(void *key, size_t keySize,
                             void *value, size_t valueSize,
@@ -16,8 +16,7 @@ static inline void save_entry(Entry *e, FILE *f);
 
 static unsigned long generate_seed(void);
 
-static inline int keys_equal(const void *a, size_t aSize,
-                              const void *b, size_t bSize);
+static inline int keys_equal(const void *a, size_t aSize,const void *b, size_t bSize);
 
 
 /* ── API implementation ──────────────────────────────────────────────── */
@@ -27,16 +26,18 @@ Hash_Table *ht_create(size_t initialCapacity, hash_func hashFunction) {
     Hash_Table *table = malloc(sizeof(Hash_Table));
     if (!table) return NULL;
 
-    table->size       = 0;
+    table->size = 0;
     // Ensure capacity is at least the default value
-    table->capacity   = initialCapacity > 0 ? initialCapacity : HT_DEFAULT_CAPACITY;
-    
+    table->capacity = initialCapacity > 0 ? initialCapacity : HT_DEFAULT_CAPACITY;
+
     // Allocate bucket array and initialize with NULL pointers
-    table->pool       = calloc(table->capacity, sizeof(Entry *));
-    if (!table->pool) { free(table); return NULL; }
+    table->pool = calloc(table->capacity, sizeof(Entry *));
+    if (!table->pool) { 
+        free(table); return NULL; 
+    }
 
     // Initialize security seed and synchronization primitives
-    table->seed         = generate_seed();
+    table->seed = generate_seed();
     table->hashFunction = hashFunction;
     pthread_rwlock_init(&table->lock, NULL);
     return table;
@@ -66,8 +67,8 @@ int ht_set(Hash_Table * restrict table, void * restrict key, size_t keySize,
     // Writers-only lock: modification of the structure starts here
     pthread_rwlock_wrlock(&table->lock);
 
-    unsigned long h     = table->hashFunction(key, keySize, table->seed);
-    unsigned int  index = h % table->capacity;
+    unsigned long h = table->hashFunction(key, keySize, table->seed);
+    unsigned int index = h % table->capacity;
 
     // Update existing entry if key is already present
     for (Entry *e = table->pool[index]; e; e = e->next) {
@@ -97,8 +98,8 @@ int ht_set(Hash_Table * restrict table, void * restrict key, size_t keySize,
     if (!newEntry) goto error;
 
     // Standard linked list insertion at head of the bucket
-    newEntry->next      = table->pool[index];
-    table->pool[index]  = newEntry;
+    newEntry->next = table->pool[index];
+    table->pool[index] = newEntry;
     table->size++;
 
     pthread_rwlock_unlock(&table->lock);
@@ -138,12 +139,12 @@ int ht_delete(Hash_Table * restrict table, void * restrict key, size_t keySize) 
 
     unsigned int index = table->hashFunction(key, keySize, table->seed) % table->capacity;
     Entry *prev = NULL;
-    Entry *e    = table->pool[index];
+    Entry *e = table->pool[index];
 
     // Standard linked list node removal search
     while (e && !keys_equal(e->key, e->keySize, key, keySize)) {
         prev = e;
-        e    = e->next;
+        e = e->next;
     }
 
     if (!e) {
@@ -175,20 +176,20 @@ static int ht_resize(Hash_Table *table) {
     for (size_t i = 0; i < table->capacity; i++) {
         Entry *e = table->pool[i];
         while (e) {
-            Entry       *next     = e->next;
+            Entry *next = e->next;
             // Use cached hash to avoid expensive recomputations
             unsigned int newIndex = e->hash % newCap;
-            
+
             // Move entry to new bucket
-            e->next               = newPool[newIndex];
-            newPool[newIndex]     = e;
-            e                     = next;
+            e->next = newPool[newIndex];
+            newPool[newIndex] = e;
+            e = next;
         }
     }
     
     // Free old bucket array (entries themselves were moved, not freed)
     free(table->pool);
-    table->pool     = newPool;
+    table->pool = newPool;
     table->capacity = newCap;
     return 1;
 }

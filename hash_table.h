@@ -33,13 +33,13 @@ typedef void (*ht_foreach_cb)(void *key, size_t keySize,
                                void *value, size_t valueSize,
                                void *userdata);
 
-typedef struct Entry {
-    void          *key;
-    size_t         keySize;
-    void          *value;
-    size_t         size;
-    unsigned long  hash;   
-    struct Entry  *next;
+typedef struct Entry{
+    void *key;
+    size_t keySize;
+    void *value;
+    size_t size;
+    unsigned long hash;
+    struct Entry *next;
 } Entry;
 
 typedef struct {

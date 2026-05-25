@@ -137,7 +137,7 @@ void on_buffer_alloc(uv_handle_t *handle, size_t suggestedSize, uv_buf_t *buf) {
     // Lazy allocation: the buffer is created only when data first arrives,
     // so idle keep-alive connections don't consume BUFFER_SIZE each.
     if (!ctx->buffer) {
-        ctx->buffer = malloc(BUFFER_SIZE);
+        ctx->buffer = malloc(CLIENT_BUFFER_SIZE);
         if (!ctx->buffer) {
             buf->base = NULL;
             buf->len = 0;
@@ -147,7 +147,7 @@ void on_buffer_alloc(uv_handle_t *handle, size_t suggestedSize, uv_buf_t *buf) {
 
     // Give libuv only the unused portion of the buffer.
     // Setting base = NULL signals "no space" and triggers a zero-length read.
-    size_t remaining = BUFFER_SIZE - 1 - ctx->totalRead;
+    size_t remaining = CLIENT_BUFFER_SIZE - 1 - ctx->totalRead;
     buf->base = remaining ? ctx->buffer + ctx->totalRead : NULL;
     buf->len = remaining;
 }
@@ -176,7 +176,7 @@ void on_read(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf) {
     uv_read_stop(stream);
     uv_timer_stop(&ctx->timer);
 
-    // Rate-limit check — disabled by default (DEBUG_RATE_LIMIT == 0).
+    // Rate-limit check
     char ip[INET6_ADDRSTRLEN] = {0};
     get_peer_ip(&ctx->handle, ip, sizeof(ip));
     if (DEBUG_RATE_LIMIT && !rate_limit_check(ip)) {

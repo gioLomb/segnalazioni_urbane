@@ -41,7 +41,6 @@ static const Route routes[] = {
     { .method = "GET",  .path = "/static/common.css",    .handler = route_static_css           }
 };
 
-// static const size_t NUM_ROUTES = sizeof(routes) / sizeof(routes[0]);
 
 /* ── Public API ──────────────────────────────────────────────────────── */
 
