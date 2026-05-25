@@ -10,7 +10,6 @@ temp/
 *.bin
 *.lua
 *.py
-*.md
 test_modules.c
 segnalacity.db
 segnalacity.db-shm
