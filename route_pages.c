@@ -243,3 +243,16 @@ void route_static_css(const HttpRequest *req, HttpResponse *resp) {
     resp->statusCode = 200;
     resp->contentType = "text/css; charset=utf-8";
 }
+
+void route_static_docs(const HttpRequest *req, HttpResponse *resp) {
+    (void)req;
+    const Template *tpl = tpl_get(TPL_DOCS);
+    if (unlikely(!tpl)) {
+        resp_html_error(resp, 404, "docs not found");
+        return;
+    }
+    int n = tpl_render(tpl, resp->body, RESPONSE_BUFFER_SIZE, NULL, 0);
+    resp->bodyLen    = n > 0 ? (size_t)n : 0;
+    resp->statusCode = 200;
+    resp->contentType = "text/html; charset=utf-8";
+}

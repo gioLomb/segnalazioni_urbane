@@ -119,6 +119,7 @@ static int init_db(void) {
 
 static int init_templates(void) {
     if (tpl_load_files(TPL_LOGIN,
+                       TPL_DOCS,
                        TPL_REGISTER,
                        TPL_CITIZEN_HOME,
                        TPL_OPERATOR_MAP,

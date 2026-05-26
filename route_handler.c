@@ -38,7 +38,8 @@ static const Route routes[] = {
     { .method = "POST", .path = "/api/report/respond",   .handler = route_api_report_respond   },
     { .method = "POST", .path = "/api/report/feedback",  .handler = route_api_report_feedback  },
     { .method = "POST", .path = "/api/admin/assign",     .handler = route_api_admin_assign     },
-    { .method = "GET",  .path = "/static/common.css",    .handler = route_static_css           }
+    { .method = "GET",  .path = "/static/common.css",    .handler = route_static_css           },
+    { .method = "GET",  .path = "/api/docs",             .handler = route_static_docs          },
 };
 
 

@@ -236,7 +236,8 @@ int http_response_render(const HttpResponse * restrict resp, bool keepAlive,
             "HTTP/1.1 %d %s\r\n"
             "Content-Type: %s\r\n"
             "Content-Length: %zu\r\n"
-            "Connection: %s\r\n",
+            "Connection: %s\r\n"
+            "Access-Control-Allow-Origin: *\r\n",
             resp->statusCode, http_status_msg(resp->statusCode),
             ct, bodyLen, keepAlive ? "keep-alive" : "close")) return -1;
 

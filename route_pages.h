@@ -72,4 +72,5 @@ void route_post_submit(const HttpRequest *req, HttpResponse *resp);
  */
 void route_static_css(const HttpRequest *req, HttpResponse *resp);
 
+void route_static_docs(const HttpRequest *req, HttpResponse *resp);//TODO
 #endif /* ROUTE_PAGES_H */

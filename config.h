@@ -52,4 +52,6 @@
 #define TPL_OPERATOR_MAP TEMPLATES_DIR "operator_map.html"
 #define TPL_ADMIN_MAP    TEMPLATES_DIR "admin_map.html"
 #define TPL_CSS          TEMPLATES_DIR "common.css"
+#define TPL_DOCS         TEMPLATES_DIR "swagger_api_docs.html"
+
 #endif /* CONFIG_H */
