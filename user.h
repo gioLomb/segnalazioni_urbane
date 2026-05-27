@@ -48,12 +48,12 @@ typedef enum {
  * @brief In-memory representation of a user row.
  */
 typedef struct {
-    uint64_t userId;
-    char     username[USERNAME_LEN];
-    char     passwordHash[PWD_HASH_LEN + 1];
-    char     salt[SALT_HEX_LEN + 1];  // empty string = legacy row, no salt
-    char     city[CITY_LEN];
-    UserRole role;
+    uint64_t userId;                      /**< Unique numeric identifier for the user */
+    char     username[USERNAME_LEN];      /**< Null-terminated login name */
+    char     passwordHash[PWD_HASH_LEN+1];/**< Hex-encoded hash of salt+password */
+    char     salt[SALT_HEX_LEN + 1];     /**< Hex-encoded random salt; empty string indicates a legacy row with no salt */
+    char     city[CITY_LEN];             /**< City of residence associated with the user account */
+    UserRole role;                        /**< Access level: citizen, operator, or admin */
 } User;
 
 /**

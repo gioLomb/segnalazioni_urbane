@@ -72,5 +72,14 @@ void route_post_submit(const HttpRequest *req, HttpResponse *resp);
  */
 void route_static_css(const HttpRequest *req, HttpResponse *resp);
 
-void route_static_docs(const HttpRequest *req, HttpResponse *resp);//TODO
+/**
+ * @brief GET /docs — serves the Swagger UI documentation page.
+ *
+ * Renders the self-contained OpenAPI documentation interface from
+ * templates/docs.html. Because the page is served from the same origin
+ * as the API, the browser attaches the session cookie automatically,
+ * making the Try it out feature fully functional.
+ */
+void route_static_docs(const HttpRequest *req, HttpResponse *resp);
+
 #endif /* ROUTE_PAGES_H */

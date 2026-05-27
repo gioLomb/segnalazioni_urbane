@@ -41,7 +41,7 @@ static void url_decode(const char * restrict src, char * restrict dest, size_t m
 }
 
 /* Returns the standard reason-phrase for the most common HTTP status codes. */
-static const char *http_status_msg(int code){
+static inline const char *http_status_msg(int code){
     switch (code) {
         case 200: return "OK";
         case 302: return "Found";
@@ -266,7 +266,7 @@ int http_response_render(const HttpResponse * restrict resp, bool keepAlive,
 
 
 
-void get_field(const char *src, const char *paramName, char *dest, size_t max){
+void get_field(const char * restrict src, const char * restrict paramName, char * restrict dest, size_t max){
     dest[0] = '\0';
     if (unlikely(!src || !paramName)) return;
 
@@ -300,7 +300,7 @@ void html_escape(const char * restrict src, char * restrict dest, size_t max){
     dest[i] = '\0';
 }
 
-void make_error_block(const char *msg, char *dest, size_t max){
+void make_error_block(const char * restrict msg, char * restrict dest, size_t max){
     if (unlikely(!msg || !msg[0])) { dest[0] = '\0'; return; }
     snprintf(dest, max, "<div class='alert alert-err'>%s</div>", msg);
 }

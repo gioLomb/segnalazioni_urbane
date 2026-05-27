@@ -69,7 +69,7 @@ void slab_pool_destroy(SlabPool *pool);
  * @param pool Pointer to the SlabPool.
  * @return Pointer to the allocated block, or NULL if out of memory.
  */
-void *slab_pool_alloc(SlabPool *pool);
+void *slab_pool_alloc(SlabPool * restrict pool);
 
 /**
  * @brief Returns a block to the pool for reuse.

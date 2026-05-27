@@ -63,19 +63,19 @@ typedef enum {
  * followed by fixed-length char arrays and the 4-byte enum last.
  */
 typedef struct {
-    uint64_t     reportId;
-    uint64_t     authorId;
-    uint64_t     assignedTo;
-    double       lat;
-    double       lon;
-    time_t       createdAt;
-    time_t       assignedAt;
-    time_t       resolvedAt;
-    char         city[CITY_LEN];
-    char         category[CAT_LEN];
-    ReportStatus status;
-    int          feedback;   
-    char         description[DESC_LEN];
+    uint64_t     reportId;                /**< Unique numeric identifier for the report */
+    uint64_t     authorId;                /**< User ID of the citizen who submitted the report */
+    uint64_t     assignedTo;              /**< User ID of the operator assigned to handle the report; 0 if unassigned */
+    double       lat;                     /**< Latitude of the reported issue in decimal degrees */
+    double       lon;                     /**< Longitude of the reported issue in decimal degrees */
+    time_t       createdAt;               /**< Unix timestamp when the report was submitted */
+    time_t       assignedAt;              /**< Unix timestamp when the report was assigned to an operator; 0 if unassigned */
+    time_t       resolvedAt;              /**< Unix timestamp when the report was marked as resolved; 0 if still open */
+    char         city[CITY_LEN];          /**< Name of the city where the issue was reported */
+    char         category[CAT_LEN];       /**< Category of the issue (e.g. road, lighting, waste) */
+    ReportStatus status;                  /**< Current lifecycle state of the report (open, assigned, resolved) */
+    int          feedback;                /**< Citizen satisfaction rating after resolution; 0 if not yet provided */
+    char         description[DESC_LEN];   /**< Free-text description of the issue provided by the author */
 } Report;
 
 /* ── Cache ───────────────────────────────────────────────────────────── */

@@ -30,7 +30,7 @@ static void send_response(ClientCtx *ctx, const HttpResponse *resp, bool keepAli
 static void on_write_complete(uv_write_t *req, int status);
 static void on_timeout(uv_timer_t *handle);
 static void on_close(uv_handle_t *handle);
-static void get_peer_ip(uv_tcp_t *tcp, char *ip, size_t len);
+static inline void get_peer_ip(uv_tcp_t *tcp, char *ip, size_t len);
 static int  setup_client(uv_stream_t *server);
 
 /* ── Private types ───────────────────────────────────────────────────── */
@@ -80,7 +80,7 @@ static void send_response(ClientCtx *ctx, const HttpResponse *resp, bool keepAli
 
 // Resolves the IPv4 address of the TCP peer into ip[].
 // Sets ip[0] = '\0' on failure so callers can treat it as an empty string.
-static void get_peer_ip(uv_tcp_t *tcp, char *ip, size_t len) {
+static inline void get_peer_ip(uv_tcp_t *tcp, char *ip, size_t len) {
     struct sockaddr_in peer;
     int plen = sizeof(peer);
     if (uv_tcp_getpeername(tcp, (struct sockaddr *)&peer, &plen) == 0){
@@ -95,7 +95,7 @@ static void get_peer_ip(uv_tcp_t *tcp, char *ip, size_t len) {
 // ClientCtx and registers it with the event loop.
 // Returns 1 on success, 0 if the client cap is reached or allocation fails.
 static int setup_client(uv_stream_t *server) {
-    if (client_manager_active_count() >= MAX_CLIENTS) return 0;
+    if (unlikely(client_manager_active_count() >= MAX_CLIENTS)) return 0;
 
     ClientCtx *ctx = client_manager_alloc();
     if (!ctx) return 0;

@@ -80,13 +80,13 @@ int http_response_render(const HttpResponse *resp, bool keepAlive,
 /* ── Body & HTML Sanitization Helpers ───────────────────────────────── */
 
 /** @brief Extracts and URL-decodes an individual key variable from an URL-encoded buffer. */
-void get_field(const char *src, const char *paramName,
-               char *dest, size_t max);
+void get_field(const char * restrict src, const char * restrict paramName,
+               char * restrict dest, size_t max);
 
 /** @brief Escapes basic dangerous syntax structures to avoid Cross-Site Scripting (XSS). */
 void html_escape(const char *restrict src, char *restrict dest, size_t max);
 
 /** @brief Wraps text messages inside stylized template warning blocks. */
-void make_error_block(const char *msg, char *dest, size_t max);
+void make_error_block(const char * restrict msg, char * restrict dest, size_t max);
 
 #endif /* HTTP_UTILS_H */

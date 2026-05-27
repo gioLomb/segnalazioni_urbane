@@ -70,7 +70,7 @@ void slab_pool_destroy(SlabPool *pool) {
     pool->chunksHead = NULL;
 }
 
-void *slab_pool_alloc(SlabPool *pool) {
+void *slab_pool_alloc(SlabPool * restrict pool) {
     if (!pool) return NULL;
 
     // Find the first chunk with at least one free slot.
