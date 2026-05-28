@@ -1,0 +1,34 @@
+<map id="route_helpers.h" name="route_helpers.h">
+<area shape="rect" id="Node000001" title="Internal helpers shared by route_pages.c and route_api.c." alt="" coords="203,5,325,31"/>
+<area shape="rect" id="Node000002" href="$http__types_8h.html" title="Shared HTTP request and response data structures." alt="" coords="123,152,226,177"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="221,33,184,51,168,64,156,80,151,94,151,109,162,139,157,141,146,110,146,93,151,77,165,60,182,47,219,28"/>
+<area shape="rect" id="Node000005" href="$http__utils_8h.html" title="HTTP parsing, evaluation, and serialization utility suite." alt="" coords="166,79,261,104"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="258,33,232,69,227,66,253,29"/>
+<area shape="rect" id="Node000006" href="$template_8h.html" title="Lightweight HTML template engine." alt="" coords="5,152,99,177"/>
+<area shape="poly" id="edge7_Node000001_Node000006" title=" " alt="" coords="236,33,191,53,144,81,106,112,74,143,70,140,102,108,141,76,189,49,234,28"/>
+<area shape="rect" id="Node000007" href="$user_8h.html" title="User management: registration, authentication, and role queries." alt="" coords="352,152,413,177"/>
+<area shape="poly" id="edge9_Node000001_Node000007" title=" " alt="" coords="293,28,327,48,358,77,374,107,382,138,377,139,369,109,354,80,324,52,290,33"/>
+<area shape="rect" id="Node000010" href="$session_8h.html" title="In&#45;memory session management backed by a hash table." alt="" coords="419,79,501,104"/>
+<area shape="poly" id="edge14_Node000001_Node000010" title=" " alt="" coords="296,28,416,71,414,76,295,33"/>
+<area shape="rect" id="Node000012" href="$geo_8h.html" title="City geometry module for indexing and validating geographic data." alt="" coords="285,79,344,104"/>
+<area shape="poly" id="edge19_Node000001_Node000012" title=" " alt="" coords="275,29,301,66,296,69,270,33"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="125,225,200,251"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="175,178,170,212,164,211,170,177"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="224,225,307,251"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="191,175,241,214,238,219,188,179"/>
+<area shape="poly" id="edge5_Node000005_Node000002" title=" " alt="" coords="209,106,190,141,185,139,205,103"/>
+<area shape="poly" id="edge6_Node000005_Node000004" title=" " alt="" coords="221,103,240,151,260,211,255,213,235,153,216,105"/>
+<area shape="poly" id="edge8_Node000006_Node000003" title=" " alt="" coords="71,175,134,215,131,220,68,180"/>
+<area shape="poly" id="edge13_Node000007_Node000003" title=" " alt="" coords="352,179,212,224,211,218,351,173"/>
+<area shape="poly" id="edge12_Node000007_Node000004" title=" " alt="" coords="365,180,298,220,295,216,362,175"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="331,225,442,251"/>
+<area shape="poly" id="edge10_Node000007_Node000008" title=" " alt="" coords="386,178,388,212,383,212,381,178"/>
+<area shape="rect" id="Node000009" title=" " alt="" coords="466,225,537,251"/>
+<area shape="poly" id="edge11_Node000007_Node000009" title=" " alt="" coords="403,175,471,216,469,220,400,180"/>
+<area shape="poly" id="edge16_Node000010_Node000004" title=" " alt="" coords="461,105,451,141,441,161,427,179,409,191,383,203,321,224,319,219,381,198,407,187,424,175,437,158,446,139,456,103"/>
+<area shape="poly" id="edge18_Node000010_Node000007" title=" " alt="" coords="449,106,407,144,404,141,446,102"/>
+<area shape="poly" id="edge15_Node000010_Node000009" title=" " alt="" coords="466,104,497,211,492,213,461,105"/>
+<area shape="rect" id="Node000011" title=" " alt="" coords="539,152,603,177"/>
+<area shape="poly" id="edge17_Node000010_Node000011" title=" " alt="" coords="479,102,542,142,539,147,476,106"/>
+<area shape="poly" id="edge20_Node000012_Node000004" title=" " alt="" coords="313,105,276,213,271,212,308,104"/>
+</map>

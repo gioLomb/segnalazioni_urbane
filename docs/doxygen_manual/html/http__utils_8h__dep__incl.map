@@ -1,0 +1,9 @@
+<map id="http_utils.h" name="http_utils.h">
+<area shape="rect" id="Node000001" title="HTTP parsing, evaluation, and serialization utility suite." alt="" coords="203,5,298,31"/>
+<area shape="rect" id="Node000002" href="$connection__handler_8h.html" title="Networking layer: connection setup, I/O callbacks, response dispatch." alt="" coords="5,79,165,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="213,38,113,81,111,76,211,34"/>
+<area shape="rect" id="Node000003" href="$route__handler_8h.html" title="Public interface of the HTTP routing subsystem." alt="" coords="189,79,312,104"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="253,44,253,79,248,79,248,44"/>
+<area shape="rect" id="Node000004" href="$route__helpers_8h.html" title="Internal helpers shared by route_pages.c and route_api.c." alt="" coords="336,79,459,104"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="287,34,374,76,372,81,285,39"/>
+</map>

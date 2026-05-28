@@ -1,0 +1,17 @@
+<map id="http_types.h" name="http_types.h">
+<area shape="rect" id="Node000001" title="Shared HTTP request and response data structures." alt="" coords="266,5,369,31"/>
+<area shape="rect" id="Node000002" href="$http__utils_8h.html" title="HTTP parsing, evaluation, and serialization utility suite." alt="" coords="185,79,279,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="295,41,248,80,244,76,292,37"/>
+<area shape="rect" id="Node000004" href="$route__handler_8h.html" title="Public interface of the HTTP routing subsystem." alt="" coords="5,152,128,177"/>
+<area shape="poly" id="edge6_Node000001_Node000004" title=" " alt="" coords="270,38,223,57,175,81,121,119,81,154,77,150,118,115,172,76,221,52,268,33"/>
+<area shape="rect" id="Node000005" href="$route__helpers_8h.html" title="Internal helpers shared by route_pages.c and route_api.c." alt="" coords="336,152,459,177"/>
+<area shape="poly" id="edge7_Node000001_Node000005" title=" " alt="" coords="325,43,333,73,346,103,366,129,386,150,382,154,362,133,342,105,328,74,320,45"/>
+<area shape="rect" id="Node000006" href="$route__api_8h.html" title="Declarations for the JSON API route handlers." alt="" coords="355,79,450,104"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="343,37,390,76,387,80,340,41"/>
+<area shape="rect" id="Node000007" href="$route__pages_8h.html" title="Declarations for HTML page and form handlers." alt="" coords="475,79,589,104"/>
+<area shape="poly" id="edge8_Node000001_Node000007" title=" " alt="" coords="366,32,498,76,496,81,364,37"/>
+<area shape="rect" id="Node000003" href="$connection__handler_8h.html" title="Networking layer: connection setup, I/O callbacks, response dispatch." alt="" coords="152,152,312,177"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="235,118,235,152,229,152,229,118"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="194,112,95,154,93,149,192,107"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="272,107,371,149,369,154,270,112"/>
+</map>

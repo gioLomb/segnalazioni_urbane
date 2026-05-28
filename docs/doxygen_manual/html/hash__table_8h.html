@@ -1,0 +1,596 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="it">
+<head>
+<meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=11"/>
+<meta name="generator" content="Doxygen 1.9.8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>SegnalaCity Backend: Riferimenti per il file hash_table.h</title>
+<link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="jquery.js"></script>
+<script type="text/javascript" src="dynsections.js"></script>
+<link href="navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="resize.js"></script>
+<script type="text/javascript" src="navtreedata.js"></script>
+<script type="text/javascript" src="navtree.js"></script>
+<link href="search/search.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="search/searchdata.js"></script>
+<script type="text/javascript" src="search/search.js"></script>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+  $(document).ready(function() { init_search(); });
+/* @license-end */
+</script>
+<link href="doxygen.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+<div id="top"><!-- do not remove this div, it is closed by doxygen! -->
+<div id="titlearea">
+<table cellspacing="0" cellpadding="0">
+ <tbody>
+ <tr id="projectrow">
+  <td id="projectalign">
+   <div id="projectname">SegnalaCity Backend<span id="projectnumber">&#160;1.0.0</span>
+   </div>
+   <div id="projectbrief">Manuale d&#39;uso delle API pubbliche (Interfacce Header)</div>
+  </td>
+    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
+        <span class="left">
+          <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
+          <input type="text" id="MSearchField" value="" placeholder="Cerca" accesskey="S"
+               onfocus="searchBox.OnSearchFieldFocus(true)" 
+               onblur="searchBox.OnSearchFieldFocus(false)" 
+               onkeyup="searchBox.OnSearchFieldChange(event)"/>
+          </span><span class="right">
+            <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
+          </span>
+        </div>
+</td>
+ </tr>
+ </tbody>
+</table>
+</div>
+<!-- end header part -->
+<!-- Generato da Doxygen 1.9.8 -->
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+var searchBox = new SearchBox("searchBox", "search/",'.html');
+/* @license-end */
+</script>
+</div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
+  <div id="nav-tree">
+    <div id="nav-tree-contents">
+      <div id="nav-sync" class="sync"></div>
+    </div>
+  </div>
+  <div id="splitbar" style="-moz-user-select:none;" 
+       class="ui-resizable-handle">
+  </div>
+</div>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(document).ready(function(){initNavTree('hash__table_8h.html',''); initResizable(); });
+/* @license-end */
+</script>
+<div id="doc-content">
+<!-- window showing the filter options -->
+<div id="MSearchSelectWindow"
+     onmouseover="return searchBox.OnSearchSelectShow()"
+     onmouseout="return searchBox.OnSearchSelectHide()"
+     onkeydown="return searchBox.OnSearchSelectKey(event)">
+</div>
+
+<!-- iframe showing the search results (closed by default) -->
+<div id="MSearchResultsWindow">
+<div id="MSearchResults">
+<div class="SRPage">
+<div id="SRIndex">
+<div id="SRResults"></div>
+<div class="SRStatus" id="Loading">Caricamento in corso...</div>
+<div class="SRStatus" id="Searching">Ricerca in corso...</div>
+<div class="SRStatus" id="NoMatches">Nessun risultato</div>
+</div>
+</div>
+</div>
+</div>
+
+<div class="header">
+  <div class="summary">
+<a href="#typedef-members">Ridefinizioni di tipo (typedef)</a> &#124;
+<a href="#func-members">Funzioni</a>  </div>
+  <div class="headertitle"><div class="title">Riferimenti per il file hash_table.h</div></div>
+</div><!--header-->
+<div class="contents">
+
+<p>Thread-safe hash table with separate chaining and binary key-value support.  
+<a href="#details">Continua...</a></p>
+<div class="textblock"><code>#include &lt;stdio.h&gt;</code><br />
+<code>#include &lt;stdarg.h&gt;</code><br />
+<code>#include &lt;stdlib.h&gt;</code><br />
+<code>#include &lt;string.h&gt;</code><br />
+<code>#include &lt;time.h&gt;</code><br />
+<code>#include &lt;pthread.h&gt;</code><br />
+</div><div class="textblock"><div class="dynheader">
+Grafo delle dipendenze di inclusione per hash_table.h:</div>
+<div class="dyncontent">
+<div class="center"><img src="hash__table_8h__incl.png" border="0" usemap="#ahash__table_8h" alt=""/></div>
+<map name="ahash__table_8h" id="ahash__table_8h">
+<area shape="rect" title="Thread&#45;safe hash table with separate chaining and binary key&#45;value support." alt="" coords="225,5,330,31"/>
+<area shape="rect" title=" " alt="" coords="5,79,72,104"/>
+<area shape="poly" title=" " alt="" coords="240,33,86,79,85,74,238,28"/>
+<area shape="rect" title=" " alt="" coords="96,79,171,104"/>
+<area shape="poly" title=" " alt="" coords="255,33,170,75,168,70,253,28"/>
+<area shape="rect" title=" " alt="" coords="195,79,266,104"/>
+<area shape="poly" title=" " alt="" coords="272,32,248,69,244,66,267,30"/>
+<area shape="rect" title=" " alt="" coords="290,79,361,104"/>
+<area shape="poly" title=" " alt="" coords="287,30,312,66,308,69,283,33"/>
+<area shape="rect" title=" " alt="" coords="385,79,449,104"/>
+<area shape="poly" title=" " alt="" coords="301,28,384,70,381,75,299,33"/>
+<area shape="rect" title=" " alt="" coords="474,79,558,104"/>
+<area shape="poly" title=" " alt="" coords="316,28,465,72,463,77,315,33"/>
+</map>
+</div>
+</div><div class="textblock"><div class="dynheader">
+Questo grafo mostra quali altri file includono direttamente o indirettamente questo file:</div>
+<div class="dyncontent">
+<div class="center"><img src="hash__table_8h__dep__incl.png" border="0" usemap="#ahash__table_8hdep" alt=""/></div>
+<map name="ahash__table_8hdep" id="ahash__table_8hdep">
+<area shape="rect" title="Thread&#45;safe hash table with separate chaining and binary key&#45;value support." alt="" coords="65,5,170,31"/>
+<area shape="rect" href="rate__limiter_8h.html" title="Sliding&#45;window per&#45;IP rate limiter." alt="" coords="5,79,115,104"/>
+<area shape="poly" title=" " alt="" coords="102,43,71,80,67,77,97,40"/>
+<area shape="rect" href="server_8h.html" title="Server lifecycle." alt="" coords="139,79,213,104"/>
+<area shape="poly" title=" " alt="" coords="138,40,169,77,164,80,134,43"/>
+</map>
+</div>
+</div><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="typedef-members" name="typedef-members"></a>
+Ridefinizioni di tipo (typedef)</h2></td></tr>
+<tr class="memitem:a9cf401f8c72c3459d524461e348f2b33" id="r_a9cf401f8c72c3459d524461e348f2b33"><td class="memItemLeft" align="right" valign="top">typedef void(*&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="hash__table_8h.html#a9cf401f8c72c3459d524461e348f2b33">ht_foreach_cb</a>) (void *key, size_t keySize, void *value, size_t valueSize, void *userdata)</td></tr>
+<tr class="memdesc:a9cf401f8c72c3459d524461e348f2b33"><td class="mdescLeft">&#160;</td><td class="mdescRight">Callback for table traversal.  <br /></td></tr>
+<tr class="separator:a9cf401f8c72c3459d524461e348f2b33"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
+Funzioni</h2></td></tr>
+<tr class="memitem:ae1bc3f8d1cc56c8bf5cf10c7ce32de6e" id="r_ae1bc3f8d1cc56c8bf5cf10c7ce32de6e"><td class="memItemLeft" align="right" valign="top">Hash_Table *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="hash__table_8h.html#ae1bc3f8d1cc56c8bf5cf10c7ce32de6e">ht_create</a> (size_t initialCapacity, hash_func hashFunction)</td></tr>
+<tr class="memdesc:ae1bc3f8d1cc56c8bf5cf10c7ce32de6e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates and initializes a new hash table.  <br /></td></tr>
+<tr class="separator:ae1bc3f8d1cc56c8bf5cf10c7ce32de6e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af177a3dfd557f1d74f7351c7fc209d8e" id="r_af177a3dfd557f1d74f7351c7fc209d8e"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="hash__table_8h.html#af177a3dfd557f1d74f7351c7fc209d8e">ht_snapshot</a> (Hash_Table *table, const char *path)</td></tr>
+<tr class="memdesc:af177a3dfd557f1d74f7351c7fc209d8e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Saves a snapshot of the table to a binary file.  <br /></td></tr>
+<tr class="separator:af177a3dfd557f1d74f7351c7fc209d8e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a427252b31b8a9c4699d0870ba25dd26d" id="r_a427252b31b8a9c4699d0870ba25dd26d"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="hash__table_8h.html#a427252b31b8a9c4699d0870ba25dd26d">ht_set</a> (Hash_Table *restrict table, void *restrict key, size_t keySize, void *restrict value, size_t valueSize)</td></tr>
+<tr class="memdesc:a427252b31b8a9c4699d0870ba25dd26d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Inserts or updates a key-value pair in the table.  <br /></td></tr>
+<tr class="separator:a427252b31b8a9c4699d0870ba25dd26d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a558825dbaa6e9b4bddfab3d3a8c8db07" id="r_a558825dbaa6e9b4bddfab3d3a8c8db07"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="hash__table_8h.html#a558825dbaa6e9b4bddfab3d3a8c8db07">ht_get</a> (Hash_Table *restrict table, void *restrict key, size_t keySize, void *restrict destBuffer, size_t destSize)</td></tr>
+<tr class="memdesc:a558825dbaa6e9b4bddfab3d3a8c8db07"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieves a copy of the value associated with a key.  <br /></td></tr>
+<tr class="separator:a558825dbaa6e9b4bddfab3d3a8c8db07"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa654272c94a43a43e2d7b309d6699122" id="r_aa654272c94a43a43e2d7b309d6699122"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="hash__table_8h.html#aa654272c94a43a43e2d7b309d6699122">ht_delete</a> (Hash_Table *restrict table, void *restrict key, size_t keySize)</td></tr>
+<tr class="memdesc:aa654272c94a43a43e2d7b309d6699122"><td class="mdescLeft">&#160;</td><td class="mdescRight">Removes an entry from the table.  <br /></td></tr>
+<tr class="separator:aa654272c94a43a43e2d7b309d6699122"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac986a6f910dcf3f2048cc79c6529c0d2" id="r_ac986a6f910dcf3f2048cc79c6529c0d2"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="hash__table_8h.html#ac986a6f910dcf3f2048cc79c6529c0d2">ht_destroy</a> (Hash_Table *table, const char *persistenceFilePath)</td></tr>
+<tr class="memdesc:ac986a6f910dcf3f2048cc79c6529c0d2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Destroys the table and frees all allocated resources.  <br /></td></tr>
+<tr class="separator:ac986a6f910dcf3f2048cc79c6529c0d2"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a14a4ab0781749f8723acc44f9977a267" id="r_a14a4ab0781749f8723acc44f9977a267"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="hash__table_8h.html#a14a4ab0781749f8723acc44f9977a267">ht_load</a> (Hash_Table *table, const char *path)</td></tr>
+<tr class="memdesc:a14a4ab0781749f8723acc44f9977a267"><td class="mdescLeft">&#160;</td><td class="mdescRight">Loads table content from a binary snapshot.  <br /></td></tr>
+<tr class="separator:a14a4ab0781749f8723acc44f9977a267"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4044224a01d29cb8790e2c52d4120dfd" id="r_a4044224a01d29cb8790e2c52d4120dfd"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="hash__table_8h.html#a4044224a01d29cb8790e2c52d4120dfd">ht_foreach</a> (Hash_Table *table, <a class="el" href="hash__table_8h.html#a9cf401f8c72c3459d524461e348f2b33">ht_foreach_cb</a> cb, void *userdata)</td></tr>
+<tr class="memdesc:a4044224a01d29cb8790e2c52d4120dfd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Iterates over every entry in the table.  <br /></td></tr>
+<tr class="separator:a4044224a01d29cb8790e2c52d4120dfd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table>
+<a name="details" id="details"></a><h2 class="groupheader">Descrizione dettagliata</h2>
+<div class="textblock"><p>Thread-safe hash table with separate chaining and binary key-value support. </p>
+<ul>
+<li>This module provides a generic hash table implementation. It is designed to be thread-safe using a readers-writer lock </li>
+</ul>
+</div><h2 class="groupheader">Documentazione delle ridefinizioni di tipo (typedef)</h2>
+<a id="a9cf401f8c72c3459d524461e348f2b33" name="a9cf401f8c72c3459d524461e348f2b33"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9cf401f8c72c3459d524461e348f2b33">&#9670;&#160;</a></span>ht_foreach_cb</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">typedef void(* ht_foreach_cb) (void *key, size_t keySize, void *value, size_t valueSize, void *userdata)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Callback for table traversal. </p>
+<dl class="params"><dt>Parametri</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">key</td><td>Pointer to the entry key. </td></tr>
+    <tr><td class="paramname">keySize</td><td>Size of the key in bytes. </td></tr>
+    <tr><td class="paramname">value</td><td>Pointer to the entry value. </td></tr>
+    <tr><td class="paramname">valueSize</td><td>Size of the value in bytes. </td></tr>
+    <tr><td class="paramname">userdata</td><td>User-provided pointer passed through ht_foreach. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<h2 class="groupheader">Documentazione delle funzioni</h2>
+<a id="ae1bc3f8d1cc56c8bf5cf10c7ce32de6e" name="ae1bc3f8d1cc56c8bf5cf10c7ce32de6e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae1bc3f8d1cc56c8bf5cf10c7ce32de6e">&#9670;&#160;</a></span>ht_create()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">Hash_Table * ht_create </td>
+          <td>(</td>
+          <td class="paramtype">size_t&#160;</td>
+          <td class="paramname"><em>initialCapacity</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">hash_func&#160;</td>
+          <td class="paramname"><em>hashFunction</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Creates and initializes a new hash table. </p>
+<dl class="section pre"><dt>Precondizione</dt><dd>initialCapacity &gt; 0 (recommended), hashFunction != NULL </dd></dl>
+<dl class="section post"><dt>Postcondizione</dt><dd>A new Hash_Table instance is allocated and returned </dd></dl>
+<dl class="params"><dt>Parametri</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">initialCapacity</td><td>Suggestion for the initial number of buckets. </td></tr>
+    <tr><td class="paramname">hashFunction</td><td>Function pointer to the hashing algorithm. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Restituisce</dt><dd>Pointer to the new Hash_Table, or NULL on failure. </dd></dl>
+
+</div>
+</div>
+<a id="aa654272c94a43a43e2d7b309d6699122" name="aa654272c94a43a43e2d7b309d6699122"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa654272c94a43a43e2d7b309d6699122">&#9670;&#160;</a></span>ht_delete()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int ht_delete </td>
+          <td>(</td>
+          <td class="paramtype">Hash_Table *restrict&#160;</td>
+          <td class="paramname"><em>table</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">void *restrict&#160;</td>
+          <td class="paramname"><em>key</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">size_t&#160;</td>
+          <td class="paramname"><em>keySize</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Removes an entry from the table. </p>
+<dl class="section pre"><dt>Precondizione</dt><dd>table != NULL, key != NULL </dd></dl>
+<dl class="section post"><dt>Postcondizione</dt><dd>Entry is freed and removed; table size decrements if it existed </dd></dl>
+<dl class="params"><dt>Parametri</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">table</td><td>Pointer to the hash table. </td></tr>
+    <tr><td class="paramname">key</td><td>Pointer to the key to delete. </td></tr>
+    <tr><td class="paramname">keySize</td><td>Size of the key. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Restituisce</dt><dd>1 if found and deleted, 0 otherwise. </dd></dl>
+
+</div>
+</div>
+<a id="ac986a6f910dcf3f2048cc79c6529c0d2" name="ac986a6f910dcf3f2048cc79c6529c0d2"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac986a6f910dcf3f2048cc79c6529c0d2">&#9670;&#160;</a></span>ht_destroy()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void ht_destroy </td>
+          <td>(</td>
+          <td class="paramtype">Hash_Table *&#160;</td>
+          <td class="paramname"><em>table</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>persistenceFilePath</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Destroys the table and frees all allocated resources. </p>
+<dl class="section pre"><dt>Precondizione</dt><dd>table != NULL </dd></dl>
+<dl class="section post"><dt>Postcondizione</dt><dd>Memory for all entries, the pool, and the table struct is released </dd></dl>
+<dl class="params"><dt>Parametri</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">table</td><td>Pointer to the table to destroy. </td></tr>
+    <tr><td class="paramname">persistenceFilePath</td><td>Optional path to save a final snapshot before destruction. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="a4044224a01d29cb8790e2c52d4120dfd" name="a4044224a01d29cb8790e2c52d4120dfd"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4044224a01d29cb8790e2c52d4120dfd">&#9670;&#160;</a></span>ht_foreach()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void ht_foreach </td>
+          <td>(</td>
+          <td class="paramtype">Hash_Table *&#160;</td>
+          <td class="paramname"><em>table</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="hash__table_8h.html#a9cf401f8c72c3459d524461e348f2b33">ht_foreach_cb</a>&#160;</td>
+          <td class="paramname"><em>cb</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">void *&#160;</td>
+          <td class="paramname"><em>userdata</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Iterates over every entry in the table. </p>
+<dl class="section pre"><dt>Precondizione</dt><dd>table != NULL, cb != NULL </dd></dl>
+<dl class="section post"><dt>Postcondizione</dt><dd>cb is invoked for every entry. Table is read-locked during traversal </dd></dl>
+<dl class="params"><dt>Parametri</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">table</td><td>Pointer to the hash table. </td></tr>
+    <tr><td class="paramname">cb</td><td>Callback function. </td></tr>
+    <tr><td class="paramname">userdata</td><td>Arbitrary data passed to the callback. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="a558825dbaa6e9b4bddfab3d3a8c8db07" name="a558825dbaa6e9b4bddfab3d3a8c8db07"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a558825dbaa6e9b4bddfab3d3a8c8db07">&#9670;&#160;</a></span>ht_get()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int ht_get </td>
+          <td>(</td>
+          <td class="paramtype">Hash_Table *restrict&#160;</td>
+          <td class="paramname"><em>table</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">void *restrict&#160;</td>
+          <td class="paramname"><em>key</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">size_t&#160;</td>
+          <td class="paramname"><em>keySize</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">void *restrict&#160;</td>
+          <td class="paramname"><em>destBuffer</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">size_t&#160;</td>
+          <td class="paramname"><em>destSize</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Retrieves a copy of the value associated with a key. </p>
+<dl class="section pre"><dt>Precondizione</dt><dd>table != NULL, key != NULL, destBuffer != NULL </dd></dl>
+<dl class="section post"><dt>Postcondizione</dt><dd>Up to destSize bytes are copied into destBuffer if the key is found </dd></dl>
+<dl class="params"><dt>Parametri</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">table</td><td>Pointer to the hash table. </td></tr>
+    <tr><td class="paramname">key</td><td>Pointer to the search key. </td></tr>
+    <tr><td class="paramname">keySize</td><td>Size of the key. </td></tr>
+    <tr><td class="paramname">destBuffer</td><td>Buffer where the value will be copied. </td></tr>
+    <tr><td class="paramname">destSize</td><td>Maximum capacity of destBuffer. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Restituisce</dt><dd>1 if found, 0 otherwise. </dd></dl>
+
+</div>
+</div>
+<a id="a14a4ab0781749f8723acc44f9977a267" name="a14a4ab0781749f8723acc44f9977a267"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a14a4ab0781749f8723acc44f9977a267">&#9670;&#160;</a></span>ht_load()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int ht_load </td>
+          <td>(</td>
+          <td class="paramtype">Hash_Table *&#160;</td>
+          <td class="paramname"><em>table</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>path</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Loads table content from a binary snapshot. </p>
+<dl class="section pre"><dt>Precondizione</dt><dd>table != NULL (must be empty), path != NULL </dd></dl>
+<dl class="section post"><dt>Postcondizione</dt><dd>The table is populated with entries from the file </dd></dl>
+<dl class="params"><dt>Parametri</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">table</td><td>Pointer to an empty hash table. </td></tr>
+    <tr><td class="paramname">path</td><td>Path to the snapshot file. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Restituisce</dt><dd>1 on success, 0 on failure. </dd></dl>
+
+</div>
+</div>
+<a id="a427252b31b8a9c4699d0870ba25dd26d" name="a427252b31b8a9c4699d0870ba25dd26d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a427252b31b8a9c4699d0870ba25dd26d">&#9670;&#160;</a></span>ht_set()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int ht_set </td>
+          <td>(</td>
+          <td class="paramtype">Hash_Table *restrict&#160;</td>
+          <td class="paramname"><em>table</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">void *restrict&#160;</td>
+          <td class="paramname"><em>key</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">size_t&#160;</td>
+          <td class="paramname"><em>keySize</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">void *restrict&#160;</td>
+          <td class="paramname"><em>value</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">size_t&#160;</td>
+          <td class="paramname"><em>valueSize</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Inserts or updates a key-value pair in the table. </p>
+<dl class="section pre"><dt>Precondizione</dt><dd>table != NULL, key != NULL, keySize &lt;= MAX_KEY_LEN, valueSize &lt;= MAX_VALUE_SIZE </dd></dl>
+<dl class="section post"><dt>Postcondizione</dt><dd>The value is stored under the specified key; table size increments if new </dd></dl>
+<dl class="params"><dt>Parametri</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">table</td><td>Pointer to the hash table. </td></tr>
+    <tr><td class="paramname">key</td><td>Pointer to the key buffer. </td></tr>
+    <tr><td class="paramname">keySize</td><td>Size of the key. </td></tr>
+    <tr><td class="paramname">value</td><td>Pointer to the value buffer. </td></tr>
+    <tr><td class="paramname">valueSize</td><td>Size of the value. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Restituisce</dt><dd>1 on success, 0 on failure </dd></dl>
+
+</div>
+</div>
+<a id="af177a3dfd557f1d74f7351c7fc209d8e" name="af177a3dfd557f1d74f7351c7fc209d8e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af177a3dfd557f1d74f7351c7fc209d8e">&#9670;&#160;</a></span>ht_snapshot()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void ht_snapshot </td>
+          <td>(</td>
+          <td class="paramtype">Hash_Table *&#160;</td>
+          <td class="paramname"><em>table</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>path</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Saves a snapshot of the table to a binary file. </p>
+<dl class="section pre"><dt>Precondizione</dt><dd>table != NULL, path != NULL </dd></dl>
+<dl class="section post"><dt>Postcondizione</dt><dd>All current entries are serialized to the file at path </dd></dl>
+<dl class="params"><dt>Parametri</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">table</td><td>Pointer to the hash table. </td></tr>
+    <tr><td class="paramname">path</td><td>Filesystem path where the snapshot will be saved. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+</div><!-- contents -->
+</div><!-- doc-content -->
+<!-- start footer part -->
+<div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
+  <ul>
+    <li class="navelem"><a class="el" href="hash__table_8h.html">hash_table.h</a></li>
+    <li class="footer">Generato da <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8 </li>
+  </ul>
+</div>
+</body>
+</html>

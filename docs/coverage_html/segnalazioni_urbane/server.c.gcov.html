@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-05-23 12:29:43</td>
+            <td class="headerValue">2026-05-27 21:31:52</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -108,18 +108,18 @@
 <span id="L30"><span class="lineNum">      30</span>                 :             : // MurmurHash-inspired function used by every Hash_Table instance in the</span>
 <span id="L31"><span class="lineNum">      31</span>                 :             : // application. Defined here and declared</span>
 <span id="L32"><span class="lineNum">      32</span>                 :             : // in server.h so all modules share a single implementation.</span>
-<span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaGNC">        8285 : unsigned long hash_key(const void *key, size_t keySize, unsigned long seed) {</span></span>
-<span id="L34"><span class="lineNum">      34</span>                 :<span class="tlaGNC">        8285 :     const unsigned char *data = (const unsigned char *)key;</span></span>
-<span id="L35"><span class="lineNum">      35</span>                 :<span class="tlaGNC">        8285 :     unsigned long h = seed;</span></span>
-<span id="L36"><span class="lineNum">      36</span>         [<span class="tlaGBC" title="Branch 0 was taken 102630 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 8285 times"> + </span>]:<span class="tlaGNC">      110915 :     for (size_t i = 0; i &lt; keySize; i++) {</span></span>
-<span id="L37"><span class="lineNum">      37</span>                 :<span class="tlaGNC">      102630 :         h ^= data[i];</span></span>
-<span id="L38"><span class="lineNum">      38</span>                 :<span class="tlaGNC">      102630 :         h *= 0x5bd1e995UL;</span></span>
-<span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaGNC">      102630 :         h ^= h &gt;&gt; 15;</span></span>
+<span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaGNC">        8291 : unsigned long hash_key(const void *key, size_t keySize, unsigned long seed) {</span></span>
+<span id="L34"><span class="lineNum">      34</span>                 :<span class="tlaGNC">        8291 :     const unsigned char *data = (const unsigned char *)key;</span></span>
+<span id="L35"><span class="lineNum">      35</span>                 :<span class="tlaGNC">        8291 :     unsigned long h = seed;</span></span>
+<span id="L36"><span class="lineNum">      36</span>         [<span class="tlaGBC" title="Branch 0 was taken 102828 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 8291 times"> + </span>]:<span class="tlaGNC">      111119 :     for (size_t i = 0; i &lt; keySize; i++) {</span></span>
+<span id="L37"><span class="lineNum">      37</span>                 :<span class="tlaGNC">      102828 :         h ^= data[i];</span></span>
+<span id="L38"><span class="lineNum">      38</span>                 :<span class="tlaGNC">      102828 :         h *= MURMUR_MUL;</span></span>
+<span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaGNC">      102828 :         h ^= h &gt;&gt; 15;</span></span>
 <span id="L40"><span class="lineNum">      40</span>                 :             :     }</span>
-<span id="L41"><span class="lineNum">      41</span>                 :<span class="tlaGNC">        8285 :     h ^= h &gt;&gt; 13;</span></span>
-<span id="L42"><span class="lineNum">      42</span>                 :<span class="tlaGNC">        8285 :     h *= 0x85ebca6bUL;</span></span>
-<span id="L43"><span class="lineNum">      43</span>                 :<span class="tlaGNC">        8285 :     h ^= h &gt;&gt; 16;</span></span>
-<span id="L44"><span class="lineNum">      44</span>                 :<span class="tlaGNC">        8285 :     return h;</span></span>
+<span id="L41"><span class="lineNum">      41</span>                 :<span class="tlaGNC">        8291 :     h ^= h &gt;&gt; 13;</span></span>
+<span id="L42"><span class="lineNum">      42</span>                 :<span class="tlaGNC">        8291 :     h *= MURMUR_FIN;</span></span>
+<span id="L43"><span class="lineNum">      43</span>                 :<span class="tlaGNC">        8291 :     h ^= h &gt;&gt; 16;</span></span>
+<span id="L44"><span class="lineNum">      44</span>                 :<span class="tlaGNC">        8291 :     return h;</span></span>
 <span id="L45"><span class="lineNum">      45</span>                 :             : }</span>
 <span id="L46"><span class="lineNum">      46</span>                 :             : </span>
 <span id="L47"><span class="lineNum">      47</span>                 :             : </span>
@@ -196,79 +196,80 @@
 <span id="L118"><span class="lineNum">     118</span>                 :             : }</span>
 <span id="L119"><span class="lineNum">     119</span>                 :             : </span>
 <span id="L120"><span class="lineNum">     120</span>                 :<span class="tlaGNC">           1 : static int init_templates(void) {</span></span>
-<span id="L121"><span class="lineNum">     121</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">           1 :     if (tpl_load_files(&quot;templates/login.html&quot;,</span></span>
-<span id="L122"><span class="lineNum">     122</span>                 :             :                        &quot;templates/register.html&quot;,</span>
-<span id="L123"><span class="lineNum">     123</span>                 :             :                        &quot;templates/citizen_home.html&quot;,</span>
-<span id="L124"><span class="lineNum">     124</span>                 :             :                        &quot;templates/operator_map.html&quot;,</span>
-<span id="L125"><span class="lineNum">     125</span>                 :             :                        &quot;templates/submit.html&quot;,</span>
-<span id="L126"><span class="lineNum">     126</span>                 :             :                        &quot;templates/common.css&quot;,</span>
-<span id="L127"><span class="lineNum">     127</span>                 :             :                        &quot;templates/admin_map.html&quot;,</span>
-<span id="L128"><span class="lineNum">     128</span>                 :             :                        NULL) != 0) {</span>
-<span id="L129"><span class="lineNum">     129</span>                 :<span class="tlaUNC">           0 :         fprintf(stderr, &quot;Fatal: failed to load core templates\n&quot;);</span></span>
-<span id="L130"><span class="lineNum">     130</span>                 :<span class="tlaUNC">           0 :         return -1;</span></span>
-<span id="L131"><span class="lineNum">     131</span>                 :             :     }</span>
-<span id="L132"><span class="lineNum">     132</span>                 :<span class="tlaGNC">           1 :     return 0;</span></span>
-<span id="L133"><span class="lineNum">     133</span>                 :             : }</span>
-<span id="L134"><span class="lineNum">     134</span>                 :             : </span>
-<span id="L135"><span class="lineNum">     135</span>                 :<span class="tlaGNC">           1 : static int init_geo_table(void) {</span></span>
-<span id="L136"><span class="lineNum">     136</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">           1 :     if (geo_init(GEO_JSON_PATH, CITIES_JSON_PATH) &lt; 0) {</span></span>
-<span id="L137"><span class="lineNum">     137</span>                 :<span class="tlaUNC">           0 :         fprintf(stderr, &quot;Fatal: failed to load '%s'\n&quot;, GEO_JSON_PATH);</span></span>
-<span id="L138"><span class="lineNum">     138</span>                 :<span class="tlaUNC">           0 :         return -1;</span></span>
-<span id="L139"><span class="lineNum">     139</span>                 :             :     }</span>
-<span id="L140"><span class="lineNum">     140</span>                 :             :     // Load the city-name JSON produced by geo_init into the template cache</span>
-<span id="L141"><span class="lineNum">     141</span>                 :             :     // so it can be served directly via route_api_cities.</span>
-<span id="L142"><span class="lineNum">     142</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">           1 :     if (tpl_load_files(CITIES_JSON_PATH, NULL) != 0) {</span></span>
-<span id="L143"><span class="lineNum">     143</span>                 :<span class="tlaUNC">           0 :         fprintf(stderr, &quot;Fatal: failed to load '%s'\n&quot;, CITIES_JSON_PATH);</span></span>
-<span id="L144"><span class="lineNum">     144</span>                 :<span class="tlaUNC">           0 :         return -1;</span></span>
-<span id="L145"><span class="lineNum">     145</span>                 :             :     }</span>
-<span id="L146"><span class="lineNum">     146</span>                 :<span class="tlaGNC">           1 :     return 0;</span></span>
-<span id="L147"><span class="lineNum">     147</span>                 :             : }</span>
-<span id="L148"><span class="lineNum">     148</span>                 :             : </span>
-<span id="L149"><span class="lineNum">     149</span>                 :<span class="tlaGNC">           1 : static int init_sessions(void) {</span></span>
-<span id="L150"><span class="lineNum">     150</span>                 :<span class="tlaGNC">           1 :     return session_init();</span></span>
-<span id="L151"><span class="lineNum">     151</span>                 :             : }</span>
-<span id="L152"><span class="lineNum">     152</span>                 :             : </span>
-<span id="L153"><span class="lineNum">     153</span>                 :             : /* ── main ────────────────────────────────────────────────────────────── */</span>
-<span id="L154"><span class="lineNum">     154</span>                 :             : </span>
-<span id="L155"><span class="lineNum">     155</span>                 :             : /**</span>
-<span id="L156"><span class="lineNum">     156</span>                 :             :  * Server startup sequence:</span>
-<span id="L157"><span class="lineNum">     157</span>                 :             :  *</span>
-<span id="L158"><span class="lineNum">     158</span>                 :             :  *  Ignore SIGPIPE so that a broken client pipe cannot kill the process.</span>
-<span id="L159"><span class="lineNum">     159</span>                 :             :  *  Initialise every subsystem — a single assert() provides fail-fast</span>
-<span id="L160"><span class="lineNum">     160</span>                 :             :  *  semantics; each helper prints its own diagnostic on failure.</span>
-<span id="L161"><span class="lineNum">     161</span>                 :             :  *  Bind the TCP socket and arm the SIGINT handler.</span>
-<span id="L162"><span class="lineNum">     162</span>                 :             :  *  Enter the event loop (blocks until SIGINT).</span>
-<span id="L163"><span class="lineNum">     163</span>                 :             :  *  Graceful shutdown: drain callbacks and destroy all state.</span>
-<span id="L164"><span class="lineNum">     164</span>                 :             :  */</span>
-<span id="L165"><span class="lineNum">     165</span>                 :<span class="tlaGNC">           1 : int main(void) {</span></span>
-<span id="L166"><span class="lineNum">     166</span>                 :             :     uv_loop_t  *loop;</span>
-<span id="L167"><span class="lineNum">     167</span>                 :             :     uv_tcp_t    server;</span>
-<span id="L168"><span class="lineNum">     168</span>                 :             :     uv_signal_t sig;</span>
-<span id="L169"><span class="lineNum">     169</span>                 :             : </span>
-<span id="L170"><span class="lineNum">     170</span>                 :             :     // Suppress SIGPIPE process-wide: libuv may trigger it on concurrent closes.</span>
-<span id="L171"><span class="lineNum">     171</span>                 :<span class="tlaGNC">           1 :     signal(SIGPIPE, SIG_IGN);</span></span>
-<span id="L172"><span class="lineNum">     172</span>                 :             : </span>
-<span id="L173"><span class="lineNum">     173</span>                 :             :     // Fail-fast subsystem initialisation; the assert string is printed by</span>
-<span id="L174"><span class="lineNum">     174</span>                 :             :     // the C runtime if any operand evaluates to zero or NULL.</span>
-<span id="L175"><span class="lineNum">     175</span>   [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaGBC" title="Branch 2 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">           1 :     assert( client_manager_init() == 0 &amp;&amp;</span></span>
+<span id="L121"><span class="lineNum">     121</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">           1 :     if (tpl_load_files(TPL_LOGIN,</span></span>
+<span id="L122"><span class="lineNum">     122</span>                 :             :                        TPL_DOCS,</span>
+<span id="L123"><span class="lineNum">     123</span>                 :             :                        TPL_REGISTER,</span>
+<span id="L124"><span class="lineNum">     124</span>                 :             :                        TPL_CITIZEN_HOME,</span>
+<span id="L125"><span class="lineNum">     125</span>                 :             :                        TPL_OPERATOR_MAP,</span>
+<span id="L126"><span class="lineNum">     126</span>                 :             :                        TPL_SUBMIT,</span>
+<span id="L127"><span class="lineNum">     127</span>                 :             :                        TPL_CSS,</span>
+<span id="L128"><span class="lineNum">     128</span>                 :             :                        TPL_ADMIN_MAP,</span>
+<span id="L129"><span class="lineNum">     129</span>                 :             :                        NULL) != 0) {</span>
+<span id="L130"><span class="lineNum">     130</span>                 :<span class="tlaUNC">           0 :         fprintf(stderr, &quot;Fatal: failed to load core templates\n&quot;);</span></span>
+<span id="L131"><span class="lineNum">     131</span>                 :<span class="tlaUNC">           0 :         return -1;</span></span>
+<span id="L132"><span class="lineNum">     132</span>                 :             :     }</span>
+<span id="L133"><span class="lineNum">     133</span>                 :<span class="tlaGNC">           1 :     return 0;</span></span>
+<span id="L134"><span class="lineNum">     134</span>                 :             : }</span>
+<span id="L135"><span class="lineNum">     135</span>                 :             : </span>
+<span id="L136"><span class="lineNum">     136</span>                 :<span class="tlaGNC">           1 : static int init_geo_table(void) {</span></span>
+<span id="L137"><span class="lineNum">     137</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">           1 :     if (geo_init(GEO_JSON_PATH, CITIES_JSON_PATH) &lt; 0) {</span></span>
+<span id="L138"><span class="lineNum">     138</span>                 :<span class="tlaUNC">           0 :         fprintf(stderr, &quot;Fatal: failed to load '%s'\n&quot;, GEO_JSON_PATH);</span></span>
+<span id="L139"><span class="lineNum">     139</span>                 :<span class="tlaUNC">           0 :         return -1;</span></span>
+<span id="L140"><span class="lineNum">     140</span>                 :             :     }</span>
+<span id="L141"><span class="lineNum">     141</span>                 :             :     // Load the city-name JSON produced by geo_init into the template cache</span>
+<span id="L142"><span class="lineNum">     142</span>                 :             :     // so it can be served directly via route_api_cities.</span>
+<span id="L143"><span class="lineNum">     143</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">           1 :     if (tpl_load_files(CITIES_JSON_PATH, NULL) != 0) {</span></span>
+<span id="L144"><span class="lineNum">     144</span>                 :<span class="tlaUNC">           0 :         fprintf(stderr, &quot;Fatal: failed to load '%s'\n&quot;, CITIES_JSON_PATH);</span></span>
+<span id="L145"><span class="lineNum">     145</span>                 :<span class="tlaUNC">           0 :         return -1;</span></span>
+<span id="L146"><span class="lineNum">     146</span>                 :             :     }</span>
+<span id="L147"><span class="lineNum">     147</span>                 :<span class="tlaGNC">           1 :     return 0;</span></span>
+<span id="L148"><span class="lineNum">     148</span>                 :             : }</span>
+<span id="L149"><span class="lineNum">     149</span>                 :             : </span>
+<span id="L150"><span class="lineNum">     150</span>                 :<span class="tlaGNC">           1 : static int init_sessions(void) {</span></span>
+<span id="L151"><span class="lineNum">     151</span>                 :<span class="tlaGNC">           1 :     return session_init();</span></span>
+<span id="L152"><span class="lineNum">     152</span>                 :             : }</span>
+<span id="L153"><span class="lineNum">     153</span>                 :             : </span>
+<span id="L154"><span class="lineNum">     154</span>                 :             : /* ── main ────────────────────────────────────────────────────────────── */</span>
+<span id="L155"><span class="lineNum">     155</span>                 :             : </span>
+<span id="L156"><span class="lineNum">     156</span>                 :             : /**</span>
+<span id="L157"><span class="lineNum">     157</span>                 :             :  * Server startup sequence:</span>
+<span id="L158"><span class="lineNum">     158</span>                 :             :  *</span>
+<span id="L159"><span class="lineNum">     159</span>                 :             :  *  Ignore SIGPIPE so that a broken client pipe cannot kill the process.</span>
+<span id="L160"><span class="lineNum">     160</span>                 :             :  *  Initialise every subsystem — a single assert() provides fail-fast</span>
+<span id="L161"><span class="lineNum">     161</span>                 :             :  *  semantics; each helper prints its own diagnostic on failure.</span>
+<span id="L162"><span class="lineNum">     162</span>                 :             :  *  Bind the TCP socket and arm the SIGINT handler.</span>
+<span id="L163"><span class="lineNum">     163</span>                 :             :  *  Enter the event loop (blocks until SIGINT).</span>
+<span id="L164"><span class="lineNum">     164</span>                 :             :  *  Graceful shutdown: drain callbacks and destroy all state.</span>
+<span id="L165"><span class="lineNum">     165</span>                 :             :  */</span>
+<span id="L166"><span class="lineNum">     166</span>                 :<span class="tlaGNC">           1 : int main(void) {</span></span>
+<span id="L167"><span class="lineNum">     167</span>                 :             :     uv_loop_t  *loop;</span>
+<span id="L168"><span class="lineNum">     168</span>                 :             :     uv_tcp_t    server;</span>
+<span id="L169"><span class="lineNum">     169</span>                 :             :     uv_signal_t sig;</span>
+<span id="L170"><span class="lineNum">     170</span>                 :             : </span>
+<span id="L171"><span class="lineNum">     171</span>                 :             :     // Suppress SIGPIPE process-wide: libuv may trigger it on concurrent closes.</span>
+<span id="L172"><span class="lineNum">     172</span>                 :<span class="tlaGNC">           1 :     signal(SIGPIPE, SIG_IGN);</span></span>
+<span id="L173"><span class="lineNum">     173</span>                 :             : </span>
+<span id="L174"><span class="lineNum">     174</span>                 :             :     // Fail-fast subsystem initialisation; the assert string is printed by</span>
+<span id="L175"><span class="lineNum">     175</span>                 :             :     // the C runtime if any operand evaluates to zero or NULL.</span>
+<span id="L176"><span class="lineNum">     176</span>   [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaGBC" title="Branch 2 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">           1 :     assert( client_manager_init() == 0 &amp;&amp;</span></span>
 <span class="lineNum">        </span> <span class="tlaGBC" title="Branch 4 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 5 was not taken"> - </span><span class="tlaGBC" title="Branch 6 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 7 was not taken"> - </span><span class="tlaGBC" title="Branch 8 was taken 1 time"> + </span> 
 <span class="lineNum">        </span>       <span class="tlaUNC" title="Branch 9 was not taken"> - </span><span class="tlaGBC" title="Branch 10 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 11 was not taken"> - </span>]
-<span id="L176"><span class="lineNum">     176</span>                 :             :             init_db()             == 0 &amp;&amp;</span>
-<span id="L177"><span class="lineNum">     177</span>                 :             :             init_templates()      == 0 &amp;&amp;</span>
-<span id="L178"><span class="lineNum">     178</span>                 :             :             init_geo_table()      == 0 &amp;&amp;</span>
-<span id="L179"><span class="lineNum">     179</span>                 :             :             init_sessions()       == 0 &amp;&amp;</span>
-<span id="L180"><span class="lineNum">     180</span>                 :             :             rate_limiter_init() == 0</span>
-<span id="L181"><span class="lineNum">     181</span>                 :             :             &amp;&amp; &quot;Fatal: startup failed — see stderr for details&quot; );</span>
-<span id="L182"><span class="lineNum">     182</span>                 :             : </span>
-<span id="L183"><span class="lineNum">     183</span>                 :<span class="tlaGNC">           1 :     loop = uv_default_loop();</span></span>
-<span id="L184"><span class="lineNum">     184</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           1 :     assert(server_bind(loop, &amp;server, &amp;sig) == 0 &amp;&amp; &quot;Fatal: server_bind&quot;);</span></span>
-<span id="L185"><span class="lineNum">     185</span>                 :             : </span>
-<span id="L186"><span class="lineNum">     186</span>                 :<span class="tlaGNC">           1 :     printf(&quot;SegnalaCity listening on port %d\n&quot;, PORT);</span></span>
-<span id="L187"><span class="lineNum">     187</span>                 :<span class="tlaGNC">           1 :     uv_run(loop, UV_RUN_DEFAULT);</span></span>
-<span id="L188"><span class="lineNum">     188</span>                 :             : </span>
-<span id="L189"><span class="lineNum">     189</span>                 :<span class="tlaGNC">           1 :     server_shutdown(loop, &amp;server, &amp;sig);</span></span>
-<span id="L190"><span class="lineNum">     190</span>                 :<span class="tlaGNC">           1 :     return EXIT_SUCCESS;</span></span>
-<span id="L191"><span class="lineNum">     191</span>                 :             : }</span>
+<span id="L177"><span class="lineNum">     177</span>                 :             :             init_db()             == 0 &amp;&amp;</span>
+<span id="L178"><span class="lineNum">     178</span>                 :             :             init_templates()      == 0 &amp;&amp;</span>
+<span id="L179"><span class="lineNum">     179</span>                 :             :             init_geo_table()      == 0 &amp;&amp;</span>
+<span id="L180"><span class="lineNum">     180</span>                 :             :             init_sessions()       == 0 &amp;&amp;</span>
+<span id="L181"><span class="lineNum">     181</span>                 :             :             rate_limiter_init() == 0</span>
+<span id="L182"><span class="lineNum">     182</span>                 :             :             &amp;&amp; &quot;Fatal: startup failed — see stderr for details&quot; );</span>
+<span id="L183"><span class="lineNum">     183</span>                 :             : </span>
+<span id="L184"><span class="lineNum">     184</span>                 :<span class="tlaGNC">           1 :     loop = uv_default_loop();</span></span>
+<span id="L185"><span class="lineNum">     185</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           1 :     assert(server_bind(loop, &amp;server, &amp;sig) == 0 &amp;&amp; &quot;Fatal: server_bind&quot;);</span></span>
+<span id="L186"><span class="lineNum">     186</span>                 :             : </span>
+<span id="L187"><span class="lineNum">     187</span>                 :<span class="tlaGNC">           1 :     printf(&quot;SegnalaCity listening on port %d\n&quot;, PORT);</span></span>
+<span id="L188"><span class="lineNum">     188</span>                 :<span class="tlaGNC">           1 :     uv_run(loop, UV_RUN_DEFAULT); //Start listening for events</span></span>
+<span id="L189"><span class="lineNum">     189</span>                 :             : </span>
+<span id="L190"><span class="lineNum">     190</span>                 :<span class="tlaGNC">           1 :     server_shutdown(loop, &amp;server, &amp;sig);</span></span>
+<span id="L191"><span class="lineNum">     191</span>                 :<span class="tlaGNC">           1 :     return EXIT_SUCCESS;</span></span>
+<span id="L192"><span class="lineNum">     192</span>                 :             : }</span>
         </pre>
               </td>
             </tr>

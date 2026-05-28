@@ -31,13 +31,13 @@
             <td class="headerValue">SegnalaCity — Coverage Report</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntryMed">79.0&nbsp;%</td>
+            <td class="headerCovTableEntryMed">75.2&nbsp;%</td>
             <td class="headerCovTableEntry">105</td>
-            <td class="headerCovTableEntry">83</td>
+            <td class="headerCovTableEntry">79</td>
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-05-23 12:29:43</td>
+            <td class="headerValue">2026-05-27 21:31:52</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">90.0&nbsp;%</td>
@@ -56,9 +56,9 @@
 </td>
             <td></td>
             <td class="headerItem">Branches:</td>
-            <td class="headerCovTableEntryLo">55.3&nbsp;%</td>
+            <td class="headerCovTableEntryLo">52.6&nbsp;%</td>
             <td class="headerCovTableEntry">38</td>
-            <td class="headerCovTableEntry">21</td>
+            <td class="headerCovTableEntry">20</td>
           </tr>
                   <tr><td><img src="../glass.png" width=3 height=3 alt=""></td></tr>
                 </table>
@@ -108,7 +108,7 @@
 <span id="L30"><span class="lineNum">      30</span>                 :             : static void on_write_complete(uv_write_t *req, int status);</span>
 <span id="L31"><span class="lineNum">      31</span>                 :             : static void on_timeout(uv_timer_t *handle);</span>
 <span id="L32"><span class="lineNum">      32</span>                 :             : static void on_close(uv_handle_t *handle);</span>
-<span id="L33"><span class="lineNum">      33</span>                 :             : static void get_peer_ip(uv_tcp_t *tcp, char *ip, size_t len);</span>
+<span id="L33"><span class="lineNum">      33</span>                 :             : static inline void get_peer_ip(uv_tcp_t *tcp, char *ip, size_t len);</span>
 <span id="L34"><span class="lineNum">      34</span>                 :             : static int  setup_client(uv_stream_t *server);</span>
 <span id="L35"><span class="lineNum">      35</span>                 :             : </span>
 <span id="L36"><span class="lineNum">      36</span>                 :             : /* ── Private types ───────────────────────────────────────────────────── */</span>
@@ -158,7 +158,7 @@
 <span id="L80"><span class="lineNum">      80</span>                 :             : </span>
 <span id="L81"><span class="lineNum">      81</span>                 :             : // Resolves the IPv4 address of the TCP peer into ip[].</span>
 <span id="L82"><span class="lineNum">      82</span>                 :             : // Sets ip[0] = '\0' on failure so callers can treat it as an empty string.</span>
-<span id="L83"><span class="lineNum">      83</span>                 :<span class="tlaGNC">         136 : static void get_peer_ip(uv_tcp_t *tcp, char *ip, size_t len) {</span></span>
+<span id="L83"><span class="lineNum">      83</span>                 :<span class="tlaGNC">         136 : static inline void get_peer_ip(uv_tcp_t *tcp, char *ip, size_t len) {</span></span>
 <span id="L84"><span class="lineNum">      84</span>                 :             :     struct sockaddr_in peer;</span>
 <span id="L85"><span class="lineNum">      85</span>                 :<span class="tlaGNC">         136 :     int plen = sizeof(peer);</span></span>
 <span id="L86"><span class="lineNum">      86</span>         [<span class="tlaGBC" title="Branch 0 was taken 136 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">         136 :     if (uv_tcp_getpeername(tcp, (struct sockaddr *)&amp;peer, &amp;plen) == 0){</span></span>
@@ -173,7 +173,7 @@
 <span id="L95"><span class="lineNum">      95</span>                 :             : // ClientCtx and registers it with the event loop.</span>
 <span id="L96"><span class="lineNum">      96</span>                 :             : // Returns 1 on success, 0 if the client cap is reached or allocation fails.</span>
 <span id="L97"><span class="lineNum">      97</span>                 :<span class="tlaGNC">         136 : static int setup_client(uv_stream_t *server) {</span></span>
-<span id="L98"><span class="lineNum">      98</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 136 times"> + </span>]:<span class="tlaGNC">         136 :     if (client_manager_active_count() &gt;= MAX_CLIENTS) return 0;</span></span>
+<span id="L98"><span class="lineNum">      98</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 136 times"> + </span>]:<span class="tlaGNC">         136 :     if (unlikely(client_manager_active_count() &gt;= MAX_CLIENTS)) return 0;</span></span>
 <span id="L99"><span class="lineNum">      99</span>                 :             : </span>
 <span id="L100"><span class="lineNum">     100</span>                 :<span class="tlaGNC">         136 :     ClientCtx *ctx = client_manager_alloc();</span></span>
 <span id="L101"><span class="lineNum">     101</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 136 times"> + </span>]:<span class="tlaGNC">         136 :     if (!ctx) return 0;</span></span>
@@ -215,7 +215,7 @@
 <span id="L137"><span class="lineNum">     137</span>                 :             :     // Lazy allocation: the buffer is created only when data first arrives,</span>
 <span id="L138"><span class="lineNum">     138</span>                 :             :     // so idle keep-alive connections don't consume BUFFER_SIZE each.</span>
 <span id="L139"><span class="lineNum">     139</span>         [<span class="tlaGBC" title="Branch 0 was taken 136 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">         136 :     if (!ctx-&gt;buffer) {</span></span>
-<span id="L140"><span class="lineNum">     140</span>                 :<span class="tlaGNC">         136 :         ctx-&gt;buffer = malloc(BUFFER_SIZE);</span></span>
+<span id="L140"><span class="lineNum">     140</span>                 :<span class="tlaGNC">         136 :         ctx-&gt;buffer = malloc(CLIENT_BUFFER_SIZE);</span></span>
 <span id="L141"><span class="lineNum">     141</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 136 times"> + </span>]:<span class="tlaGNC">         136 :         if (!ctx-&gt;buffer) {</span></span>
 <span id="L142"><span class="lineNum">     142</span>                 :<span class="tlaUNC">           0 :             buf-&gt;base = NULL;</span></span>
 <span id="L143"><span class="lineNum">     143</span>                 :<span class="tlaUNC">           0 :             buf-&gt;len = 0;</span></span>
@@ -225,7 +225,7 @@
 <span id="L147"><span class="lineNum">     147</span>                 :             : </span>
 <span id="L148"><span class="lineNum">     148</span>                 :             :     // Give libuv only the unused portion of the buffer.</span>
 <span id="L149"><span class="lineNum">     149</span>                 :             :     // Setting base = NULL signals &quot;no space&quot; and triggers a zero-length read.</span>
-<span id="L150"><span class="lineNum">     150</span>                 :<span class="tlaGNC">         136 :     size_t remaining = BUFFER_SIZE - 1 - ctx-&gt;totalRead;</span></span>
+<span id="L150"><span class="lineNum">     150</span>                 :<span class="tlaGNC">         136 :     size_t remaining = CLIENT_BUFFER_SIZE - 1 - ctx-&gt;totalRead;</span></span>
 <span id="L151"><span class="lineNum">     151</span>         [<span class="tlaGBC" title="Branch 0 was taken 136 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">         136 :     buf-&gt;base = remaining ? ctx-&gt;buffer + ctx-&gt;totalRead : NULL;</span></span>
 <span id="L152"><span class="lineNum">     152</span>                 :<span class="tlaGNC">         136 :     buf-&gt;len = remaining;</span></span>
 <span id="L153"><span class="lineNum">     153</span>                 :             : }</span>
@@ -238,7 +238,7 @@
 <span id="L160"><span class="lineNum">     160</span>                 :             :     // nread &lt; 0 covers EOF (UV_EOF) and all I/O errors.</span>
 <span id="L161"><span class="lineNum">     161</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 136 times"> + </span>]:<span class="tlaGNC">         136 :     if (nread &lt; 0) {</span></span>
 <span id="L162"><span class="lineNum">     162</span>                 :<span class="tlaUNC">           0 :         close_client(ctx);</span></span>
-<span id="L163"><span class="lineNum">     163</span>                 :<span class="tlaGNC">           6 :         return;</span></span>
+<span id="L163"><span class="lineNum">     163</span>                 :<span class="tlaUNC">           0 :         return;</span></span>
 <span id="L164"><span class="lineNum">     164</span>                 :             :     }</span>
 <span id="L165"><span class="lineNum">     165</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 136 times"> + </span>]:<span class="tlaGNC">         136 :     if (nread == 0) return;  // EAGAIN / no data yet</span></span>
 <span id="L166"><span class="lineNum">     166</span>                 :             : </span>
@@ -254,22 +254,22 @@
 <span id="L176"><span class="lineNum">     176</span>                 :<span class="tlaGNC">         136 :     uv_read_stop(stream);</span></span>
 <span id="L177"><span class="lineNum">     177</span>                 :<span class="tlaGNC">         136 :     uv_timer_stop(&amp;ctx-&gt;timer);</span></span>
 <span id="L178"><span class="lineNum">     178</span>                 :             : </span>
-<span id="L179"><span class="lineNum">     179</span>                 :             :     // Rate-limit check — disabled by default (DEBUG_RATE_LIMIT == 0).</span>
+<span id="L179"><span class="lineNum">     179</span>                 :             :     // Rate-limit check</span>
 <span id="L180"><span class="lineNum">     180</span>                 :<span class="tlaGNC">         136 :     char ip[INET6_ADDRSTRLEN] = {0};</span></span>
 <span id="L181"><span class="lineNum">     181</span>                 :<span class="tlaGNC">         136 :     get_peer_ip(&amp;ctx-&gt;handle, ip, sizeof(ip));</span></span>
-<span id="L182"><span class="lineNum">     182</span>         [<span class="tlaGBC" title="Branch 0 was taken 6 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 130 times"> + </span>]:<span class="tlaGNC">         136 :     if (DEBUG_RATE_LIMIT &amp;&amp; !rate_limit_check(ip)) {</span></span>
-<span id="L183"><span class="lineNum">     183</span>                 :<span class="tlaGNC">           6 :         HttpResponse r429 = {</span></span>
+<span id="L182"><span class="lineNum">     182</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 136 times"> + </span>]:<span class="tlaGNC">         136 :     if (DEBUG_RATE_LIMIT &amp;&amp; !rate_limit_check(ip)) {</span></span>
+<span id="L183"><span class="lineNum">     183</span>                 :<span class="tlaUNC">           0 :         HttpResponse r429 = {</span></span>
 <span id="L184"><span class="lineNum">     184</span>                 :             :             .statusCode = 429,</span>
 <span id="L185"><span class="lineNum">     185</span>                 :             :             .body = &quot;Too Many Requests\n&quot;,</span>
 <span id="L186"><span class="lineNum">     186</span>                 :             :             .bodyLen = 18</span>
 <span id="L187"><span class="lineNum">     187</span>                 :             :         };</span>
-<span id="L188"><span class="lineNum">     188</span>                 :<span class="tlaGNC">           6 :         send_response(ctx, &amp;r429, false);</span></span>
-<span id="L189"><span class="lineNum">     189</span>                 :<span class="tlaGNC">           6 :         return;</span></span>
+<span id="L188"><span class="lineNum">     188</span>                 :<span class="tlaUNC">           0 :         send_response(ctx, &amp;r429, false);</span></span>
+<span id="L189"><span class="lineNum">     189</span>                 :<span class="tlaUNC">           0 :         return;</span></span>
 <span id="L190"><span class="lineNum">     190</span>                 :             :     }</span>
 <span id="L191"><span class="lineNum">     191</span>                 :             : </span>
 <span id="L192"><span class="lineNum">     192</span>                 :             :     // Reject malformed requests immediately with a 400.</span>
-<span id="L193"><span class="lineNum">     193</span>                 :<span class="tlaGNC">         130 :     HttpRequest req = {0};</span></span>
-<span id="L194"><span class="lineNum">     194</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 130 times"> + </span>]:<span class="tlaGNC">         130 :     if (!http_request_parse(ctx-&gt;buffer, ctx-&gt;totalRead, &amp;req)) {</span></span>
+<span id="L193"><span class="lineNum">     193</span>                 :<span class="tlaGNC">         136 :     HttpRequest req = {0};</span></span>
+<span id="L194"><span class="lineNum">     194</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 136 times"> + </span>]:<span class="tlaGNC">         136 :     if (!http_request_parse(ctx-&gt;buffer, ctx-&gt;totalRead, &amp;req)) {</span></span>
 <span id="L195"><span class="lineNum">     195</span>                 :<span class="tlaUNC">           0 :         HttpResponse bad = {</span></span>
 <span id="L196"><span class="lineNum">     196</span>                 :             :             .statusCode = 400,</span>
 <span id="L197"><span class="lineNum">     197</span>                 :             :             .body = &quot;&lt;h1&gt;400 Bad Request&lt;/h1&gt;&quot;,</span>
@@ -279,12 +279,12 @@
 <span id="L201"><span class="lineNum">     201</span>                 :<span class="tlaUNC">           0 :         return;</span></span>
 <span id="L202"><span class="lineNum">     202</span>                 :             :     }</span>
 <span id="L203"><span class="lineNum">     203</span>                 :             : </span>
-<span id="L204"><span class="lineNum">     204</span>                 :<span class="tlaGNC">         130 :     bool keepAlive = http_request_contains_keepalive(&amp;req);</span></span>
+<span id="L204"><span class="lineNum">     204</span>                 :<span class="tlaGNC">         136 :     bool keepAlive = http_request_contains_keepalive(&amp;req);</span></span>
 <span id="L205"><span class="lineNum">     205</span>                 :             : </span>
 <span id="L206"><span class="lineNum">     206</span>                 :             :     // Dispatch: handle_request() writes the response into g_response_buffer.</span>
-<span id="L207"><span class="lineNum">     207</span>                 :<span class="tlaGNC">         130 :     HttpResponse resp = { .statusCode = 200, .body = g_response_buffer };</span></span>
-<span id="L208"><span class="lineNum">     208</span>                 :<span class="tlaGNC">         130 :     handle_request(&amp;req, &amp;resp);</span></span>
-<span id="L209"><span class="lineNum">     209</span>                 :<span class="tlaGNC">         130 :     send_response(ctx, &amp;resp, keepAlive);</span></span>
+<span id="L207"><span class="lineNum">     207</span>                 :<span class="tlaGNC">         136 :     HttpResponse resp = { .statusCode = 200, .body = g_response_buffer };</span></span>
+<span id="L208"><span class="lineNum">     208</span>                 :<span class="tlaGNC">         136 :     handle_request(&amp;req, &amp;resp);</span></span>
+<span id="L209"><span class="lineNum">     209</span>                 :<span class="tlaGNC">         136 :     send_response(ctx, &amp;resp, keepAlive);</span></span>
 <span id="L210"><span class="lineNum">     210</span>                 :             : }</span>
 <span id="L211"><span class="lineNum">     211</span>                 :             : </span>
 <span id="L212"><span class="lineNum">     212</span>                 :             : /* ── Private callbacks ───────────────────────────────────────────────── */</span>

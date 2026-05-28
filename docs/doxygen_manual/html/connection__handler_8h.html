@@ -1,0 +1,318 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="it">
+<head>
+<meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=11"/>
+<meta name="generator" content="Doxygen 1.9.8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>SegnalaCity Backend: Riferimenti per il file connection_handler.h</title>
+<link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="jquery.js"></script>
+<script type="text/javascript" src="dynsections.js"></script>
+<link href="navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="resize.js"></script>
+<script type="text/javascript" src="navtreedata.js"></script>
+<script type="text/javascript" src="navtree.js"></script>
+<link href="search/search.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="search/searchdata.js"></script>
+<script type="text/javascript" src="search/search.js"></script>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+  $(document).ready(function() { init_search(); });
+/* @license-end */
+</script>
+<link href="doxygen.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+<div id="top"><!-- do not remove this div, it is closed by doxygen! -->
+<div id="titlearea">
+<table cellspacing="0" cellpadding="0">
+ <tbody>
+ <tr id="projectrow">
+  <td id="projectalign">
+   <div id="projectname">SegnalaCity Backend<span id="projectnumber">&#160;1.0.0</span>
+   </div>
+   <div id="projectbrief">Manuale d&#39;uso delle API pubbliche (Interfacce Header)</div>
+  </td>
+    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
+        <span class="left">
+          <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
+          <input type="text" id="MSearchField" value="" placeholder="Cerca" accesskey="S"
+               onfocus="searchBox.OnSearchFieldFocus(true)" 
+               onblur="searchBox.OnSearchFieldFocus(false)" 
+               onkeyup="searchBox.OnSearchFieldChange(event)"/>
+          </span><span class="right">
+            <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
+          </span>
+        </div>
+</td>
+ </tr>
+ </tbody>
+</table>
+</div>
+<!-- end header part -->
+<!-- Generato da Doxygen 1.9.8 -->
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+var searchBox = new SearchBox("searchBox", "search/",'.html');
+/* @license-end */
+</script>
+</div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
+  <div id="nav-tree">
+    <div id="nav-tree-contents">
+      <div id="nav-sync" class="sync"></div>
+    </div>
+  </div>
+  <div id="splitbar" style="-moz-user-select:none;" 
+       class="ui-resizable-handle">
+  </div>
+</div>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(document).ready(function(){initNavTree('connection__handler_8h.html',''); initResizable(); });
+/* @license-end */
+</script>
+<div id="doc-content">
+<!-- window showing the filter options -->
+<div id="MSearchSelectWindow"
+     onmouseover="return searchBox.OnSearchSelectShow()"
+     onmouseout="return searchBox.OnSearchSelectHide()"
+     onkeydown="return searchBox.OnSearchSelectKey(event)">
+</div>
+
+<!-- iframe showing the search results (closed by default) -->
+<div id="MSearchResultsWindow">
+<div id="MSearchResults">
+<div class="SRPage">
+<div id="SRIndex">
+<div id="SRResults"></div>
+<div class="SRStatus" id="Loading">Caricamento in corso...</div>
+<div class="SRStatus" id="Searching">Ricerca in corso...</div>
+<div class="SRStatus" id="NoMatches">Nessun risultato</div>
+</div>
+</div>
+</div>
+</div>
+
+<div class="header">
+  <div class="summary">
+<a href="#func-members">Funzioni</a>  </div>
+  <div class="headertitle"><div class="title">Riferimenti per il file connection_handler.h</div></div>
+</div><!--header-->
+<div class="contents">
+
+<p>Networking layer: connection setup, I/O callbacks, response dispatch.  
+<a href="#details">Continua...</a></p>
+<div class="textblock"><code>#include &quot;config.h&quot;</code><br />
+<code>#include &quot;<a class="el" href="client__manager_8h.html">client_manager.h</a>&quot;</code><br />
+<code>#include &quot;<a class="el" href="http__utils_8h.html">http_utils.h</a>&quot;</code><br />
+</div><div class="textblock"><div class="dynheader">
+Grafo delle dipendenze di inclusione per connection_handler.h:</div>
+<div class="dyncontent">
+<div class="center"><img src="connection__handler_8h__incl.png" border="0" usemap="#aconnection__handler_8h" alt=""/></div>
+<map name="aconnection__handler_8h" id="aconnection__handler_8h">
+<area shape="rect" title="Networking layer: connection setup, I/O callbacks, response dispatch." alt="" coords="62,5,222,31"/>
+<area shape="rect" href="client__manager_8h.html" title="Registry and memory manager for active TCP connections." alt="" coords="5,79,140,104"/>
+<area shape="poly" title=" " alt="" coords="132,33,95,71,91,67,129,29"/>
+<area shape="rect" href="http__utils_8h.html" title="HTTP parsing, evaluation, and serialization utility suite." alt="" coords="164,79,259,104"/>
+<area shape="poly" title=" " alt="" coords="155,29,193,67,189,71,152,33"/>
+<area shape="rect" title=" " alt="" coords="17,152,67,177"/>
+<area shape="poly" title=" " alt="" coords="70,105,55,141,50,139,65,103"/>
+<area shape="rect" title=" " alt="" coords="107,225,190,251"/>
+<area shape="poly" title=" " alt="" coords="81,103,139,212,134,215,77,106"/>
+<area shape="poly" title=" " alt="" coords="208,106,184,153,160,213,155,211,180,151,203,103"/>
+<area shape="rect" href="http__types_8h.html" title="Shared HTTP request and response data structures." alt="" coords="193,152,296,177"/>
+<area shape="poly" title=" " alt="" coords="219,103,236,139,231,141,214,105"/>
+<area shape="poly" title=" " alt="" coords="231,180,177,219,174,215,228,175"/>
+<area shape="rect" title=" " alt="" coords="214,225,289,251"/>
+<area shape="poly" title=" " alt="" coords="248,177,252,212,246,212,243,178"/>
+</map>
+</div>
+</div><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
+Funzioni</h2></td></tr>
+<tr class="memitem:a1db95eaa49c81ad63519fb7a8908be37" id="r_a1db95eaa49c81ad63519fb7a8908be37"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="connection__handler_8h.html#a1db95eaa49c81ad63519fb7a8908be37">on_connection</a> (uv_stream_t *server, int status)</td></tr>
+<tr class="memdesc:a1db95eaa49c81ad63519fb7a8908be37"><td class="mdescLeft">&#160;</td><td class="mdescRight">libuv connection callback — accept, init and register a new client.  <br /></td></tr>
+<tr class="separator:a1db95eaa49c81ad63519fb7a8908be37"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1d74171c0360dc771aace49df61ac509" id="r_a1d74171c0360dc771aace49df61ac509"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="connection__handler_8h.html#a1d74171c0360dc771aace49df61ac509">close_client</a> (<a class="el" href="structClientCtx.html">ClientCtx</a> *ctx)</td></tr>
+<tr class="memdesc:a1d74171c0360dc771aace49df61ac509"><td class="mdescLeft">&#160;</td><td class="mdescRight">Initiates a graceful close of both the TCP handle and keepalive timer.  <br /></td></tr>
+<tr class="separator:a1d74171c0360dc771aace49df61ac509"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2115213f213602da0f51d9f384b09bc4" id="r_a2115213f213602da0f51d9f384b09bc4"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="connection__handler_8h.html#a2115213f213602da0f51d9f384b09bc4">on_buffer_alloc</a> (uv_handle_t *handle, size_t suggested, uv_buf_t *buf)</td></tr>
+<tr class="memdesc:a2115213f213602da0f51d9f384b09bc4"><td class="mdescLeft">&#160;</td><td class="mdescRight">libuv buffer allocation callback.  <br /></td></tr>
+<tr class="separator:a2115213f213602da0f51d9f384b09bc4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a550be703064c32ae946900e876ce3988" id="r_a550be703064c32ae946900e876ce3988"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="connection__handler_8h.html#a550be703064c32ae946900e876ce3988">on_read</a> (uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf)</td></tr>
+<tr class="memdesc:a550be703064c32ae946900e876ce3988"><td class="mdescLeft">&#160;</td><td class="mdescRight">libuv read callback — accumulate, parse, dispatch, respond.  <br /></td></tr>
+<tr class="separator:a550be703064c32ae946900e876ce3988"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table>
+<a name="details" id="details"></a><h2 class="groupheader">Descrizione dettagliata</h2>
+<div class="textblock"><p>Networking layer: connection setup, I/O callbacks, response dispatch. </p>
+<p>Exposes the four libuv callbacks and the close helper needed by server.c:</p>
+<p>on_connection — accept callback passed to uv_listen(); allocates <a class="el" href="structClientCtx.html" title="State for a single active client connection.">ClientCtx</a>, inits handles, arms the keepalive timer. on_buffer_alloc — buffer allocation callback; lazily allocates the receive buffer and returns the unused tail. on_read — read callback; accumulates bytes, parses HTTP, dispatches via <a class="el" href="route__handler_8h.html#ab4013acbe7214be92666929906cbb836" title="Dispatches a request to the matching handler and fills resp.">handle_request()</a>, sends the response. close_client — initiates graceful teardown of TCP + timer handles; called from server.c during shutdown. </p>
+</div><h2 class="groupheader">Documentazione delle funzioni</h2>
+<a id="a1d74171c0360dc771aace49df61ac509" name="a1d74171c0360dc771aace49df61ac509"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1d74171c0360dc771aace49df61ac509">&#9670;&#160;</a></span>close_client()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void close_client </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="structClientCtx.html">ClientCtx</a> *&#160;</td>
+          <td class="paramname"><em>ctx</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Initiates a graceful close of both the TCP handle and keepalive timer. </p>
+<p>Guarded by ctx-&gt;closing to prevent double-close. Memory is released inside the on_close callback once both uv_close() calls have fired.</p>
+<dl class="params"><dt>Parametri</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">ctx</td><td>Client context to close. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="a2115213f213602da0f51d9f384b09bc4" name="a2115213f213602da0f51d9f384b09bc4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2115213f213602da0f51d9f384b09bc4">&#9670;&#160;</a></span>on_buffer_alloc()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void on_buffer_alloc </td>
+          <td>(</td>
+          <td class="paramtype">uv_handle_t *&#160;</td>
+          <td class="paramname"><em>handle</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">size_t&#160;</td>
+          <td class="paramname"><em>suggested</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uv_buf_t *&#160;</td>
+          <td class="paramname"><em>buf</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>libuv buffer allocation callback. </p>
+<p>Lazily allocates ctx-&gt;buffer on the first call; subsequent calls return the unused tail of the existing buffer. Sets buf-&gt;base = NULL when the buffer is full, which triggers UV_ENOBUFS in on_read and closes the connection.</p>
+<dl class="params"><dt>Parametri</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">handle</td><td>TCP handle whose data field points to the owning <a class="el" href="structClientCtx.html" title="State for a single active client connection.">ClientCtx</a>. </td></tr>
+    <tr><td class="paramname">suggested</td><td>Suggested buffer size (ignored — fixed BUFFER_SIZE is used). </td></tr>
+    <tr><td class="paramname">buf</td><td>Output descriptor to fill. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="a1db95eaa49c81ad63519fb7a8908be37" name="a1db95eaa49c81ad63519fb7a8908be37"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1db95eaa49c81ad63519fb7a8908be37">&#9670;&#160;</a></span>on_connection()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void on_connection </td>
+          <td>(</td>
+          <td class="paramtype">uv_stream_t *&#160;</td>
+          <td class="paramname"><em>server</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>status</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>libuv connection callback — accept, init and register a new client. </p>
+<p>Passed directly to uv_listen() in server.c. Allocates a <a class="el" href="structClientCtx.html" title="State for a single active client connection.">ClientCtx</a> from the slab pool, initialises the TCP and timer handles, accepts the socket, enables TCP_NODELAY, arms the keepalive timer, and starts reading via on_buffer_alloc / on_read.</p>
+<dl class="params"><dt>Parametri</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">server</td><td>The listening TCP server handle. </td></tr>
+    <tr><td class="paramname">status</td><td>0 on success; negative libuv error code on failure. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="a550be703064c32ae946900e876ce3988" name="a550be703064c32ae946900e876ce3988"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a550be703064c32ae946900e876ce3988">&#9670;&#160;</a></span>on_read()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void on_read </td>
+          <td>(</td>
+          <td class="paramtype">uv_stream_t *&#160;</td>
+          <td class="paramname"><em>stream</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">ssize_t&#160;</td>
+          <td class="paramname"><em>nread</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const uv_buf_t *&#160;</td>
+          <td class="paramname"><em>buf</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>libuv read callback — accumulate, parse, dispatch, respond. </p>
+<p>Accumulates raw bytes in ctx-&gt;buffer until <a class="el" href="http__utils_8h.html#a80b79507bd287181f71ea834e5c26a2b">http_is_request_complete()</a> returns true, then parses the HTTP request, optionally checks the rate limit, dispatches through <a class="el" href="route__handler_8h.html#ab4013acbe7214be92666929906cbb836" title="Dispatches a request to the matching handler and fills resp.">handle_request()</a>, and sends the response. Closes the connection on network error, parse failure or rate-limit rejection.</p>
+<dl class="params"><dt>Parametri</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">stream</td><td>TCP stream whose data field points to the owning <a class="el" href="structClientCtx.html" title="State for a single active client connection.">ClientCtx</a>. </td></tr>
+    <tr><td class="paramname">nread</td><td>Bytes read; negative signals EOF or network error. </td></tr>
+    <tr><td class="paramname">buf</td><td>Buffer descriptor filled by on_buffer_alloc (informational only). </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+</div><!-- contents -->
+</div><!-- doc-content -->
+<!-- start footer part -->
+<div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
+  <ul>
+    <li class="navelem"><a class="el" href="connection__handler_8h.html">connection_handler.h</a></li>
+    <li class="footer">Generato da <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8 </li>
+  </ul>
+</div>
+</body>
+</html>

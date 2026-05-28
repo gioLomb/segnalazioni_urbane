@@ -1,0 +1,8 @@
+<map id="user.h" name="user.h">
+<area shape="rect" id="Node000001" title="User management: registration, authentication, and role queries." alt="" coords="36,5,97,31"/>
+<area shape="rect" id="Node000002" href="$route__helpers_8h.html" title="Internal helpers shared by route_pages.c and route_api.c." alt="" coords="5,152,128,177"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="62,44,57,73,56,104,66,151,61,152,51,104,51,72,57,43"/>
+<area shape="rect" id="Node000003" href="$session_8h.html" title="In&#45;memory session management backed by a hash table." alt="" coords="65,79,148,104"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="82,42,103,77,98,80,78,44"/>
+<area shape="poly" id="edge3_Node000003_Node000002" title=" " alt="" coords="96,118,75,153,71,151,91,115"/>
+</map>

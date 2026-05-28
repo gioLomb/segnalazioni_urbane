@@ -1,0 +1,26 @@
+var searchData=
+[
+  ['category_0',['category',['../structReport.html#a1550ca6d6f0f3aafd3de4932e71f3ad3',1,'Report']]],
+  ['centroidlon_1',['centroidLon',['../structCityGeo.html#a50423c53a2d7aec1793de7337b643305',1,'CityGeo']]],
+  ['chunkcapacity_2',['chunkCapacity',['../structSlabPool.html#aec7465baaf178d33699f0c71678bd0fd',1,'SlabPool']]],
+  ['chunkshead_3',['chunksHead',['../structSlabPool.html#a6a1b2a4c4422e1085e549fd4a8e31f22',1,'SlabPool']]],
+  ['city_4',['city',['../structReport.html#aeb5361ffd4bd5465f2116cbc9afed95d',1,'Report::city'],['../structUser.html#af4508305291c7b0fb67a4fac544fd7fd',1,'User::city']]],
+  ['citygeo_5',['CityGeo',['../structCityGeo.html',1,'']]],
+  ['client_5fmanager_2eh_6',['client_manager.h',['../client__manager_8h.html',1,'']]],
+  ['client_5fmanager_5factive_5fcount_7',['client_manager_active_count',['../client__manager_8h.html#ad298e53c235b4ef9ed6526ef0989246f',1,'client_manager.h']]],
+  ['client_5fmanager_5falloc_8',['client_manager_alloc',['../client__manager_8h.html#ab259797185232a173d5dc1a389490a6b',1,'client_manager.h']]],
+  ['client_5fmanager_5fclose_5fall_9',['client_manager_close_all',['../client__manager_8h.html#abd09c93313416fec798266ade26c7b27',1,'client_manager.h']]],
+  ['client_5fmanager_5fdestroy_10',['client_manager_destroy',['../client__manager_8h.html#a3cf91cb8e5f706a7277004f40fe62327',1,'client_manager.h']]],
+  ['client_5fmanager_5finit_11',['client_manager_init',['../client__manager_8h.html#a1b36ee468413a53d94dadc37ee77b9d6',1,'client_manager.h']]],
+  ['client_5fmanager_5flink_12',['client_manager_link',['../client__manager_8h.html#a946e9c58caf3141f9b80dfe31fd8f6db',1,'client_manager.h']]],
+  ['client_5fmanager_5frelease_13',['client_manager_release',['../client__manager_8h.html#aa52e77d31b703599f2a335b4eefc66d3',1,'client_manager.h']]],
+  ['client_5fmanager_5funlink_14',['client_manager_unlink',['../client__manager_8h.html#ae1b61876ea74483463931b0bede9c219',1,'client_manager.h']]],
+  ['clientctx_15',['ClientCtx',['../structClientCtx.html',1,'']]],
+  ['close_5fclient_16',['close_client',['../connection__handler_8h.html#a1d74171c0360dc771aace49df61ac509',1,'connection_handler.h']]],
+  ['closing_17',['closing',['../structClientCtx.html#a0aabecb6dbfd895462b06fc04bd35e53',1,'ClientCtx']]],
+  ['connection_5fhandler_2eh_18',['connection_handler.h',['../connection__handler_8h.html',1,'']]],
+  ['cookie_5fmax_19',['COOKIE_MAX',['../http__types_8h.html#a46194fa0a816b64112333fc33f4a7b38',1,'http_types.h']]],
+  ['countcurr_20',['countCurr',['../structRateEntry.html#a82ad91e11d2b4ab9b5316348f8380d1c',1,'RateEntry']]],
+  ['countprev_21',['countPrev',['../structRateEntry.html#a2f7c3181f86e918d165717ca6c07fdc7',1,'RateEntry']]],
+  ['createdat_22',['createdat',['../structSession.html#a38397fcda4910caae61ead2708a1f8a7',1,'Session::createdAt'],['../structReport.html#af08bd09273f1f177200b0a0bda61c220',1,'Report::createdAt']]]
+];

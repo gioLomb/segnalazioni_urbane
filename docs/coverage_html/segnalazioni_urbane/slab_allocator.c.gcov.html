@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-05-23 12:29:43</td>
+            <td class="headerValue">2026-05-27 21:31:52</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -148,7 +148,7 @@
 <span id="L70"><span class="lineNum">      70</span>                 :<span class="tlaGNC">           1 :     pool-&gt;chunksHead = NULL;</span></span>
 <span id="L71"><span class="lineNum">      71</span>                 :             : }</span>
 <span id="L72"><span class="lineNum">      72</span>                 :             : </span>
-<span id="L73"><span class="lineNum">      73</span>                 :<span class="tlaGNC">         136 : void *slab_pool_alloc(SlabPool *pool) {</span></span>
+<span id="L73"><span class="lineNum">      73</span>                 :<span class="tlaGNC">         136 : void *slab_pool_alloc(SlabPool * restrict pool) {</span></span>
 <span id="L74"><span class="lineNum">      74</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 136 times"> + </span>]:<span class="tlaGNC">         136 :     if (!pool) return NULL;</span></span>
 <span id="L75"><span class="lineNum">      75</span>                 :             : </span>
 <span id="L76"><span class="lineNum">      76</span>                 :             :     // Find the first chunk with at least one free slot.</span>

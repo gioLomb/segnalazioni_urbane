@@ -31,13 +31,13 @@
             <td class="headerValue">SegnalaCity — Coverage Report</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntryMed">87.4&nbsp;%</td>
+            <td class="headerCovTableEntryMed">86.1&nbsp;%</td>
             <td class="headerCovTableEntry">151</td>
-            <td class="headerCovTableEntry">132</td>
+            <td class="headerCovTableEntry">130</td>
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-05-23 12:29:43</td>
+            <td class="headerValue">2026-05-27 21:31:52</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">93.8&nbsp;%</td>
@@ -56,9 +56,9 @@
 </td>
             <td></td>
             <td class="headerItem">Branches:</td>
-            <td class="headerCovTableEntryLo">61.3&nbsp;%</td>
+            <td class="headerCovTableEntryLo">60.1&nbsp;%</td>
             <td class="headerCovTableEntry">168</td>
-            <td class="headerCovTableEntry">103</td>
+            <td class="headerCovTableEntry">101</td>
           </tr>
                   <tr><td><img src="../glass.png" width=3 height=3 alt=""></td></tr>
                 </table>
@@ -85,326 +85,311 @@
 <span id="L7"><span class="lineNum">       7</span>                 :             : /* ── Internal helpers ────────────────────────────────────────────────── */</span>
 <span id="L8"><span class="lineNum">       8</span>                 :             : </span>
 <span id="L9"><span class="lineNum">       9</span>                 :             : /* Converts a single hex digit character to its numeric value (0–15). */</span>
-<span id="L10"><span class="lineNum">      10</span>                 :<span class="tlaUNC">           0 : static inline int hex_val(char c)</span></span>
-<span id="L11"><span class="lineNum">      11</span>                 :             : {</span>
-<span id="L12"><span class="lineNum">      12</span>   [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span><span class="tlaUNC" title="Branch 2 was not executed"> # </span><span class="tlaUNC" title="Branch 3 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (c &gt;= '0' &amp;&amp; c &lt;= '9') return c - '0';</span></span>
-<span id="L13"><span class="lineNum">      13</span>   [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span><span class="tlaUNC" title="Branch 2 was not executed"> # </span><span class="tlaUNC" title="Branch 3 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (c &gt;= 'a' &amp;&amp; c &lt;= 'f') return c - 'a' + 10;</span></span>
-<span id="L14"><span class="lineNum">      14</span>   [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span><span class="tlaUNC" title="Branch 2 was not executed"> # </span><span class="tlaUNC" title="Branch 3 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (c &gt;= 'A' &amp;&amp; c &lt;= 'F') return c - 'A' + 10;</span></span>
-<span id="L15"><span class="lineNum">      15</span>                 :<span class="tlaUNC">           0 :     return 0;</span></span>
-<span id="L16"><span class="lineNum">      16</span>                 :             : }</span>
-<span id="L17"><span class="lineNum">      17</span>                 :             : </span>
-<span id="L18"><span class="lineNum">      18</span>                 :             : /*</span>
-<span id="L19"><span class="lineNum">      19</span>                 :             :  * URL-decodes src into dest, stopping at query-string delimiters</span>
-<span id="L20"><span class="lineNum">      20</span>                 :             :  * ('&amp;', ' ', '\r', '\n') or when dest is full.</span>
-<span id="L21"><span class="lineNum">      21</span>                 :             :  * '%XX' sequences are decoded; '+' is mapped to a space.</span>
-<span id="L22"><span class="lineNum">      22</span>                 :             :  * A decoded NUL byte (%00) terminates the loop as a safety measure.</span>
-<span id="L23"><span class="lineNum">      23</span>                 :             :  */</span>
-<span id="L24"><span class="lineNum">      24</span>                 :<span class="tlaGNC">         245 : static void url_decode(const char * restrict src, char * restrict dest, size_t max)</span></span>
-<span id="L25"><span class="lineNum">      25</span>                 :             : {</span>
-<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC">         245 :     size_t i = 0;</span></span>
-<span id="L27"><span class="lineNum">      27</span>   [<span class="tlaGBC" title="Branch 0 was taken 3669 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 87 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 3669 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">        4001 :     while (*src &amp;&amp; *src != '&amp;' &amp;&amp; *src != ' ' &amp;&amp; *src != '\r' &amp;&amp; *src != '\n'</span></span>
-<span class="lineNum">        </span>    <span class="tlaGBC" title="Branch 4 was taken 3577 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 92 times"> + </span><span class="tlaGBC" title="Branch 6 was taken 3577 times"> + </span><span class="tlaUNC" title="Branch 7 was not taken"> - </span>]
-<span id="L28"><span class="lineNum">      28</span>   [<span class="tlaGBC" title="Branch 0 was taken 3756 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 66 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 3577 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">        7399 :            &amp;&amp; i &lt; max - 1) {</span></span>
-<span id="L29"><span class="lineNum">      29</span>   [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 3577 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">        3577 :         if (*src == '%' &amp;&amp; isxdigit((unsigned char)src[1])</span></span>
-<span id="L30"><span class="lineNum">      30</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :                         &amp;&amp; isxdigit((unsigned char)src[2])) {</span></span>
-<span id="L31"><span class="lineNum">      31</span>                 :<span class="tlaUNC">           0 :             char c = (char)((hex_val(src[1]) &lt;&lt; 4) | hex_val(src[2]));</span></span>
-<span id="L32"><span class="lineNum">      32</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :             if (c == '\0') break; // %00 could be used to bypass string checks</span></span>
-<span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaUNC">           0 :             dest[i++] = c;</span></span>
-<span id="L34"><span class="lineNum">      34</span>                 :<span class="tlaUNC">           0 :             src += 3;</span></span>
-<span id="L35"><span class="lineNum">      35</span>         [<span class="tlaGBC" title="Branch 0 was taken 8 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 3569 times"> + </span>]:<span class="tlaGNC">        3577 :         } else if (*src == '+') {</span></span>
-<span id="L36"><span class="lineNum">      36</span>                 :<span class="tlaGNC">           8 :             dest[i++] = ' ';</span></span>
-<span id="L37"><span class="lineNum">      37</span>                 :<span class="tlaGNC">           8 :             src++;</span></span>
-<span id="L38"><span class="lineNum">      38</span>                 :             :         } else {</span>
-<span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaGNC">        3569 :             dest[i++] = *src++;</span></span>
-<span id="L40"><span class="lineNum">      40</span>                 :             :         }</span>
-<span id="L41"><span class="lineNum">      41</span>                 :             :     }</span>
-<span id="L42"><span class="lineNum">      42</span>                 :<span class="tlaGNC">         245 :     dest[i] = '\0';</span></span>
-<span id="L43"><span class="lineNum">      43</span>                 :<span class="tlaGNC">         245 : }</span></span>
-<span id="L44"><span class="lineNum">      44</span>                 :             : </span>
-<span id="L45"><span class="lineNum">      45</span>                 :             : /* Returns the standard reason-phrase for the most common HTTP status codes. */</span>
-<span id="L46"><span class="lineNum">      46</span>                 :<span class="tlaGNC">         136 : static const char *http_status_msg(int code)</span></span>
-<span id="L47"><span class="lineNum">      47</span>                 :             : {</span>
-<span id="L48"><span class="lineNum">      48</span>   [<span class="tlaGBC" title="Branch 0 was taken 45 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 23 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 17 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 3 times"> + </span> :<span class="tlaGNC">         136 :     switch (code) {</span></span>
-<span class="lineNum">        </span> <span class="tlaGBC" title="Branch 4 was taken 19 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 6 was taken 9 times"> + </span><span class="tlaGBC" title="Branch 7 was taken 6 times"> + </span><span class="tlaUNC" title="Branch 8 was not taken"> - </span> 
-<span class="lineNum">        </span>             <span class="tlaGBC" title="Branch 9 was taken 10 times"> + </span>]
-<span id="L49"><span class="lineNum">      49</span>                 :<span class="tlaGNC">          45 :         case 200: return &quot;OK&quot;;</span></span>
-<span id="L50"><span class="lineNum">      50</span>                 :<span class="tlaGNC">          23 :         case 302: return &quot;Found&quot;;</span></span>
-<span id="L51"><span class="lineNum">      51</span>                 :<span class="tlaGNC">          17 :         case 400: return &quot;Bad Request&quot;;</span></span>
-<span id="L52"><span class="lineNum">      52</span>                 :<span class="tlaGNC">           3 :         case 401: return &quot;Unauthorized&quot;;</span></span>
-<span id="L53"><span class="lineNum">      53</span>                 :<span class="tlaGNC">          19 :         case 403: return &quot;Forbidden&quot;;</span></span>
-<span id="L54"><span class="lineNum">      54</span>                 :<span class="tlaGNC">           4 :         case 404: return &quot;Not Found&quot;;</span></span>
-<span id="L55"><span class="lineNum">      55</span>                 :<span class="tlaGNC">           9 :         case 405: return &quot;Method Not Allowed&quot;;</span></span>
-<span id="L56"><span class="lineNum">      56</span>                 :<span class="tlaGNC">           6 :         case 429: return &quot;Too Many Requests&quot;;</span></span>
-<span id="L57"><span class="lineNum">      57</span>                 :<span class="tlaUNC">           0 :         case 500: return &quot;Internal Server Error&quot;;</span></span>
-<span id="L58"><span class="lineNum">      58</span>                 :<span class="tlaGNC">          10 :         default:  return &quot;OK&quot;;</span></span>
-<span id="L59"><span class="lineNum">      59</span>                 :             :     }</span>
-<span id="L60"><span class="lineNum">      60</span>                 :             : }</span>
-<span id="L61"><span class="lineNum">      61</span>                 :             : </span>
-<span id="L62"><span class="lineNum">      62</span>                 :             : /*</span>
-<span id="L63"><span class="lineNum">      63</span>                 :             :  * Determines the Content-Type to use in the response.</span>
-<span id="L64"><span class="lineNum">      64</span>                 :             :  * Returns override directly if it is non-NULL and non-empty;</span>
-<span id="L65"><span class="lineNum">      65</span>                 :             :  * otherwise infers the type from the first byte of body.</span>
-<span id="L66"><span class="lineNum">      66</span>                 :             :  */</span>
-<span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaGNC">         136 : static const char *infer_contentType(const char *body, const char *override)</span></span>
-<span id="L68"><span class="lineNum">      68</span>                 :             : {</span>
-<span id="L69"><span class="lineNum">      69</span>   [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 134 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 2 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">         136 :     if (override &amp;&amp; override[0])                    return override;</span></span>
-<span id="L70"><span class="lineNum">      70</span>   [<span class="tlaGBC" title="Branch 0 was taken 134 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaGBC" title="Branch 2 was taken 50 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 84 times"> + </span>]:<span class="tlaGNC">         134 :     if (body &amp;&amp; body[0] == '&lt;')                     return &quot;text/html; charset=utf-8&quot;;</span></span>
-<span id="L71"><span class="lineNum">      71</span>   [<span class="tlaGBC" title="Branch 0 was taken 84 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaGBC" title="Branch 2 was taken 19 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 65 times"> + </span> :<span class="tlaGNC">          84 :     if (body &amp;&amp; (body[0] == '{' || body[0] == '[')) return &quot;application/json&quot;;</span></span>
-<span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 4 was taken 13 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 6 times"> + </span>]
-<span id="L72"><span class="lineNum">      72</span>                 :<span class="tlaGNC">           6 :     return &quot;text/plain; charset=utf-8&quot;;</span></span>
-<span id="L73"><span class="lineNum">      73</span>                 :             : }</span>
-<span id="L74"><span class="lineNum">      74</span>                 :             : </span>
-<span id="L75"><span class="lineNum">      75</span>                 :             : /* ── Request parsing ─────────────────────────────────────────────────── */</span>
-<span id="L76"><span class="lineNum">      76</span>                 :             : </span>
-<span id="L77"><span class="lineNum">      77</span>                 :<span class="tlaGNC">         136 : bool http_is_request_complete(const char *buf, size_t len)</span></span>
-<span id="L78"><span class="lineNum">      78</span>                 :             : {</span>
-<span id="L79"><span class="lineNum">      79</span>                 :             :     struct phr_header headers[HTTP_MAX_HEADERS];</span>
-<span id="L80"><span class="lineNum">      80</span>                 :<span class="tlaGNC">         136 :     size_t            numHeaders = HTTP_MAX_HEADERS;</span></span>
-<span id="L81"><span class="lineNum">      81</span>                 :             :     const char       *method, *path;</span>
-<span id="L82"><span class="lineNum">      82</span>                 :             :     size_t            methodLen, pathLen;</span>
-<span id="L83"><span class="lineNum">      83</span>                 :             :     int               minorVersion;</span>
-<span id="L84"><span class="lineNum">      84</span>                 :             : </span>
-<span id="L85"><span class="lineNum">      85</span>                 :<span class="tlaGNC">         136 :     int r = phr_parse_request(buf, len,</span></span>
-<span id="L86"><span class="lineNum">      86</span>                 :             :                               &amp;method, &amp;methodLen,</span>
-<span id="L87"><span class="lineNum">      87</span>                 :             :                               &amp;path,   &amp;pathLen,</span>
-<span id="L88"><span class="lineNum">      88</span>                 :             :                               &amp;minorVersion,</span>
-<span id="L89"><span class="lineNum">      89</span>                 :             :                               headers, &amp;numHeaders,</span>
-<span id="L90"><span class="lineNum">      90</span>                 :             :                               0 /* lastLen: always a fresh parse */);</span>
-<span id="L91"><span class="lineNum">      91</span>                 :             : </span>
-<span id="L92"><span class="lineNum">      92</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 136 times"> + </span>]:<span class="tlaGNC">         136 :     if (r == -2) return false; // headers incomplete — wait for more data</span></span>
-<span id="L93"><span class="lineNum">      93</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 136 times"> + </span>]:<span class="tlaGNC">         136 :     if (r == -1) return true;  // malformed — let the handler return 400</span></span>
-<span id="L94"><span class="lineNum">      94</span>                 :             : </span>
-<span id="L95"><span class="lineNum">      95</span>                 :             :     // For POST requests verify that the body has fully arrived</span>
-<span id="L96"><span class="lineNum">      96</span>   [<span class="tlaGBC" title="Branch 0 was taken 83 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 53 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 83 times"> + </span>]:<span class="tlaGNC">         136 :     if (methodLen != 4 || memcmp(method, &quot;POST&quot;, 4) != 0) return true;</span></span>
+<span id="L10"><span class="lineNum">      10</span>                 :<span class="tlaUNC">           0 : static inline int hex_val(char c){</span></span>
+<span id="L11"><span class="lineNum">      11</span>   [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span><span class="tlaUNC" title="Branch 2 was not executed"> # </span><span class="tlaUNC" title="Branch 3 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (c &gt;= '0' &amp;&amp; c &lt;= '9') return c - '0';</span></span>
+<span id="L12"><span class="lineNum">      12</span>   [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span><span class="tlaUNC" title="Branch 2 was not executed"> # </span><span class="tlaUNC" title="Branch 3 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (c &gt;= 'a' &amp;&amp; c &lt;= 'f') return c - 'a' + 10;</span></span>
+<span id="L13"><span class="lineNum">      13</span>   [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span><span class="tlaUNC" title="Branch 2 was not executed"> # </span><span class="tlaUNC" title="Branch 3 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (c &gt;= 'A' &amp;&amp; c &lt;= 'F') return c - 'A' + 10;</span></span>
+<span id="L14"><span class="lineNum">      14</span>                 :<span class="tlaUNC">           0 :     return 0;</span></span>
+<span id="L15"><span class="lineNum">      15</span>                 :             : }</span>
+<span id="L16"><span class="lineNum">      16</span>                 :             : </span>
+<span id="L17"><span class="lineNum">      17</span>                 :             : /*</span>
+<span id="L18"><span class="lineNum">      18</span>                 :             :  * URL-decodes src into dest, stopping at query-string delimiters</span>
+<span id="L19"><span class="lineNum">      19</span>                 :             :  * ('&amp;', ' ', '\r', '\n') or when dest is full.</span>
+<span id="L20"><span class="lineNum">      20</span>                 :             :  * '%XX' sequences are decoded; '+' is mapped to a space.</span>
+<span id="L21"><span class="lineNum">      21</span>                 :             :  * A decoded NUL byte (%00) terminates the loop as a safety measure.</span>
+<span id="L22"><span class="lineNum">      22</span>                 :             :  */</span>
+<span id="L23"><span class="lineNum">      23</span>                 :<span class="tlaGNC">         253 : static void url_decode(const char * restrict src, char * restrict dest, size_t max){</span></span>
+<span id="L24"><span class="lineNum">      24</span>                 :<span class="tlaGNC">         253 :     size_t i = 0;</span></span>
+<span id="L25"><span class="lineNum">      25</span>   [<span class="tlaGBC" title="Branch 0 was taken 3869 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 88 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 3869 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">        4210 :     while (*src &amp;&amp; *src != '&amp;' &amp;&amp; *src != ' ' &amp;&amp; *src != '\r' &amp;&amp; *src != '\n'</span></span>
+<span class="lineNum">        </span>    <span class="tlaGBC" title="Branch 4 was taken 3771 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 98 times"> + </span><span class="tlaGBC" title="Branch 6 was taken 3771 times"> + </span><span class="tlaUNC" title="Branch 7 was not taken"> - </span>]
+<span id="L26"><span class="lineNum">      26</span>   [<span class="tlaGBC" title="Branch 0 was taken 3957 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 67 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 3771 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">        7795 :            &amp;&amp; i &lt; max - 1) {</span></span>
+<span id="L27"><span class="lineNum">      27</span>   [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 3771 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">        3771 :         if (*src == '%' &amp;&amp; isxdigit((unsigned char)src[1])</span></span>
+<span id="L28"><span class="lineNum">      28</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :                         &amp;&amp; isxdigit((unsigned char)src[2])) {</span></span>
+<span id="L29"><span class="lineNum">      29</span>                 :<span class="tlaUNC">           0 :             char c = (char)((hex_val(src[1]) &lt;&lt; 4) | hex_val(src[2]));</span></span>
+<span id="L30"><span class="lineNum">      30</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :             if (c == '\0') break; // %00 could be used to bypass string checks</span></span>
+<span id="L31"><span class="lineNum">      31</span>                 :<span class="tlaUNC">           0 :             dest[i++] = c;</span></span>
+<span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaUNC">           0 :             src += 3;</span></span>
+<span id="L33"><span class="lineNum">      33</span>         [<span class="tlaGBC" title="Branch 0 was taken 8 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 3763 times"> + </span>]:<span class="tlaGNC">        3771 :         } else if (*src == '+') {</span></span>
+<span id="L34"><span class="lineNum">      34</span>                 :<span class="tlaGNC">           8 :             dest[i++] = ' ';</span></span>
+<span id="L35"><span class="lineNum">      35</span>                 :<span class="tlaGNC">           8 :             src++;</span></span>
+<span id="L36"><span class="lineNum">      36</span>                 :             :         } else {</span>
+<span id="L37"><span class="lineNum">      37</span>                 :<span class="tlaGNC">        3763 :             dest[i++] = *src++;</span></span>
+<span id="L38"><span class="lineNum">      38</span>                 :             :         }</span>
+<span id="L39"><span class="lineNum">      39</span>                 :             :     }</span>
+<span id="L40"><span class="lineNum">      40</span>                 :<span class="tlaGNC">         253 :     dest[i] = '\0';</span></span>
+<span id="L41"><span class="lineNum">      41</span>                 :<span class="tlaGNC">         253 : }</span></span>
+<span id="L42"><span class="lineNum">      42</span>                 :             : </span>
+<span id="L43"><span class="lineNum">      43</span>                 :             : /* Returns the standard reason-phrase for the most common HTTP status codes. */</span>
+<span id="L44"><span class="lineNum">      44</span>                 :<span class="tlaGNC">         136 : static inline const char *http_status_msg(int code){</span></span>
+<span id="L45"><span class="lineNum">      45</span>   [<span class="tlaGBC" title="Branch 0 was taken 52 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 23 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 17 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 3 times"> + </span> :<span class="tlaGNC">         136 :     switch (code) {</span></span>
+<span class="lineNum">        </span> <span class="tlaGBC" title="Branch 4 was taken 19 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 6 was taken 9 times"> + </span><span class="tlaUNC" title="Branch 7 was not taken"> - </span><span class="tlaUNC" title="Branch 8 was not taken"> - </span> 
+<span class="lineNum">        </span>             <span class="tlaGBC" title="Branch 9 was taken 9 times"> + </span>]
+<span id="L46"><span class="lineNum">      46</span>                 :<span class="tlaGNC">          52 :         case 200: return &quot;OK&quot;;</span></span>
+<span id="L47"><span class="lineNum">      47</span>                 :<span class="tlaGNC">          23 :         case 302: return &quot;Found&quot;;</span></span>
+<span id="L48"><span class="lineNum">      48</span>                 :<span class="tlaGNC">          17 :         case 400: return &quot;Bad Request&quot;;</span></span>
+<span id="L49"><span class="lineNum">      49</span>                 :<span class="tlaGNC">           3 :         case 401: return &quot;Unauthorized&quot;;</span></span>
+<span id="L50"><span class="lineNum">      50</span>                 :<span class="tlaGNC">          19 :         case 403: return &quot;Forbidden&quot;;</span></span>
+<span id="L51"><span class="lineNum">      51</span>                 :<span class="tlaGNC">           4 :         case 404: return &quot;Not Found&quot;;</span></span>
+<span id="L52"><span class="lineNum">      52</span>                 :<span class="tlaGNC">           9 :         case 405: return &quot;Method Not Allowed&quot;;</span></span>
+<span id="L53"><span class="lineNum">      53</span>                 :<span class="tlaUNC">           0 :         case 429: return &quot;Too Many Requests&quot;;</span></span>
+<span id="L54"><span class="lineNum">      54</span>                 :<span class="tlaUNC">           0 :         case 500: return &quot;Internal Server Error&quot;;</span></span>
+<span id="L55"><span class="lineNum">      55</span>                 :<span class="tlaGNC">           9 :         default:  return &quot;OK&quot;;</span></span>
+<span id="L56"><span class="lineNum">      56</span>                 :             :     }</span>
+<span id="L57"><span class="lineNum">      57</span>                 :             : }</span>
+<span id="L58"><span class="lineNum">      58</span>                 :             : </span>
+<span id="L59"><span class="lineNum">      59</span>                 :             : /*</span>
+<span id="L60"><span class="lineNum">      60</span>                 :             :  * Determines the Content-Type to use in the response.</span>
+<span id="L61"><span class="lineNum">      61</span>                 :             :  * Returns override directly if it is non-NULL and non-empty;</span>
+<span id="L62"><span class="lineNum">      62</span>                 :             :  * otherwise infers the type from the first byte of body.</span>
+<span id="L63"><span class="lineNum">      63</span>                 :             :  */</span>
+<span id="L64"><span class="lineNum">      64</span>                 :<span class="tlaGNC">         136 : static const char *infer_contentType(const char *body, const char *override){</span></span>
+<span id="L65"><span class="lineNum">      65</span>   [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 134 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 2 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">         136 :     if (override &amp;&amp; override[0])                    return override;</span></span>
+<span id="L66"><span class="lineNum">      66</span>   [<span class="tlaGBC" title="Branch 0 was taken 134 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaGBC" title="Branch 2 was taken 50 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 84 times"> + </span>]:<span class="tlaGNC">         134 :     if (body &amp;&amp; body[0] == '&lt;')                     return &quot;text/html; charset=utf-8&quot;;</span></span>
+<span id="L67"><span class="lineNum">      67</span>   [<span class="tlaGBC" title="Branch 0 was taken 84 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaGBC" title="Branch 2 was taken 18 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 66 times"> + </span> :<span class="tlaGNC">          84 :     if (body &amp;&amp; (body[0] == '{' || body[0] == '[')) return &quot;application/json&quot;;</span></span>
+<span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 4 was taken 18 times"> + </span><span class="tlaUNC" title="Branch 5 was not taken"> - </span>]
+<span id="L68"><span class="lineNum">      68</span>                 :<span class="tlaUNC">           0 :     return &quot;text/plain; charset=utf-8&quot;;</span></span>
+<span id="L69"><span class="lineNum">      69</span>                 :             : }</span>
+<span id="L70"><span class="lineNum">      70</span>                 :             : </span>
+<span id="L71"><span class="lineNum">      71</span>                 :             : /* ── Request parsing ─────────────────────────────────────────────────── */</span>
+<span id="L72"><span class="lineNum">      72</span>                 :             : </span>
+<span id="L73"><span class="lineNum">      73</span>                 :<span class="tlaGNC">         136 : bool http_is_request_complete(const char *buf, size_t len){</span></span>
+<span id="L74"><span class="lineNum">      74</span>                 :             :     struct phr_header headers[HTTP_MAX_HEADERS];</span>
+<span id="L75"><span class="lineNum">      75</span>                 :<span class="tlaGNC">         136 :     size_t numHeaders = HTTP_MAX_HEADERS;</span></span>
+<span id="L76"><span class="lineNum">      76</span>                 :             :     const char *method, *path;</span>
+<span id="L77"><span class="lineNum">      77</span>                 :             :     size_t methodLen, pathLen;</span>
+<span id="L78"><span class="lineNum">      78</span>                 :             :     int minorVersion;</span>
+<span id="L79"><span class="lineNum">      79</span>                 :             : </span>
+<span id="L80"><span class="lineNum">      80</span>                 :<span class="tlaGNC">         136 :     int r = phr_parse_request(buf, len,</span></span>
+<span id="L81"><span class="lineNum">      81</span>                 :             :                               &amp;method, &amp;methodLen,</span>
+<span id="L82"><span class="lineNum">      82</span>                 :             :                               &amp;path,   &amp;pathLen,</span>
+<span id="L83"><span class="lineNum">      83</span>                 :             :                               &amp;minorVersion,</span>
+<span id="L84"><span class="lineNum">      84</span>                 :             :                               headers, &amp;numHeaders,</span>
+<span id="L85"><span class="lineNum">      85</span>                 :             :                               0 /* lastLen: always a fresh parse */);</span>
+<span id="L86"><span class="lineNum">      86</span>                 :             : </span>
+<span id="L87"><span class="lineNum">      87</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 136 times"> + </span>]:<span class="tlaGNC">         136 :     if (r == -2) return false; // headers incomplete — wait for more data</span></span>
+<span id="L88"><span class="lineNum">      88</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 136 times"> + </span>]:<span class="tlaGNC">         136 :     if (r == -1) return true;  // malformed — let the handler return 400</span></span>
+<span id="L89"><span class="lineNum">      89</span>                 :             : </span>
+<span id="L90"><span class="lineNum">      90</span>                 :             :     // For POST requests verify that the body has fully arrived</span>
+<span id="L91"><span class="lineNum">      91</span>   [<span class="tlaGBC" title="Branch 0 was taken 83 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 53 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 83 times"> + </span>]:<span class="tlaGNC">         136 :     if (methodLen != 4 || memcmp(method, &quot;POST&quot;, 4) != 0) return true;</span></span>
+<span id="L92"><span class="lineNum">      92</span>                 :             : </span>
+<span id="L93"><span class="lineNum">      93</span>         [<span class="tlaGBC" title="Branch 0 was taken 394 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">         395 :     for (size_t i = 0; i &lt; numHeaders; i++) {</span></span>
+<span id="L94"><span class="lineNum">      94</span>                 :             :         // Fast pre-filter: &quot;content-length&quot; is exactly 14 chars</span>
+<span id="L95"><span class="lineNum">      95</span>         [<span class="tlaGBC" title="Branch 0 was taken 312 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 82 times"> + </span>]:<span class="tlaGNC">         394 :         if (headers[i].name_len != 14) continue;</span></span>
+<span id="L96"><span class="lineNum">      96</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 82 times"> + </span>]:<span class="tlaGNC">          82 :         if (strncasecmp(headers[i].name, &quot;content-length&quot;, 14) != 0) continue;</span></span>
 <span id="L97"><span class="lineNum">      97</span>                 :             : </span>
-<span id="L98"><span class="lineNum">      98</span>         [<span class="tlaGBC" title="Branch 0 was taken 394 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">         395 :     for (size_t i = 0; i &lt; numHeaders; i++) {</span></span>
-<span id="L99"><span class="lineNum">      99</span>                 :             :         // Fast pre-filter: &quot;content-length&quot; is exactly 14 chars</span>
-<span id="L100"><span class="lineNum">     100</span>         [<span class="tlaGBC" title="Branch 0 was taken 312 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 82 times"> + </span>]:<span class="tlaGNC">         394 :         if (headers[i].name_len != 14) continue;</span></span>
-<span id="L101"><span class="lineNum">     101</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 82 times"> + </span>]:<span class="tlaGNC">          82 :         if (strncasecmp(headers[i].name, &quot;content-length&quot;, 14) != 0) continue;</span></span>
-<span id="L102"><span class="lineNum">     102</span>                 :             : </span>
-<span id="L103"><span class="lineNum">     103</span>                 :             :         // phr_header values are not NUL-terminated — copy into a local buffer</span>
-<span id="L104"><span class="lineNum">     104</span>                 :             :         // and clamp to MAX_NUMBER_LEN - 1 to leave room for the NUL</span>
-<span id="L105"><span class="lineNum">     105</span>                 :<span class="tlaGNC">          82 :         char   val[MAX_NUMBER_LEN] = {0};</span></span>
-<span id="L106"><span class="lineNum">     106</span>                 :<span class="tlaGNC">          82 :         size_t vlen = headers[i].value_len &lt; MAX_NUMBER_LEN - 1</span></span>
-<span id="L107"><span class="lineNum">     107</span>                 :             :                     ? headers[i].value_len</span>
-<span id="L108"><span class="lineNum">     108</span>                 :             :                     : MAX_NUMBER_LEN - 1;</span>
-<span id="L109"><span class="lineNum">     109</span>                 :<span class="tlaGNC">          82 :         memcpy(val, headers[i].value, vlen);</span></span>
-<span id="L110"><span class="lineNum">     110</span>                 :             : </span>
-<span id="L111"><span class="lineNum">     111</span>                 :<span class="tlaGNC">          82 :         long cl = strtol(val, NULL, 10);</span></span>
-<span id="L112"><span class="lineNum">     112</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 80 times"> + </span>]:<span class="tlaGNC">          82 :         if (cl &lt;= 0) break; // malformed or zero-length body — treat as complete</span></span>
-<span id="L113"><span class="lineNum">     113</span>                 :             : </span>
-<span id="L114"><span class="lineNum">     114</span>                 :             :         // r is the byte offset where the body starts (returned by phr_parse_request)</span>
-<span id="L115"><span class="lineNum">     115</span>                 :<span class="tlaGNC">          80 :         size_t bodyReceived = len - (size_t)r;</span></span>
-<span id="L116"><span class="lineNum">     116</span>                 :<span class="tlaGNC">          80 :         return bodyReceived &gt;= (size_t)cl;</span></span>
-<span id="L117"><span class="lineNum">     117</span>                 :             :     }</span>
-<span id="L118"><span class="lineNum">     118</span>                 :<span class="tlaGNC">           3 :     return true;</span></span>
-<span id="L119"><span class="lineNum">     119</span>                 :             : }</span>
-<span id="L120"><span class="lineNum">     120</span>                 :             : </span>
-<span id="L121"><span class="lineNum">     121</span>                 :<span class="tlaGNC">         130 : bool http_request_parse(const char *raw, size_t rawLen, HttpRequest *req)</span></span>
-<span id="L122"><span class="lineNum">     122</span>                 :             : {</span>
-<span id="L123"><span class="lineNum">     123</span>                 :<span class="tlaGNC">         130 :     memset(req, 0, sizeof(*req));</span></span>
-<span id="L124"><span class="lineNum">     124</span>                 :<span class="tlaGNC">         130 :     req-&gt;numHeaders = HTTP_MAX_HEADERS;</span></span>
-<span id="L125"><span class="lineNum">     125</span>                 :             : </span>
-<span id="L126"><span class="lineNum">     126</span>                 :<span class="tlaGNC">         130 :     int r = phr_parse_request(raw, rawLen,</span></span>
-<span id="L127"><span class="lineNum">     127</span>                 :             :                               &amp;req-&gt;method,   &amp;req-&gt;methodLen,</span>
-<span id="L128"><span class="lineNum">     128</span>                 :             :                               &amp;req-&gt;path,     &amp;req-&gt;pathLen,</span>
-<span id="L129"><span class="lineNum">     129</span>                 :             :                               &amp;req-&gt;minorVersion,</span>
-<span id="L130"><span class="lineNum">     130</span>                 :<span class="tlaGNC">         130 :                               req-&gt;headers,   &amp;req-&gt;numHeaders,</span></span>
-<span id="L131"><span class="lineNum">     131</span>                 :             :                               0);</span>
-<span id="L132"><span class="lineNum">     132</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 130 times"> + </span>]:<span class="tlaGNC">         130 :     if (r &lt; 0) return false;</span></span>
-<span id="L133"><span class="lineNum">     133</span>                 :             : </span>
-<span id="L134"><span class="lineNum">     134</span>                 :             :     // Strip the query string from the path (e.g. &quot;/api/x?foo=1&quot; → &quot;/api/x&quot;)</span>
-<span id="L135"><span class="lineNum">     135</span>                 :<span class="tlaGNC">         130 :     const char *q = memchr(req-&gt;path, '?', req-&gt;pathLen);</span></span>
-<span id="L136"><span class="lineNum">     136</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 130 times"> + </span>]:<span class="tlaGNC">         130 :     if (q) req-&gt;pathLen = (size_t)(q - req-&gt;path);</span></span>
+<span id="L98"><span class="lineNum">      98</span>                 :             :         // phr_header values are not NUL-terminated — copy into a local buffer</span>
+<span id="L99"><span class="lineNum">      99</span>                 :             :         // and clamp to MAX_NUMBER_LEN - 1 to leave room for the NUL</span>
+<span id="L100"><span class="lineNum">     100</span>                 :<span class="tlaGNC">          82 :         char   val[MAX_NUMBER_LEN] = {0};</span></span>
+<span id="L101"><span class="lineNum">     101</span>                 :<span class="tlaGNC">          82 :         size_t vlen = headers[i].value_len &lt; MAX_NUMBER_LEN - 1</span></span>
+<span id="L102"><span class="lineNum">     102</span>                 :             :                     ? headers[i].value_len</span>
+<span id="L103"><span class="lineNum">     103</span>                 :             :                     : MAX_NUMBER_LEN - 1;</span>
+<span id="L104"><span class="lineNum">     104</span>                 :<span class="tlaGNC">          82 :         memcpy(val, headers[i].value, vlen);</span></span>
+<span id="L105"><span class="lineNum">     105</span>                 :             : </span>
+<span id="L106"><span class="lineNum">     106</span>                 :<span class="tlaGNC">          82 :         long cl = strtol(val, NULL, 10);</span></span>
+<span id="L107"><span class="lineNum">     107</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 80 times"> + </span>]:<span class="tlaGNC">          82 :         if (cl &lt;= 0) break; // malformed or zero-length body — treat as complete</span></span>
+<span id="L108"><span class="lineNum">     108</span>                 :             : </span>
+<span id="L109"><span class="lineNum">     109</span>                 :             :         // r is the byte offset where the body starts (returned by phr_parse_request)</span>
+<span id="L110"><span class="lineNum">     110</span>                 :<span class="tlaGNC">          80 :         size_t bodyReceived = len - (size_t)r;</span></span>
+<span id="L111"><span class="lineNum">     111</span>                 :<span class="tlaGNC">          80 :         return bodyReceived &gt;= (size_t)cl;</span></span>
+<span id="L112"><span class="lineNum">     112</span>                 :             :     }</span>
+<span id="L113"><span class="lineNum">     113</span>                 :<span class="tlaGNC">           3 :     return true;</span></span>
+<span id="L114"><span class="lineNum">     114</span>                 :             : }</span>
+<span id="L115"><span class="lineNum">     115</span>                 :             : </span>
+<span id="L116"><span class="lineNum">     116</span>                 :<span class="tlaGNC">         136 : bool http_request_parse(const char *raw, size_t rawLen, HttpRequest *req){</span></span>
+<span id="L117"><span class="lineNum">     117</span>                 :<span class="tlaGNC">         136 :     memset(req, 0, sizeof(*req));</span></span>
+<span id="L118"><span class="lineNum">     118</span>                 :<span class="tlaGNC">         136 :     req-&gt;numHeaders = HTTP_MAX_HEADERS;</span></span>
+<span id="L119"><span class="lineNum">     119</span>                 :             : </span>
+<span id="L120"><span class="lineNum">     120</span>                 :<span class="tlaGNC">         136 :     int r = phr_parse_request(raw, rawLen,</span></span>
+<span id="L121"><span class="lineNum">     121</span>                 :             :                               &amp;req-&gt;method,   &amp;req-&gt;methodLen,</span>
+<span id="L122"><span class="lineNum">     122</span>                 :             :                               &amp;req-&gt;path,     &amp;req-&gt;pathLen,</span>
+<span id="L123"><span class="lineNum">     123</span>                 :             :                               &amp;req-&gt;minorVersion,</span>
+<span id="L124"><span class="lineNum">     124</span>                 :<span class="tlaGNC">         136 :                               req-&gt;headers,   &amp;req-&gt;numHeaders,</span></span>
+<span id="L125"><span class="lineNum">     125</span>                 :             :                               0);</span>
+<span id="L126"><span class="lineNum">     126</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 136 times"> + </span>]:<span class="tlaGNC">         136 :     if (r &lt; 0) return false;</span></span>
+<span id="L127"><span class="lineNum">     127</span>                 :             : </span>
+<span id="L128"><span class="lineNum">     128</span>                 :             :     // Strip the query string from the path (e.g. &quot;/api/x?foo=1&quot; → &quot;/api/x&quot;)</span>
+<span id="L129"><span class="lineNum">     129</span>                 :<span class="tlaGNC">         136 :     const char *q = memchr(req-&gt;path, '?', req-&gt;pathLen);</span></span>
+<span id="L130"><span class="lineNum">     130</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 136 times"> + </span>]:<span class="tlaGNC">         136 :     if (q) req-&gt;pathLen = (size_t)(q - req-&gt;path);</span></span>
+<span id="L131"><span class="lineNum">     131</span>                 :             : </span>
+<span id="L132"><span class="lineNum">     132</span>                 :             :     // Point body to the bytes that follow the header block</span>
+<span id="L133"><span class="lineNum">     133</span>         [<span class="tlaGBC" title="Branch 0 was taken 80 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 56 times"> + </span>]:<span class="tlaGNC">         136 :     if (rawLen &gt; (size_t)r) {</span></span>
+<span id="L134"><span class="lineNum">     134</span>                 :<span class="tlaGNC">          80 :         req-&gt;body    = raw + r;</span></span>
+<span id="L135"><span class="lineNum">     135</span>                 :<span class="tlaGNC">          80 :         req-&gt;bodyLen = rawLen - (size_t)r;</span></span>
+<span id="L136"><span class="lineNum">     136</span>                 :             :     }</span>
 <span id="L137"><span class="lineNum">     137</span>                 :             : </span>
-<span id="L138"><span class="lineNum">     138</span>                 :             :     // Point body to the bytes that follow the header block</span>
-<span id="L139"><span class="lineNum">     139</span>         [<span class="tlaGBC" title="Branch 0 was taken 79 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 51 times"> + </span>]:<span class="tlaGNC">         130 :     if (rawLen &gt; (size_t)r) {</span></span>
-<span id="L140"><span class="lineNum">     140</span>                 :<span class="tlaGNC">          79 :         req-&gt;body    = raw + r;</span></span>
-<span id="L141"><span class="lineNum">     141</span>                 :<span class="tlaGNC">          79 :         req-&gt;bodyLen = rawLen - (size_t)r;</span></span>
-<span id="L142"><span class="lineNum">     142</span>                 :             :     }</span>
-<span id="L143"><span class="lineNum">     143</span>                 :             : </span>
-<span id="L144"><span class="lineNum">     144</span>                 :<span class="tlaGNC">         130 :     return true;</span></span>
-<span id="L145"><span class="lineNum">     145</span>                 :             : }</span>
-<span id="L146"><span class="lineNum">     146</span>                 :             : </span>
-<span id="L147"><span class="lineNum">     147</span>                 :<span class="tlaGNC">         231 : const char *http_request_header(const HttpRequest *req,</span></span>
-<span id="L148"><span class="lineNum">     148</span>                 :             :                                 const char        *name,</span>
-<span id="L149"><span class="lineNum">     149</span>                 :             :                                 size_t            *valueLenOut)</span>
-<span id="L150"><span class="lineNum">     150</span>                 :             : {</span>
-<span id="L151"><span class="lineNum">     151</span>                 :<span class="tlaGNC">         231 :     size_t nlen = strlen(name);</span></span>
-<span id="L152"><span class="lineNum">     152</span>         [<span class="tlaGBC" title="Branch 0 was taken 1045 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 139 times"> + </span>]:<span class="tlaGNC">        1184 :     for (size_t i = 0; i &lt; req-&gt;numHeaders; i++) {</span></span>
-<span id="L153"><span class="lineNum">     153</span>         [<span class="tlaGBC" title="Branch 0 was taken 323 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 722 times"> + </span>]:<span class="tlaGNC">        1045 :         if (req-&gt;headers[i].name_len == nlen &amp;&amp;</span></span>
-<span id="L154"><span class="lineNum">     154</span>         [<span class="tlaGBC" title="Branch 0 was taken 92 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 231 times"> + </span>]:<span class="tlaGNC">         323 :             strncasecmp(req-&gt;headers[i].name, name, nlen) == 0) {</span></span>
-<span id="L155"><span class="lineNum">     155</span>         [<span class="tlaGBC" title="Branch 0 was taken 92 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">          92 :             if (valueLenOut) *valueLenOut = req-&gt;headers[i].value_len;</span></span>
-<span id="L156"><span class="lineNum">     156</span>                 :<span class="tlaGNC">          92 :             return req-&gt;headers[i].value;</span></span>
-<span id="L157"><span class="lineNum">     157</span>                 :             :         }</span>
-<span id="L158"><span class="lineNum">     158</span>                 :             :     }</span>
-<span id="L159"><span class="lineNum">     159</span>                 :<span class="tlaGNC">         139 :     return NULL;</span></span>
-<span id="L160"><span class="lineNum">     160</span>                 :             : }</span>
+<span id="L138"><span class="lineNum">     138</span>                 :<span class="tlaGNC">         136 :     return true;</span></span>
+<span id="L139"><span class="lineNum">     139</span>                 :             : }</span>
+<span id="L140"><span class="lineNum">     140</span>                 :             : </span>
+<span id="L141"><span class="lineNum">     141</span>                 :<span class="tlaGNC">         243 : const char *http_request_header(const HttpRequest *req,</span></span>
+<span id="L142"><span class="lineNum">     142</span>                 :             :                                 const char        *name,</span>
+<span id="L143"><span class="lineNum">     143</span>                 :             :                                 size_t            *valueLenOut){</span>
+<span id="L144"><span class="lineNum">     144</span>                 :<span class="tlaGNC">         243 :     size_t nlen = strlen(name);</span></span>
+<span id="L145"><span class="lineNum">     145</span>         [<span class="tlaGBC" title="Branch 0 was taken 1095 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 145 times"> + </span>]:<span class="tlaGNC">        1240 :     for (size_t i = 0; i &lt; req-&gt;numHeaders; i++) {</span></span>
+<span id="L146"><span class="lineNum">     146</span>         [<span class="tlaGBC" title="Branch 0 was taken 341 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 754 times"> + </span>]:<span class="tlaGNC">        1095 :         if (req-&gt;headers[i].name_len == nlen &amp;&amp;</span></span>
+<span id="L147"><span class="lineNum">     147</span>         [<span class="tlaGBC" title="Branch 0 was taken 98 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 243 times"> + </span>]:<span class="tlaGNC">         341 :             strncasecmp(req-&gt;headers[i].name, name, nlen) == 0) {</span></span>
+<span id="L148"><span class="lineNum">     148</span>         [<span class="tlaGBC" title="Branch 0 was taken 98 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">          98 :             if (valueLenOut) *valueLenOut = req-&gt;headers[i].value_len;</span></span>
+<span id="L149"><span class="lineNum">     149</span>                 :<span class="tlaGNC">          98 :             return req-&gt;headers[i].value;</span></span>
+<span id="L150"><span class="lineNum">     150</span>                 :             :         }</span>
+<span id="L151"><span class="lineNum">     151</span>                 :             :     }</span>
+<span id="L152"><span class="lineNum">     152</span>                 :<span class="tlaGNC">         145 :     return NULL;</span></span>
+<span id="L153"><span class="lineNum">     153</span>                 :             : }</span>
+<span id="L154"><span class="lineNum">     154</span>                 :             : </span>
+<span id="L155"><span class="lineNum">     155</span>                 :<span class="tlaGNC">         107 : void http_request_cookie(const HttpRequest *req, const char *name, char *dest, size_t max){</span></span>
+<span id="L156"><span class="lineNum">     156</span>                 :<span class="tlaGNC">         107 :     dest[0] = '\0';</span></span>
+<span id="L157"><span class="lineNum">     157</span>                 :             : </span>
+<span id="L158"><span class="lineNum">     158</span>                 :<span class="tlaGNC">         107 :     size_t cookieLen = 0;</span></span>
+<span id="L159"><span class="lineNum">     159</span>                 :<span class="tlaGNC">         107 :     const char *h = http_request_header(req, &quot;cookie&quot;, &amp;cookieLen);</span></span>
+<span id="L160"><span class="lineNum">     160</span>         [<span class="tlaGBC" title="Branch 0 was taken 9 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 98 times"> + </span>]:<span class="tlaGNC">         205 :     if (!h) return;</span></span>
 <span id="L161"><span class="lineNum">     161</span>                 :             : </span>
-<span id="L162"><span class="lineNum">     162</span>                 :<span class="tlaGNC">         101 : void http_request_cookie(const HttpRequest *req, const char *name, char *dest, size_t max)</span></span>
-<span id="L163"><span class="lineNum">     163</span>                 :             : {</span>
-<span id="L164"><span class="lineNum">     164</span>                 :<span class="tlaGNC">         101 :     dest[0] = '\0';</span></span>
-<span id="L165"><span class="lineNum">     165</span>                 :             : </span>
-<span id="L166"><span class="lineNum">     166</span>                 :<span class="tlaGNC">         101 :     size_t cookieLen = 0;</span></span>
-<span id="L167"><span class="lineNum">     167</span>                 :<span class="tlaGNC">         101 :     const char *h = http_request_header(req, &quot;cookie&quot;, &amp;cookieLen);</span></span>
-<span id="L168"><span class="lineNum">     168</span>         [<span class="tlaGBC" title="Branch 0 was taken 9 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 92 times"> + </span>]:<span class="tlaGNC">         193 :     if (!h) return;</span></span>
+<span id="L162"><span class="lineNum">     162</span>                 :<span class="tlaGNC">          98 :     size_t nameLen = strlen(name);</span></span>
+<span id="L163"><span class="lineNum">     163</span>                 :<span class="tlaGNC">          98 :     const char *end = h + cookieLen;</span></span>
+<span id="L164"><span class="lineNum">     164</span>                 :             : </span>
+<span id="L165"><span class="lineNum">     165</span>         [<span class="tlaGBC" title="Branch 0 was taken 98 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">          98 :     while (h &lt; end) {</span></span>
+<span id="L166"><span class="lineNum">     166</span>                 :             :         // Fast scan for the next occurrence of the cookie name in the remaining buffer</span>
+<span id="L167"><span class="lineNum">     167</span>                 :<span class="tlaGNC">          98 :         h = memmem(h, end - h, name, nameLen);</span></span>
+<span id="L168"><span class="lineNum">     168</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 98 times"> + </span>]:<span class="tlaGNC">          98 :         if (!h) break;</span></span>
 <span id="L169"><span class="lineNum">     169</span>                 :             : </span>
-<span id="L170"><span class="lineNum">     170</span>                 :<span class="tlaGNC">          92 :     size_t nameLen = strlen(name);</span></span>
-<span id="L171"><span class="lineNum">     171</span>                 :<span class="tlaGNC">          92 :     const char *end = h + cookieLen;</span></span>
-<span id="L172"><span class="lineNum">     172</span>                 :             : </span>
-<span id="L173"><span class="lineNum">     173</span>         [<span class="tlaGBC" title="Branch 0 was taken 92 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">          92 :     while (h &lt; end) {</span></span>
-<span id="L174"><span class="lineNum">     174</span>                 :             :         // Fast scan for the next occurrence of the cookie name in the remaining buffer</span>
-<span id="L175"><span class="lineNum">     175</span>                 :<span class="tlaGNC">          92 :         h = memmem(h, end - h, name, nameLen);</span></span>
-<span id="L176"><span class="lineNum">     176</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 92 times"> + </span>]:<span class="tlaGNC">          92 :         if (!h) break;</span></span>
-<span id="L177"><span class="lineNum">     177</span>                 :             : </span>
-<span id="L178"><span class="lineNum">     178</span>                 :             :         /*</span>
-<span id="L179"><span class="lineNum">     179</span>                 :             :          * Verify token boundaries:</span>
-<span id="L180"><span class="lineNum">     180</span>                 :             :          *  - must be preceded by ';', ' ', or be at the very start of the value</span>
-<span id="L181"><span class="lineNum">     181</span>                 :             :          *  - must be immediately followed by '='</span>
-<span id="L182"><span class="lineNum">     182</span>                 :             :          */</span>
-<span id="L183"><span class="lineNum">     183</span>   [<span class="tlaGBC" title="Branch 0 was taken 92 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 92 times"> + </span> :<span class="tlaGNC">          92 :         bool prefixOk = (h == req-&gt;headers[0].value || *(h-1) == ' ' || *(h-1) == ';');</span></span>
+<span id="L170"><span class="lineNum">     170</span>                 :             :         /*</span>
+<span id="L171"><span class="lineNum">     171</span>                 :             :          * Verify token boundaries:</span>
+<span id="L172"><span class="lineNum">     172</span>                 :             :          *  - must be preceded by ';', ' ', or be at the very start of the value</span>
+<span id="L173"><span class="lineNum">     173</span>                 :             :          *  - must be immediately followed by '='</span>
+<span id="L174"><span class="lineNum">     174</span>                 :             :          */</span>
+<span id="L175"><span class="lineNum">     175</span>   [<span class="tlaGBC" title="Branch 0 was taken 98 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 98 times"> + </span> :<span class="tlaGNC">          98 :         bool prefixOk = (h == req-&gt;headers[0].value || *(h-1) == ' ' || *(h-1) == ';');</span></span>
 <span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaUNC" title="Branch 5 was not taken"> - </span>]
-<span id="L184"><span class="lineNum">     184</span>   [<span class="tlaGBC" title="Branch 0 was taken 92 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaGBC" title="Branch 2 was taken 92 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">          92 :         if (prefixOk &amp;&amp; (h + nameLen &lt; end) &amp;&amp; h[nameLen] == '=') {</span></span>
-<span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 4 was taken 92 times"> + </span><span class="tlaUNC" title="Branch 5 was not taken"> - </span>]
-<span id="L185"><span class="lineNum">     185</span>                 :<span class="tlaGNC">          92 :             url_decode(h + nameLen + 1, dest, max);</span></span>
-<span id="L186"><span class="lineNum">     186</span>                 :<span class="tlaGNC">          92 :             return;</span></span>
-<span id="L187"><span class="lineNum">     187</span>                 :             :         }</span>
-<span id="L188"><span class="lineNum">     188</span>                 :             : </span>
-<span id="L189"><span class="lineNum">     189</span>                 :             :         // Not the right cookie — advance one byte and retry</span>
-<span id="L190"><span class="lineNum">     190</span>                 :<span class="tlaUNC">           0 :         h++;</span></span>
-<span id="L191"><span class="lineNum">     191</span>                 :             :     }</span>
-<span id="L192"><span class="lineNum">     192</span>                 :             : }</span>
-<span id="L193"><span class="lineNum">     193</span>                 :             : </span>
-<span id="L194"><span class="lineNum">     194</span>                 :<span class="tlaGNC">        1535 : bool http_is_request_path(const HttpRequest *req, const char *path)</span></span>
-<span id="L195"><span class="lineNum">     195</span>                 :             : {</span>
-<span id="L196"><span class="lineNum">     196</span>                 :<span class="tlaGNC">        1535 :     size_t plen = strlen(path);</span></span>
-<span id="L197"><span class="lineNum">     197</span>   [<span class="tlaGBC" title="Branch 0 was taken 179 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1356 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 146 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 33 times"> + </span>]:<span class="tlaGNC">        1535 :     return req-&gt;pathLen == plen &amp;&amp; memcmp(req-&gt;path, path, plen) == 0;</span></span>
-<span id="L198"><span class="lineNum">     198</span>                 :             : }</span>
-<span id="L199"><span class="lineNum">     199</span>                 :             : </span>
-<span id="L200"><span class="lineNum">     200</span>                 :<span class="tlaGNC">         146 : bool http_is_request_method(const HttpRequest *req, const char *method)</span></span>
-<span id="L201"><span class="lineNum">     201</span>                 :             : {</span>
-<span id="L202"><span class="lineNum">     202</span>                 :<span class="tlaGNC">         146 :     size_t mlen = strlen(method);</span></span>
-<span id="L203"><span class="lineNum">     203</span>   [<span class="tlaGBC" title="Branch 0 was taken 121 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 25 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 120 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 1 time"> + </span>]:<span class="tlaGNC">         146 :     return req-&gt;methodLen == mlen &amp;&amp; memcmp(req-&gt;method, method, mlen) == 0;</span></span>
-<span id="L204"><span class="lineNum">     204</span>                 :             : }</span>
-<span id="L205"><span class="lineNum">     205</span>                 :             : </span>
-<span id="L206"><span class="lineNum">     206</span>                 :<span class="tlaGNC">         130 : bool http_request_contains_keepalive(const HttpRequest *req)</span></span>
-<span id="L207"><span class="lineNum">     207</span>                 :             : {</span>
-<span id="L208"><span class="lineNum">     208</span>                 :<span class="tlaGNC">         130 :     size_t vlen = 0;</span></span>
-<span id="L209"><span class="lineNum">     209</span>                 :<span class="tlaGNC">         130 :     const char *val = http_request_header(req, &quot;connection&quot;, &amp;vlen);</span></span>
-<span id="L210"><span class="lineNum">     210</span>   [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 130 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">         130 :     return val &amp;&amp; vlen &gt;= 10 &amp;&amp; strncasecmp(val, &quot;keep-alive&quot;, 10) == 0;</span></span>
+<span id="L176"><span class="lineNum">     176</span>   [<span class="tlaGBC" title="Branch 0 was taken 98 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaGBC" title="Branch 2 was taken 98 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">          98 :         if (prefixOk &amp;&amp; (h + nameLen &lt; end) &amp;&amp; h[nameLen] == '=') {</span></span>
+<span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 4 was taken 98 times"> + </span><span class="tlaUNC" title="Branch 5 was not taken"> - </span>]
+<span id="L177"><span class="lineNum">     177</span>                 :<span class="tlaGNC">          98 :             url_decode(h + nameLen + 1, dest, max);</span></span>
+<span id="L178"><span class="lineNum">     178</span>                 :<span class="tlaGNC">          98 :             return;</span></span>
+<span id="L179"><span class="lineNum">     179</span>                 :             :         }</span>
+<span id="L180"><span class="lineNum">     180</span>                 :             : </span>
+<span id="L181"><span class="lineNum">     181</span>                 :             :         // Not the right cookie — advance one byte and retry</span>
+<span id="L182"><span class="lineNum">     182</span>                 :<span class="tlaUNC">           0 :         h++;</span></span>
+<span id="L183"><span class="lineNum">     183</span>                 :             :     }</span>
+<span id="L184"><span class="lineNum">     184</span>                 :             : }</span>
+<span id="L185"><span class="lineNum">     185</span>                 :             : </span>
+<span id="L186"><span class="lineNum">     186</span>                 :<span class="tlaGNC">        1611 : bool http_is_request_path(const HttpRequest *req, const char *path){</span></span>
+<span id="L187"><span class="lineNum">     187</span>                 :<span class="tlaGNC">        1611 :     size_t plen = strlen(path);</span></span>
+<span id="L188"><span class="lineNum">     188</span>   [<span class="tlaGBC" title="Branch 0 was taken 186 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1425 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 152 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 34 times"> + </span>]:<span class="tlaGNC">        1611 :     return req-&gt;pathLen == plen &amp;&amp; memcmp(req-&gt;path, path, plen) == 0;</span></span>
+<span id="L189"><span class="lineNum">     189</span>                 :             : }</span>
+<span id="L190"><span class="lineNum">     190</span>                 :             : </span>
+<span id="L191"><span class="lineNum">     191</span>                 :<span class="tlaGNC">         152 : bool http_is_request_method(const HttpRequest *req, const char *method){</span></span>
+<span id="L192"><span class="lineNum">     192</span>                 :<span class="tlaGNC">         152 :     size_t mlen = strlen(method);</span></span>
+<span id="L193"><span class="lineNum">     193</span>   [<span class="tlaGBC" title="Branch 0 was taken 127 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 25 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 126 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 1 time"> + </span>]:<span class="tlaGNC">         152 :     return req-&gt;methodLen == mlen &amp;&amp; memcmp(req-&gt;method, method, mlen) == 0;</span></span>
+<span id="L194"><span class="lineNum">     194</span>                 :             : }</span>
+<span id="L195"><span class="lineNum">     195</span>                 :             : </span>
+<span id="L196"><span class="lineNum">     196</span>                 :<span class="tlaGNC">         136 : bool http_request_contains_keepalive(const HttpRequest *req){</span></span>
+<span id="L197"><span class="lineNum">     197</span>                 :<span class="tlaGNC">         136 :     size_t vlen = 0;</span></span>
+<span id="L198"><span class="lineNum">     198</span>                 :<span class="tlaGNC">         136 :     const char *val = http_request_header(req, &quot;connection&quot;, &amp;vlen);</span></span>
+<span id="L199"><span class="lineNum">     199</span>   [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 136 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">         136 :     return val &amp;&amp; vlen &gt;= 10 &amp;&amp; strncasecmp(val, &quot;keep-alive&quot;, 10) == 0;</span></span>
 <span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaUNC" title="Branch 5 was not taken"> - </span>]
-<span id="L211"><span class="lineNum">     211</span>                 :             : }</span>
-<span id="L212"><span class="lineNum">     212</span>                 :             : </span>
-<span id="L213"><span class="lineNum">     213</span>                 :             : /* ── Response rendering ──────────────────────────────────────────────── */</span>
+<span id="L200"><span class="lineNum">     200</span>                 :             : }</span>
+<span id="L201"><span class="lineNum">     201</span>                 :             : </span>
+<span id="L202"><span class="lineNum">     202</span>                 :             : /* ── Response rendering ──────────────────────────────────────────────── */</span>
+<span id="L203"><span class="lineNum">     203</span>                 :             : </span>
+<span id="L204"><span class="lineNum">     204</span>                 :             : /*</span>
+<span id="L205"><span class="lineNum">     205</span>                 :             :  * Appends formatted text to out starting at *pos.</span>
+<span id="L206"><span class="lineNum">     206</span>                 :             :  * Updates *pos with the number of bytes written.</span>
+<span id="L207"><span class="lineNum">     207</span>                 :             :  * Returns false if the buffer is too small.</span>
+<span id="L208"><span class="lineNum">     208</span>                 :             :  * vsnprintf returns the bytes it *would* have written — if &gt;= remaining</span>
+<span id="L209"><span class="lineNum">     209</span>                 :             :  * the output was truncated and we treat that as an error.</span>
+<span id="L210"><span class="lineNum">     210</span>                 :             :  */</span>
+<span id="L211"><span class="lineNum">     211</span>                 :<span class="tlaGNC">         303 : static inline bool append_to_buffer(char *out, size_t outMax, size_t *pos, const char *fmt, ...){</span></span>
+<span id="L212"><span class="lineNum">     212</span>                 :             :     va_list ap;</span>
+<span id="L213"><span class="lineNum">     213</span>                 :<span class="tlaGNC">         303 :     va_start(ap, fmt);</span></span>
 <span id="L214"><span class="lineNum">     214</span>                 :             : </span>
-<span id="L215"><span class="lineNum">     215</span>                 :             : /*</span>
-<span id="L216"><span class="lineNum">     216</span>                 :             :  * Appends formatted text to out starting at *pos.</span>
-<span id="L217"><span class="lineNum">     217</span>                 :             :  * Updates *pos with the number of bytes written.</span>
-<span id="L218"><span class="lineNum">     218</span>                 :             :  * Returns false if the buffer is too small.</span>
-<span id="L219"><span class="lineNum">     219</span>                 :             :  * vsnprintf returns the bytes it *would* have written — if &gt;= remaining</span>
-<span id="L220"><span class="lineNum">     220</span>                 :             :  * the output was truncated and we treat that as an error.</span>
-<span id="L221"><span class="lineNum">     221</span>                 :             :  */</span>
-<span id="L222"><span class="lineNum">     222</span>                 :<span class="tlaGNC">         303 : static inline bool append_to_buffer(char *out, size_t outMax, size_t *pos, const char *fmt, ...)</span></span>
-<span id="L223"><span class="lineNum">     223</span>                 :             : {</span>
-<span id="L224"><span class="lineNum">     224</span>                 :             :     va_list ap;</span>
-<span id="L225"><span class="lineNum">     225</span>                 :<span class="tlaGNC">         303 :     va_start(ap, fmt);</span></span>
-<span id="L226"><span class="lineNum">     226</span>                 :             : </span>
-<span id="L227"><span class="lineNum">     227</span>                 :<span class="tlaGNC">         303 :     size_t remaining = outMax - *pos;</span></span>
-<span id="L228"><span class="lineNum">     228</span>                 :<span class="tlaGNC">         303 :     int written = vsnprintf(out + *pos, remaining, fmt, ap);</span></span>
+<span id="L215"><span class="lineNum">     215</span>                 :<span class="tlaGNC">         303 :     size_t remaining = outMax - *pos;</span></span>
+<span id="L216"><span class="lineNum">     216</span>                 :<span class="tlaGNC">         303 :     int written = vsnprintf(out + *pos, remaining, fmt, ap);</span></span>
+<span id="L217"><span class="lineNum">     217</span>                 :             : </span>
+<span id="L218"><span class="lineNum">     218</span>                 :<span class="tlaGNC">         303 :     va_end(ap);</span></span>
+<span id="L219"><span class="lineNum">     219</span>                 :             : </span>
+<span id="L220"><span class="lineNum">     220</span>   [<span class="tlaGBC" title="Branch 0 was taken 303 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 303 times"> + </span>]:<span class="tlaGNC">         303 :     if (written &lt; 0 || (size_t)written &gt;= remaining) return false;</span></span>
+<span id="L221"><span class="lineNum">     221</span>                 :             : </span>
+<span id="L222"><span class="lineNum">     222</span>                 :<span class="tlaGNC">         303 :     *pos += (size_t)written;</span></span>
+<span id="L223"><span class="lineNum">     223</span>                 :<span class="tlaGNC">         303 :     return true;</span></span>
+<span id="L224"><span class="lineNum">     224</span>                 :             : }</span>
+<span id="L225"><span class="lineNum">     225</span>                 :             : </span>
+<span id="L226"><span class="lineNum">     226</span>                 :<span class="tlaGNC">         136 : int http_response_render(const HttpResponse * restrict resp, bool keepAlive,</span></span>
+<span id="L227"><span class="lineNum">     227</span>                 :             :                          char * restrict out, size_t outMax){</span>
+<span id="L228"><span class="lineNum">     228</span>                 :<span class="tlaGNC">         136 :     const char *ct = infer_contentType(resp-&gt;body, resp-&gt;contentType);</span></span>
 <span id="L229"><span class="lineNum">     229</span>                 :             : </span>
-<span id="L230"><span class="lineNum">     230</span>                 :<span class="tlaGNC">         303 :     va_end(ap);</span></span>
-<span id="L231"><span class="lineNum">     231</span>                 :             : </span>
-<span id="L232"><span class="lineNum">     232</span>   [<span class="tlaGBC" title="Branch 0 was taken 303 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 303 times"> + </span>]:<span class="tlaGNC">         303 :     if (written &lt; 0 || (size_t)written &gt;= remaining) return false;</span></span>
+<span id="L230"><span class="lineNum">     230</span>                 :             :     // Redirect responses carry no body</span>
+<span id="L231"><span class="lineNum">     231</span>         [<span class="tlaGBC" title="Branch 0 was taken 113 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 23 times"> + </span>]:<span class="tlaGNC">         136 :     size_t bodyLen = (resp-&gt;statusCode == 302) ? 0 : resp-&gt;bodyLen;</span></span>
+<span id="L232"><span class="lineNum">     232</span>                 :<span class="tlaGNC">         136 :     size_t pos = 0;</span></span>
 <span id="L233"><span class="lineNum">     233</span>                 :             : </span>
-<span id="L234"><span class="lineNum">     234</span>                 :<span class="tlaGNC">         303 :     *pos += (size_t)written;</span></span>
-<span id="L235"><span class="lineNum">     235</span>                 :<span class="tlaGNC">         303 :     return true;</span></span>
-<span id="L236"><span class="lineNum">     236</span>                 :             : }</span>
-<span id="L237"><span class="lineNum">     237</span>                 :             : </span>
-<span id="L238"><span class="lineNum">     238</span>                 :<span class="tlaGNC">         136 : int http_response_render(const HttpResponse * restrict resp, bool keepAlive,</span></span>
-<span id="L239"><span class="lineNum">     239</span>                 :             :                          char * restrict out, size_t outMax)</span>
-<span id="L240"><span class="lineNum">     240</span>                 :             : {</span>
-<span id="L241"><span class="lineNum">     241</span>                 :<span class="tlaGNC">         136 :     const char *ct = infer_contentType(resp-&gt;body, resp-&gt;contentType);</span></span>
-<span id="L242"><span class="lineNum">     242</span>                 :             : </span>
-<span id="L243"><span class="lineNum">     243</span>                 :             :     // Redirect responses carry no body</span>
-<span id="L244"><span class="lineNum">     244</span>         [<span class="tlaGBC" title="Branch 0 was taken 113 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 23 times"> + </span>]:<span class="tlaGNC">         136 :     size_t bodyLen = (resp-&gt;statusCode == 302) ? 0 : resp-&gt;bodyLen;</span></span>
-<span id="L245"><span class="lineNum">     245</span>                 :<span class="tlaGNC">         136 :     size_t pos = 0;</span></span>
-<span id="L246"><span class="lineNum">     246</span>                 :             : </span>
-<span id="L247"><span class="lineNum">     247</span>                 :             :     // Mandatory headers: status line, Content-Type, Content-Length, Connection</span>
-<span id="L248"><span class="lineNum">     248</span>   [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 136 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 136 times"> + </span>]:<span class="tlaGNC">         272 :     if (!append_to_buffer(out, outMax, &amp;pos,</span></span>
-<span id="L249"><span class="lineNum">     249</span>                 :             :             &quot;HTTP/1.1 %d %s\r\n&quot;</span>
-<span id="L250"><span class="lineNum">     250</span>                 :             :             &quot;Content-Type: %s\r\n&quot;</span>
-<span id="L251"><span class="lineNum">     251</span>                 :             :             &quot;Content-Length: %zu\r\n&quot;</span>
-<span id="L252"><span class="lineNum">     252</span>                 :             :             &quot;Connection: %s\r\n&quot;,</span>
-<span id="L253"><span class="lineNum">     253</span>                 :<span class="tlaGNC">         136 :             resp-&gt;statusCode, http_status_msg(resp-&gt;statusCode),</span></span>
-<span id="L254"><span class="lineNum">     254</span>                 :<span class="tlaUNC">           0 :             ct, bodyLen, keepAlive ? &quot;keep-alive&quot; : &quot;close&quot;)) return -1;</span></span>
-<span id="L255"><span class="lineNum">     255</span>                 :             : </span>
-<span id="L256"><span class="lineNum">     256</span>                 :             :     // Optional headers — emitted only when the field is non-empty</span>
-<span id="L257"><span class="lineNum">     257</span>         [<span class="tlaGBC" title="Branch 0 was taken 8 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 128 times"> + </span>]:<span class="tlaGNC">         136 :     if (resp-&gt;setCookie[0]) {</span></span>
-<span id="L258"><span class="lineNum">     258</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 8 times"> + </span>]:<span class="tlaGNC">           8 :         if (!append_to_buffer(out, outMax, &amp;pos, &quot;Set-Cookie: %s\r\n&quot;, resp-&gt;setCookie)) return -1;</span></span>
-<span id="L259"><span class="lineNum">     259</span>                 :             :     }</span>
-<span id="L260"><span class="lineNum">     260</span>         [<span class="tlaGBC" title="Branch 0 was taken 23 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 113 times"> + </span>]:<span class="tlaGNC">         136 :     if (resp-&gt;location[0]) {</span></span>
-<span id="L261"><span class="lineNum">     261</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 23 times"> + </span>]:<span class="tlaGNC">          23 :         if (!append_to_buffer(out, outMax, &amp;pos, &quot;Location: %s\r\n&quot;, resp-&gt;location)) return -1;</span></span>
-<span id="L262"><span class="lineNum">     262</span>                 :             :     }</span>
-<span id="L263"><span class="lineNum">     263</span>                 :             : </span>
-<span id="L264"><span class="lineNum">     264</span>                 :             :     // Blank line that terminates the header section (CRLFCRLF)</span>
-<span id="L265"><span class="lineNum">     265</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 136 times"> + </span>]:<span class="tlaGNC">         136 :     if (!append_to_buffer(out, outMax, &amp;pos, &quot;\r\n&quot;)) return -1;</span></span>
+<span id="L234"><span class="lineNum">     234</span>                 :             :     // Mandatory headers: status line, Content-Type, Content-Length, Connection</span>
+<span id="L235"><span class="lineNum">     235</span>   [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 136 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 136 times"> + </span>]:<span class="tlaGNC">         272 :     if (!append_to_buffer(out, outMax, &amp;pos,</span></span>
+<span id="L236"><span class="lineNum">     236</span>                 :             :             &quot;HTTP/1.1 %d %s\r\n&quot;</span>
+<span id="L237"><span class="lineNum">     237</span>                 :             :             &quot;Content-Type: %s\r\n&quot;</span>
+<span id="L238"><span class="lineNum">     238</span>                 :             :             &quot;Content-Length: %zu\r\n&quot;</span>
+<span id="L239"><span class="lineNum">     239</span>                 :             :             &quot;Connection: %s\r\n&quot;</span>
+<span id="L240"><span class="lineNum">     240</span>                 :             :             &quot;Access-Control-Allow-Origin: *\r\n&quot;,</span>
+<span id="L241"><span class="lineNum">     241</span>                 :<span class="tlaGNC">         136 :             resp-&gt;statusCode, http_status_msg(resp-&gt;statusCode),</span></span>
+<span id="L242"><span class="lineNum">     242</span>                 :<span class="tlaUNC">           0 :             ct, bodyLen, keepAlive ? &quot;keep-alive&quot; : &quot;close&quot;)) return -1;</span></span>
+<span id="L243"><span class="lineNum">     243</span>                 :             : </span>
+<span id="L244"><span class="lineNum">     244</span>                 :             :     // Optional headers — emitted only when the field is non-empty</span>
+<span id="L245"><span class="lineNum">     245</span>         [<span class="tlaGBC" title="Branch 0 was taken 8 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 128 times"> + </span>]:<span class="tlaGNC">         136 :     if (resp-&gt;setCookie[0]) {</span></span>
+<span id="L246"><span class="lineNum">     246</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 8 times"> + </span>]:<span class="tlaGNC">           8 :         if (!append_to_buffer(out, outMax, &amp;pos, &quot;Set-Cookie: %s\r\n&quot;, resp-&gt;setCookie)) return -1;</span></span>
+<span id="L247"><span class="lineNum">     247</span>                 :             :     }</span>
+<span id="L248"><span class="lineNum">     248</span>         [<span class="tlaGBC" title="Branch 0 was taken 23 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 113 times"> + </span>]:<span class="tlaGNC">         136 :     if (resp-&gt;location[0]) {</span></span>
+<span id="L249"><span class="lineNum">     249</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 23 times"> + </span>]:<span class="tlaGNC">          23 :         if (!append_to_buffer(out, outMax, &amp;pos, &quot;Location: %s\r\n&quot;, resp-&gt;location)) return -1;</span></span>
+<span id="L250"><span class="lineNum">     250</span>                 :             :     }</span>
+<span id="L251"><span class="lineNum">     251</span>                 :             : </span>
+<span id="L252"><span class="lineNum">     252</span>                 :             :     // Blank line that terminates the header section (CRLFCRLF)</span>
+<span id="L253"><span class="lineNum">     253</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 136 times"> + </span>]:<span class="tlaGNC">         136 :     if (!append_to_buffer(out, outMax, &amp;pos, &quot;\r\n&quot;)) return -1;</span></span>
+<span id="L254"><span class="lineNum">     254</span>                 :             : </span>
+<span id="L255"><span class="lineNum">     255</span>                 :             :     // Body — copied with memcpy because it may contain NUL bytes</span>
+<span id="L256"><span class="lineNum">     256</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 136 times"> + </span>]:<span class="tlaGNC">         136 :     if (pos + bodyLen &gt; outMax) return -1;</span></span>
+<span id="L257"><span class="lineNum">     257</span>         [<span class="tlaGBC" title="Branch 0 was taken 113 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 23 times"> + </span>]:<span class="tlaGNC">         136 :     if (bodyLen) {</span></span>
+<span id="L258"><span class="lineNum">     258</span>                 :<span class="tlaGNC">         113 :         memcpy(out + pos, resp-&gt;body, bodyLen);</span></span>
+<span id="L259"><span class="lineNum">     259</span>                 :<span class="tlaGNC">         113 :         pos += bodyLen;</span></span>
+<span id="L260"><span class="lineNum">     260</span>                 :             :     }</span>
+<span id="L261"><span class="lineNum">     261</span>                 :             : </span>
+<span id="L262"><span class="lineNum">     262</span>                 :<span class="tlaGNC">         136 :     return (int)pos;</span></span>
+<span id="L263"><span class="lineNum">     263</span>                 :             : }</span>
+<span id="L264"><span class="lineNum">     264</span>                 :             : </span>
+<span id="L265"><span class="lineNum">     265</span>                 :             : /* ── Body / HTML helpers ─────────────────────────────────────────────── */</span>
 <span id="L266"><span class="lineNum">     266</span>                 :             : </span>
-<span id="L267"><span class="lineNum">     267</span>                 :             :     // Body — copied with memcpy because it may contain NUL bytes</span>
-<span id="L268"><span class="lineNum">     268</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 136 times"> + </span>]:<span class="tlaGNC">         136 :     if (pos + bodyLen &gt; outMax) return -1;</span></span>
-<span id="L269"><span class="lineNum">     269</span>         [<span class="tlaGBC" title="Branch 0 was taken 113 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 23 times"> + </span>]:<span class="tlaGNC">         136 :     if (bodyLen) {</span></span>
-<span id="L270"><span class="lineNum">     270</span>                 :<span class="tlaGNC">         113 :         memcpy(out + pos, resp-&gt;body, bodyLen);</span></span>
-<span id="L271"><span class="lineNum">     271</span>                 :<span class="tlaGNC">         113 :         pos += bodyLen;</span></span>
-<span id="L272"><span class="lineNum">     272</span>                 :             :     }</span>
-<span id="L273"><span class="lineNum">     273</span>                 :             : </span>
-<span id="L274"><span class="lineNum">     274</span>                 :<span class="tlaGNC">         136 :     return (int)pos;</span></span>
-<span id="L275"><span class="lineNum">     275</span>                 :             : }</span>
-<span id="L276"><span class="lineNum">     276</span>                 :             : </span>
-<span id="L277"><span class="lineNum">     277</span>                 :             : /* ── Body / HTML helpers ─────────────────────────────────────────────── */</span>
-<span id="L278"><span class="lineNum">     278</span>                 :             : </span>
-<span id="L279"><span class="lineNum">     279</span>                 :             : </span>
-<span id="L280"><span class="lineNum">     280</span>                 :             : </span>
-<span id="L281"><span class="lineNum">     281</span>                 :<span class="tlaGNC">         164 : void get_field(const char *src, const char *paramName, char *dest, size_t max)</span></span>
-<span id="L282"><span class="lineNum">     282</span>                 :             : {</span>
-<span id="L283"><span class="lineNum">     283</span>                 :<span class="tlaGNC">         164 :     dest[0] = '\0';</span></span>
-<span id="L284"><span class="lineNum">     284</span>   [<span class="tlaGBC" title="Branch 0 was taken 160 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 4 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 160 times"> + </span>]:<span class="tlaGNC">         164 :     if (unlikely(!src || !paramName)) return;</span></span>
+<span id="L267"><span class="lineNum">     267</span>                 :             : </span>
+<span id="L268"><span class="lineNum">     268</span>                 :             : </span>
+<span id="L269"><span class="lineNum">     269</span>                 :<span class="tlaGNC">         166 : void get_field(const char * restrict src, const char * restrict paramName, char * restrict dest, size_t max){</span></span>
+<span id="L270"><span class="lineNum">     270</span>                 :<span class="tlaGNC">         166 :     dest[0] = '\0';</span></span>
+<span id="L271"><span class="lineNum">     271</span>   [<span class="tlaGBC" title="Branch 0 was taken 162 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 4 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 162 times"> + </span>]:<span class="tlaGNC">         166 :     if (unlikely(!src || !paramName)) return;</span></span>
+<span id="L272"><span class="lineNum">     272</span>                 :             : </span>
+<span id="L273"><span class="lineNum">     273</span>                 :<span class="tlaGNC">         162 :     size_t plen = strlen(paramName);</span></span>
+<span id="L274"><span class="lineNum">     274</span>                 :<span class="tlaGNC">         162 :     const char *p = src;</span></span>
+<span id="L275"><span class="lineNum">     275</span>                 :             : </span>
+<span id="L276"><span class="lineNum">     276</span>         [<span class="tlaGBC" title="Branch 0 was taken 155 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 7 times"> + </span>]:<span class="tlaGNC">         162 :     while ((p = strstr(p, paramName)) != NULL) {</span></span>
+<span id="L277"><span class="lineNum">     277</span>                 :             :         // Accept the match only at the start of the string or right after '&amp;'</span>
+<span id="L278"><span class="lineNum">     278</span>   [<span class="tlaGBC" title="Branch 0 was taken 88 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 67 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 88 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">         155 :         if (p == src || *(p-1) == '&amp;') {</span></span>
+<span id="L279"><span class="lineNum">     279</span>                 :<span class="tlaGNC">         155 :             url_decode(p + plen, dest, max);</span></span>
+<span id="L280"><span class="lineNum">     280</span>                 :<span class="tlaGNC">         155 :             return;</span></span>
+<span id="L281"><span class="lineNum">     281</span>                 :             :         }</span>
+<span id="L282"><span class="lineNum">     282</span>                 :<span class="tlaUNC">           0 :         p++;</span></span>
+<span id="L283"><span class="lineNum">     283</span>                 :             :     }</span>
+<span id="L284"><span class="lineNum">     284</span>                 :             : }</span>
 <span id="L285"><span class="lineNum">     285</span>                 :             : </span>
-<span id="L286"><span class="lineNum">     286</span>                 :<span class="tlaGNC">         160 :     size_t plen = strlen(paramName);</span></span>
-<span id="L287"><span class="lineNum">     287</span>                 :<span class="tlaGNC">         160 :     const char *p = src;</span></span>
-<span id="L288"><span class="lineNum">     288</span>                 :             : </span>
-<span id="L289"><span class="lineNum">     289</span>         [<span class="tlaGBC" title="Branch 0 was taken 153 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 7 times"> + </span>]:<span class="tlaGNC">         160 :     while ((p = strstr(p, paramName)) != NULL) {</span></span>
-<span id="L290"><span class="lineNum">     290</span>                 :             :         // Accept the match only at the start of the string or right after '&amp;'</span>
-<span id="L291"><span class="lineNum">     291</span>   [<span class="tlaGBC" title="Branch 0 was taken 87 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 66 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 87 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">         153 :         if (p == src || *(p-1) == '&amp;') {</span></span>
-<span id="L292"><span class="lineNum">     292</span>                 :<span class="tlaGNC">         153 :             url_decode(p + plen, dest, max);</span></span>
-<span id="L293"><span class="lineNum">     293</span>                 :<span class="tlaGNC">         153 :             return;</span></span>
-<span id="L294"><span class="lineNum">     294</span>                 :             :         }</span>
-<span id="L295"><span class="lineNum">     295</span>                 :<span class="tlaUNC">           0 :         p++;</span></span>
-<span id="L296"><span class="lineNum">     296</span>                 :             :     }</span>
-<span id="L297"><span class="lineNum">     297</span>                 :             : }</span>
-<span id="L298"><span class="lineNum">     298</span>                 :             : </span>
-<span id="L299"><span class="lineNum">     299</span>                 :<span class="tlaGNC">          12 : void html_escape(const char * restrict src, char * restrict dest, size_t max)</span></span>
-<span id="L300"><span class="lineNum">     300</span>                 :             : {</span>
-<span id="L301"><span class="lineNum">     301</span>                 :<span class="tlaGNC">          12 :     size_t i = 0;</span></span>
-<span id="L302"><span class="lineNum">     302</span>                 :             :     // Reserve enough room for the longest entity (&amp;quot; = 6 bytes) plus NUL</span>
-<span id="L303"><span class="lineNum">     303</span>   [<span class="tlaGBC" title="Branch 0 was taken 95 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 12 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 95 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">         107 :     while (*src &amp;&amp; i + 7 &lt; max) {</span></span>
-<span id="L304"><span class="lineNum">     304</span>   [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">          95 :         switch (*src) {</span></span>
+<span id="L286"><span class="lineNum">     286</span>                 :<span class="tlaGNC">          12 : void html_escape(const char * restrict src, char * restrict dest, size_t max){</span></span>
+<span id="L287"><span class="lineNum">     287</span>                 :<span class="tlaGNC">          12 :     size_t i = 0;</span></span>
+<span id="L288"><span class="lineNum">     288</span>                 :             :     // Reserve enough room for the longest entity (&amp;quot; = 6 bytes) plus NUL</span>
+<span id="L289"><span class="lineNum">     289</span>   [<span class="tlaGBC" title="Branch 0 was taken 95 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 12 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 95 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">         107 :     while (*src &amp;&amp; i + 7 &lt; max) {</span></span>
+<span id="L290"><span class="lineNum">     290</span>   [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">          95 :         switch (*src) {</span></span>
 <span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 95 times"> + </span>]
-<span id="L305"><span class="lineNum">     305</span>                 :<span class="tlaUNC">           0 :             case '&lt;':  memcpy(dest+i, &quot;&amp;lt;&quot;,   4); i += 4; break;</span></span>
-<span id="L306"><span class="lineNum">     306</span>                 :<span class="tlaUNC">           0 :             case '&gt;':  memcpy(dest+i, &quot;&amp;gt;&quot;,   4); i += 4; break;</span></span>
-<span id="L307"><span class="lineNum">     307</span>                 :<span class="tlaUNC">           0 :             case '&amp;':  memcpy(dest+i, &quot;&amp;amp;&quot;,  5); i += 5; break;</span></span>
-<span id="L308"><span class="lineNum">     308</span>                 :<span class="tlaUNC">           0 :             case '&quot;':  memcpy(dest+i, &quot;&amp;quot;&quot;, 6); i += 6; break;</span></span>
-<span id="L309"><span class="lineNum">     309</span>                 :<span class="tlaUNC">           0 :             case '\'': memcpy(dest+i, &quot;&amp;#39;&quot;,  5); i += 5; break;</span></span>
-<span id="L310"><span class="lineNum">     310</span>                 :<span class="tlaGNC">          95 :             default:   dest[i++] = *src;             break;</span></span>
-<span id="L311"><span class="lineNum">     311</span>                 :             :         }</span>
-<span id="L312"><span class="lineNum">     312</span>                 :<span class="tlaGNC">          95 :         src++;</span></span>
-<span id="L313"><span class="lineNum">     313</span>                 :             :     }</span>
-<span id="L314"><span class="lineNum">     314</span>                 :<span class="tlaGNC">          12 :     dest[i] = '\0';</span></span>
-<span id="L315"><span class="lineNum">     315</span>                 :<span class="tlaGNC">          12 : }</span></span>
-<span id="L316"><span class="lineNum">     316</span>                 :             : </span>
-<span id="L317"><span class="lineNum">     317</span>                 :<span class="tlaGNC">          10 : void make_error_block(const char *msg, char *dest, size_t max)</span></span>
-<span id="L318"><span class="lineNum">     318</span>                 :             : {</span>
-<span id="L319"><span class="lineNum">     319</span>   [<span class="tlaGBC" title="Branch 0 was taken 10 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 10 times"> + </span>]:<span class="tlaGNC">          10 :     if (unlikely(!msg || !msg[0])) { dest[0] = '\0'; return; }</span></span>
-<span id="L320"><span class="lineNum">     320</span>                 :<span class="tlaGNC">          10 :     snprintf(dest, max, &quot;&lt;div class='alert alert-err'&gt;%s&lt;/div&gt;&quot;, msg);</span></span>
-<span id="L321"><span class="lineNum">     321</span>                 :             : }</span>
+<span id="L291"><span class="lineNum">     291</span>                 :<span class="tlaUNC">           0 :             case '&lt;':  memcpy(dest+i, &quot;&amp;lt;&quot;,   4); i += 4; break;</span></span>
+<span id="L292"><span class="lineNum">     292</span>                 :<span class="tlaUNC">           0 :             case '&gt;':  memcpy(dest+i, &quot;&amp;gt;&quot;,   4); i += 4; break;</span></span>
+<span id="L293"><span class="lineNum">     293</span>                 :<span class="tlaUNC">           0 :             case '&amp;':  memcpy(dest+i, &quot;&amp;amp;&quot;,  5); i += 5; break;</span></span>
+<span id="L294"><span class="lineNum">     294</span>                 :<span class="tlaUNC">           0 :             case '&quot;':  memcpy(dest+i, &quot;&amp;quot;&quot;, 6); i += 6; break;</span></span>
+<span id="L295"><span class="lineNum">     295</span>                 :<span class="tlaUNC">           0 :             case '\'': memcpy(dest+i, &quot;&amp;#39;&quot;,  5); i += 5; break;</span></span>
+<span id="L296"><span class="lineNum">     296</span>                 :<span class="tlaGNC">          95 :             default:   dest[i++] = *src;             break;</span></span>
+<span id="L297"><span class="lineNum">     297</span>                 :             :         }</span>
+<span id="L298"><span class="lineNum">     298</span>                 :<span class="tlaGNC">          95 :         src++;</span></span>
+<span id="L299"><span class="lineNum">     299</span>                 :             :     }</span>
+<span id="L300"><span class="lineNum">     300</span>                 :<span class="tlaGNC">          12 :     dest[i] = '\0';</span></span>
+<span id="L301"><span class="lineNum">     301</span>                 :<span class="tlaGNC">          12 : }</span></span>
+<span id="L302"><span class="lineNum">     302</span>                 :             : </span>
+<span id="L303"><span class="lineNum">     303</span>                 :<span class="tlaGNC">          10 : void make_error_block(const char * restrict msg, char * restrict dest, size_t max){</span></span>
+<span id="L304"><span class="lineNum">     304</span>   [<span class="tlaGBC" title="Branch 0 was taken 10 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 10 times"> + </span>]:<span class="tlaGNC">          10 :     if (unlikely(!msg || !msg[0])) { dest[0] = '\0'; return; }</span></span>
+<span id="L305"><span class="lineNum">     305</span>                 :<span class="tlaGNC">          10 :     snprintf(dest, max, &quot;&lt;div class='alert alert-err'&gt;%s&lt;/div&gt;&quot;, msg);</span></span>
+<span id="L306"><span class="lineNum">     306</span>                 :             : }</span>
         </pre>
               </td>
             </tr>

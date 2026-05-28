@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-05-23 12:29:43</td>
+            <td class="headerValue">2026-05-27 21:31:52</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -56,9 +56,9 @@
 </td>
             <td></td>
             <td class="headerItem">Branches:</td>
-            <td class="headerCovTableEntryLo">55.0&nbsp;%</td>
+            <td class="headerCovTableEntryLo">50.0&nbsp;%</td>
             <td class="headerCovTableEntry">20</td>
-            <td class="headerCovTableEntry">11</td>
+            <td class="headerCovTableEntry">10</td>
           </tr>
                   <tr><td><img src="../glass.png" width=3 height=3 alt=""></td></tr>
                 </table>
@@ -140,7 +140,7 @@
 <span id="L61"><span class="lineNum">      61</span>                 :<span class="tlaGNC">         136 :     double estimated = e.countPrev * (1.0 - elapsed) + e.countCurr;</span></span>
 <span id="L62"><span class="lineNum">      62</span>                 :<span class="tlaGNC">         136 :     int allowed = likely(estimated &lt; RATE_LIMIT_RPS);</span></span>
 <span id="L63"><span class="lineNum">      63</span>                 :             : </span>
-<span id="L64"><span class="lineNum">      64</span>         [<span class="tlaGBC" title="Branch 0 was taken 130 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 6 times"> + </span>]:<span class="tlaGNC">         136 :     if (allowed) e.countCurr++;</span></span>
+<span id="L64"><span class="lineNum">      64</span>         [<span class="tlaGBC" title="Branch 0 was taken 136 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">         136 :     if (allowed) e.countCurr++;</span></span>
 <span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaGNC">         136 :     ht_set(rateTable, (void *)ip, strlen(ip) + 1, &amp;e, sizeof(e));</span></span>
 <span id="L66"><span class="lineNum">      66</span>                 :<span class="tlaGNC">         136 :     return allowed;</span></span>
 <span id="L67"><span class="lineNum">      67</span>                 :             : }</span>

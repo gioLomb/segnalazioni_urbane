@@ -1,0 +1,9 @@
+<map id="report.h" name="report.h">
+<area shape="rect" id="Node000001" title="CRUD operations and JSON serialisation for urban reports." alt="" coords="93,5,166,31"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,79,69,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="116,33,65,72,61,68,113,29"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="94,79,165,104"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="132,31,132,65,127,65,127,31"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="189,79,272,104"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="147,28,204,68,201,73,144,33"/>
+</map>

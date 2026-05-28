@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-05-23 12:29:43</td>
+            <td class="headerValue">2026-05-27 21:31:52</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -91,7 +91,7 @@
 <span id="L13"><span class="lineNum">      13</span>                 :             : // using /dev/urandom. Falls back to time^pid if the device is unavailable.</span>
 <span id="L14"><span class="lineNum">      14</span>                 :<span class="tlaGNC">           5 : static void generate_salt(char *out) {</span></span>
 <span id="L15"><span class="lineNum">      15</span>                 :             :     static const char hex[] = &quot;0123456789abcdef&quot;;</span>
-<span id="L16"><span class="lineNum">      16</span>                 :             :     unsigned char buf[16];  // 16 raw bytes → 32 hex chars</span>
+<span id="L16"><span class="lineNum">      16</span>                 :             :     unsigned char buf[SALT_RAW_LEN];  // 16 raw bytes → 32 hex chars</span>
 <span id="L17"><span class="lineNum">      17</span>                 :             : </span>
 <span id="L18"><span class="lineNum">      18</span>                 :<span class="tlaGNC">           5 :     FILE *f = fopen(&quot;/dev/urandom&quot;, &quot;rb&quot;);</span></span>
 <span id="L19"><span class="lineNum">      19</span>   [<span class="tlaGBC" title="Branch 0 was taken 5 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaGBC" title="Branch 2 was taken 5 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">           5 :     if (f &amp;&amp; fread(buf, 1, sizeof(buf), f) == sizeof(buf)) {</span></span>
@@ -232,8 +232,8 @@
 <span id="L153"><span class="lineNum">     153</span>                 :<span class="tlaGNC">           7 :     return found;</span></span>
 <span id="L154"><span class="lineNum">     154</span>                 :             : }</span>
 <span id="L155"><span class="lineNum">     155</span>                 :             : </span>
-<span id="L156"><span class="lineNum">     156</span>                 :<span class="tlaGNC">          71 : bool user_is_operator(const User *u) {</span></span>
-<span id="L157"><span class="lineNum">     157</span>   [<span class="tlaGBC" title="Branch 0 was taken 71 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaGBC" title="Branch 2 was taken 42 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 29 times"> + </span>]:<span class="tlaGNC">          71 :     return u &amp;&amp; u-&gt;role == ROLE_OPERATOR;</span></span>
+<span id="L156"><span class="lineNum">     156</span>                 :<span class="tlaGNC">          77 : bool user_is_operator(const User *u) {</span></span>
+<span id="L157"><span class="lineNum">     157</span>   [<span class="tlaGBC" title="Branch 0 was taken 77 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaGBC" title="Branch 2 was taken 47 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 30 times"> + </span>]:<span class="tlaGNC">          77 :     return u &amp;&amp; u-&gt;role == ROLE_OPERATOR;</span></span>
 <span id="L158"><span class="lineNum">     158</span>                 :             : }</span>
 <span id="L159"><span class="lineNum">     159</span>                 :             : </span>
 <span id="L160"><span class="lineNum">     160</span>                 :<span class="tlaGNC">          42 : bool user_is_admin(const User *u) {</span></span>

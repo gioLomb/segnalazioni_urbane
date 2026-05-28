@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-05-23 12:29:43</td>
+            <td class="headerValue">2026-05-27 21:31:52</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -116,24 +116,24 @@
 <span id="L38"><span class="lineNum">      38</span>                 :             :     { .method = &quot;POST&quot;, .path = &quot;/api/report/respond&quot;,   .handler = route_api_report_respond   },</span>
 <span id="L39"><span class="lineNum">      39</span>                 :             :     { .method = &quot;POST&quot;, .path = &quot;/api/report/feedback&quot;,  .handler = route_api_report_feedback  },</span>
 <span id="L40"><span class="lineNum">      40</span>                 :             :     { .method = &quot;POST&quot;, .path = &quot;/api/admin/assign&quot;,     .handler = route_api_admin_assign     },</span>
-<span id="L41"><span class="lineNum">      41</span>                 :             :     { .method = &quot;GET&quot;,  .path = &quot;/static/common.css&quot;,    .handler = route_static_css           }</span>
-<span id="L42"><span class="lineNum">      42</span>                 :             : };</span>
-<span id="L43"><span class="lineNum">      43</span>                 :             : </span>
-<span id="L44"><span class="lineNum">      44</span>                 :             : // static const size_t NUM_ROUTES = sizeof(routes) / sizeof(routes[0]);</span>
+<span id="L41"><span class="lineNum">      41</span>                 :             :     { .method = &quot;GET&quot;,  .path = &quot;/static/common.css&quot;,    .handler = route_static_css           },</span>
+<span id="L42"><span class="lineNum">      42</span>                 :             :     { .method = &quot;GET&quot;,  .path = &quot;/api/docs&quot;,             .handler = route_static_docs          },</span>
+<span id="L43"><span class="lineNum">      43</span>                 :             : };</span>
+<span id="L44"><span class="lineNum">      44</span>                 :             : </span>
 <span id="L45"><span class="lineNum">      45</span>                 :             : </span>
 <span id="L46"><span class="lineNum">      46</span>                 :             : /* ── Public API ──────────────────────────────────────────────────────── */</span>
 <span id="L47"><span class="lineNum">      47</span>                 :             : </span>
-<span id="L48"><span class="lineNum">      48</span>                 :<span class="tlaGNC">         130 : void handle_request(const HttpRequest *req, HttpResponse *resp) {</span></span>
+<span id="L48"><span class="lineNum">      48</span>                 :<span class="tlaGNC">         136 : void handle_request(const HttpRequest *req, HttpResponse *resp) {</span></span>
 <span id="L49"><span class="lineNum">      49</span>                 :             :     // Two-phase matching: check path first, then method.</span>
 <span id="L50"><span class="lineNum">      50</span>                 :             :     // This ensures a POST to a GET-only route returns 405, not 404.</span>
-<span id="L51"><span class="lineNum">      51</span>                 :<span class="tlaGNC">         130 :     bool pathFound = false;</span></span>
+<span id="L51"><span class="lineNum">      51</span>                 :<span class="tlaGNC">         136 :     bool pathFound = false;</span></span>
 <span id="L52"><span class="lineNum">      52</span>                 :             : </span>
-<span id="L53"><span class="lineNum">      53</span>         [<span class="tlaGBC" title="Branch 0 was taken 1535 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 10 times"> + </span>]:<span class="tlaGNC">        1545 :     for (size_t i = 0; i &lt; NUM_ROUTES; i++) {</span></span>
-<span id="L54"><span class="lineNum">      54</span>         [<span class="tlaGBC" title="Branch 0 was taken 1389 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 146 times"> + </span>]:<span class="tlaGNC">        1535 :         if (!http_is_request_path(req, routes[i].path)) continue;</span></span>
-<span id="L55"><span class="lineNum">      55</span>                 :<span class="tlaGNC">         146 :         pathFound = true;</span></span>
-<span id="L56"><span class="lineNum">      56</span>         [<span class="tlaGBC" title="Branch 0 was taken 120 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 26 times"> + </span>]:<span class="tlaGNC">         146 :         if (http_is_request_method(req, routes[i].method)) {</span></span>
-<span id="L57"><span class="lineNum">      57</span>                 :<span class="tlaGNC">         120 :             routes[i].handler(req, resp);</span></span>
-<span id="L58"><span class="lineNum">      58</span>                 :<span class="tlaGNC">         120 :             return;</span></span>
+<span id="L53"><span class="lineNum">      53</span>         [<span class="tlaGBC" title="Branch 0 was taken 1611 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 10 times"> + </span>]:<span class="tlaGNC">        1621 :     for (size_t i = 0; i &lt; NUM_ROUTES; i++) {</span></span>
+<span id="L54"><span class="lineNum">      54</span>         [<span class="tlaGBC" title="Branch 0 was taken 1459 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 152 times"> + </span>]:<span class="tlaGNC">        1611 :         if (!http_is_request_path(req, routes[i].path)) continue;</span></span>
+<span id="L55"><span class="lineNum">      55</span>                 :<span class="tlaGNC">         152 :         pathFound = true;</span></span>
+<span id="L56"><span class="lineNum">      56</span>         [<span class="tlaGBC" title="Branch 0 was taken 126 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 26 times"> + </span>]:<span class="tlaGNC">         152 :         if (http_is_request_method(req, routes[i].method)) {</span></span>
+<span id="L57"><span class="lineNum">      57</span>                 :<span class="tlaGNC">         126 :             routes[i].handler(req, resp);</span></span>
+<span id="L58"><span class="lineNum">      58</span>                 :<span class="tlaGNC">         126 :             return;</span></span>
 <span id="L59"><span class="lineNum">      59</span>                 :             :         }</span>
 <span id="L60"><span class="lineNum">      60</span>                 :             :     }</span>
 <span id="L61"><span class="lineNum">      61</span>                 :             : </span>
