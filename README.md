@@ -1,13 +1,13 @@
-# Segnalazioni Urbane — *Segnalacity*
+# Urban Reports — *Segnalacity*
 
-> Piattaforma web per la gestione civica di segnalazioni urbane, scritta interamente in C.  
-> Cittadini, operatori e amministratori comunali interagiscono su una mappa interattiva per seguire l'intero ciclo di vita di una segnalazione.
+> A web platform for civic management of urban reports, written entirely in C.  
+> Citizens, operators, and municipal administrators interact on an interactive map to follow the full lifecycle of a report.
 
 ---
 
-## Panoramica
+## Overview
 
-**Segnalacity** è un server HTTP scritto in C puro che espone un'applicazione multi-ruolo per la gestione di problemi urbani (buche, lampioni rotti, degrado, ecc.). Il server usa **libuv** per l'I/O asincrono non-bloccante, **SQLite** come database embedded, **cJSON** per la serializzazione JSON, e un motore di template HTML custom.
+**Segnalacity** is an HTTP server written in pure C that exposes a multi-role application for managing urban issues (potholes, broken streetlights, urban decay, etc.). The server uses **libuv** for non-blocking asynchronous I/O, **SQLite** as an embedded database, **cJSON** for JSON serialization, and a custom HTML template engine.
 
 ```
                          ┌────────────────────────┐
@@ -34,171 +34,171 @@
 
 ---
 
-## Ruoli e flusso applicativo
+## Roles and Application Flow
 
-| Ruolo | Cosa può fare |
+| Role | Capabilities |
 |---|---|
-| **Cittadino** | Registrarsi, accedere, inviare una segnalazione su mappa, consultare le proprie segnalazioni attive e archiviate, lasciare feedback sulle risolte |
-| **Operatore** | Visualizzare le segnalazioni assegnategli, accettare o rifiutare un'assegnazione, marcarle come risolte |
-| **Admin** | Vedere tutte le segnalazioni della propria città, assegnare segnalazioni agli operatori |
+| **Citizen** | Register, log in, submit a report on the map, view their active and archived reports, leave feedback on resolved ones |
+| **Operator** | View assigned reports, accept or reject an assignment, mark reports as resolved |
+| **Admin** | View all reports in their city, assign reports to operators |
 
-### Ciclo di vita di una segnalazione
+### Report Lifecycle
 
 ```
-STATUS_ACTIVE  ──(admin assegna)──▶  STATUS_ASSIGNED
+STATUS_ACTIVE  ──(admin assigns)──▶  STATUS_ASSIGNED
                                            │
                            ┌───────────────┴───────────────┐
-                    (operatore accetta)             (operatore rifiuta)
+                    (operator accepts)             (operator rejects)
                            │                               │
-                  STATUS_IN_PROGRESS              STATUS_ACTIVE (riassegnabile)
+                  STATUS_IN_PROGRESS              STATUS_ACTIVE (re-assignable)
                            │
-                   (operatore risolve)
+                   (operator resolves)
                            │
                     STATUS_RESOLVED
                            │
-                  (cittadino lascia feedback)
+                  (citizen leaves feedback)
 ```
 
 ---
 
-## Struttura del progetto
+## Project Structure
 
 ```
 segnalacity/
-├── server.c / server.h            # Entry point, event loop libuv
-├── connection_handler.c / .h      # Gestione ciclo di vita connessione TCP
-├── client_manager.c / .h          # Slab allocator per ClientCtx
+├── server.c / server.h            # Entry point, libuv event loop
+├── connection_handler.c / .h      # TCP connection lifecycle management
+├── client_manager.c / .h          # Slab allocator for ClientCtx
 ├── route_handler.c / .h           # Dispatch table (method, path) → handler
-├── route_pages.c / .h             # Handler HTML (login, home, submit, mappa)
-├── route_api.c / .h               # Handler JSON REST API
-├── route_helpers.c / .h           # Asset statici (CSS)
-├── http_types.h                   # Struct HttpRequest / HttpResponse
-├── http_utils.c / .h              # Parsing URL, query string, cookie
-├── picohttpparser.c / .h          # Parser HTTP/1.1 embedded (pico)
-├── template.c / .h                # Motore di template (sostituzione variabili)
-├── db.c / .h                      # Init e accesso SQLite
-├── user.c / .h                    # Registrazione, autenticazione, ruoli
-├── session.c / .h                 # Sessioni in-memory (cookie sid)
-├── report.c / .h                  # CRUD segnalazioni + serializzazione JSON
-├── geo.c / .h                     # Lookup geometrie comunali (GeoJSON ISTAT)
-├── hash_table.c / .h              # Hash table generica con chaining e auto-resize
-├── slab_allocator.c / .h          # Allocatore a slab per ClientCtx
-├── rate_limiter.c / .h            # Rate limiting per-IP (sliding window)
-├── config.h                       # Costanti globali e include centrali
+├── route_pages.c / .h             # HTML handlers (login, home, submit, map)
+├── route_api.c / .h               # JSON REST API handlers
+├── route_helpers.c / .h           # Static assets (CSS)
+├── http_types.h                   # HttpRequest / HttpResponse structs
+├── http_utils.c / .h              # URL parsing, query string, cookie
+├── picohttpparser.c / .h          # Embedded HTTP/1.1 parser (pico)
+├── template.c / .h                # Template engine (variable substitution)
+├── db.c / .h                      # SQLite init and access
+├── user.c / .h                    # Registration, authentication, roles
+├── session.c / .h                 # In-memory sessions (cookie sid)
+├── report.c / .h                  # Report CRUD + JSON serialization
+├── geo.c / .h                     # Municipal geometry lookup (ISTAT GeoJSON)
+├── hash_table.c / .h              # Generic hash table with chaining and auto-resize
+├── slab_allocator.c / .h          # Slab allocator for ClientCtx
+├── rate_limiter.c / .h            # Per-IP rate limiting (sliding window)
+├── config.h                       # Global constants and central includes
 ├── Makefile
 ├── data/
-│   ├── comuni.geojson             # Geometrie ISTAT di tutti i comuni italiani
-│   └── cities.json                # Array di nomi comuni (generato da geo_init)
+│   ├── comuni.geojson             # ISTAT geometries for all Italian municipalities
+│   └── cities.json                # Array of municipality names (generated by geo_init)
 └── templates/
     ├── login.html
     ├── register.html
     ├── submit.html
-    ├── citizen_home.html          # Mappa interattiva cittadino
-    ├── operator_map.html          # Mappa interattiva operatore
-    ├── admin_map.html             # Dashboard mappa admin
+    ├── citizen_home.html          # Citizen interactive map
+    ├── operator_map.html          # Operator interactive map
+    ├── admin_map.html             # Admin map dashboard
     └── common.css
 ```
 
 ---
 
-## Componenti principali
+## Core Components
 
 ### Server & Event Loop (libuv)
 
-Il server usa **libuv** per multiplexare migliaia di connessioni simultanee su un singolo thread. L'I/O è completamente non-bloccante; ogni `ClientCtx` vive in un pool slab per minimizzare le allocazioni heap sotto carico elevato.
+The server uses **libuv** to multiplex thousands of simultaneous connections on a single thread. I/O is completely non-blocking; each `ClientCtx` lives in a slab pool to minimize heap allocations under high load.
 
 ### Database (SQLite + cJSON)
 
-La persistenza è affidata a **SQLite** (`segnalacity.db`). Le query sono gestite in `db.c`, `user.c` e `report.c`. I risultati vengono serializzati in JSON con **cJSON** e restituiti direttamente ai client.
+Persistence is handled by **SQLite** (`segnalacity.db`). Queries are managed in `db.c`, `user.c`, and `report.c`. Results are serialized to JSON using **cJSON** and returned directly to clients.
 
-### Autenticazione e sessioni
+### Authentication and Sessions
 
-Le password vengono salvate come hash DJB2 con salt casuale a 16 byte (hex). Le sessioni sono gestite in-memory tramite la hash table interna; ogni sessione è identificata da un token casuale a 32 caratteri hex memorizzato nel cookie `sid` (durata 24 ore).
+Passwords are stored as DJB2 hashes with a random 16-byte (hex) salt. Sessions are managed in-memory via the internal hash table; each session is identified by a random 32-character hex token stored in the `sid` cookie (valid for 24 hours).
 
-### Geolocalizzazione
+### Geolocation
 
-Al boot, `geo_init()` carica il GeoJSON ISTAT dei comuni italiani, calcola il bounding box e il centroide per ogni municipio e li indicizza nella hash table. Le mappe HTML vengono centrate automaticamente sulla città dell'utente loggato.
+At boot, `geo_init()` loads the ISTAT GeoJSON of Italian municipalities, computes the bounding box and centroid for each municipality, and indexes them in the hash table. HTML maps are automatically centered on the logged-in user's city.
 
-### Hash Table generica
+### Generic Hash Table
 
-Implementazione custom con:
-- Chiavi e valori come buffer binari (`void *` + `size_t`)
-- Chaining per la risoluzione delle collisioni
-- Auto-resize al prossimo primo ≥ 2× la capacità quando il load factor raggiunge 1
-- Seed per-istanza da `/dev/urandom` contro hash-flooding
+Custom implementation featuring:
+- Keys and values as binary buffers (`void *` + `size_t`)
+- Chaining for collision resolution
+- Auto-resize to the next prime ≥ 2× capacity when the load factor reaches 1
+- Per-instance seed from `/dev/urandom` to protect against hash-flooding
 
 ### Rate Limiter
 
-Sliding window per-IP con due contatori (finestra corrente e precedente):
+Per-IP sliding window with two counters (current and previous window):
 
 ```
 estimated_rate = countPrev × (1 − elapsed / window) + countCurr
 ```
 
-Se la stima supera `RATE_LIMIT_RPS` (default 100 req/s), il server risponde con `429 Too Many Requests`. La tabella si ricicla automaticamente oltre le 10 000 entry.
+If the estimate exceeds `RATE_LIMIT_RPS` (default 100 req/s), the server responds with `429 Too Many Requests`. The table automatically recycles beyond 10,000 entries.
 
 ---
 
-## API HTTP
+## HTTP API
 
-### Pagine (HTML)
+### Pages (HTML)
 
-| Metodo | Path | Descrizione |
+| Method | Path | Description |
 |---|---|---|
-| `GET` | `/` | Redirect al login |
-| `GET` | `/home` | Dashboard utente (varia per ruolo) |
-| `GET` | `/register` | Pagina registrazione |
-| `GET` | `/submit` | Pagina invio segnalazione |
-| `GET` | `/logout` | Logout e invalidazione sessione |
-| `POST` | `/login` | Autenticazione |
-| `POST` | `/register` | Creazione account |
-| `POST` | `/submit` | Invio nuova segnalazione |
-| `GET` | `/static/common.css` | Foglio di stile condiviso |
+| `GET` | `/` | Redirect to login |
+| `GET` | `/home` | User dashboard (varies by role) |
+| `GET` | `/register` | Registration page |
+| `GET` | `/submit` | Report submission page |
+| `GET` | `/logout` | Logout and session invalidation |
+| `POST` | `/login` | Authentication |
+| `POST` | `/register` | Account creation |
+| `POST` | `/submit` | Submit a new report |
+| `GET` | `/static/common.css` | Shared stylesheet |
 
 ### REST API (JSON)
 
-| Metodo | Path | Accesso | Descrizione |
+| Method | Path | Access | Description |
 |---|---|---|---|
-| `GET` | `/api/cities` | Pubblico | Lista di tutti i comuni disponibili |
-| `GET` | `/api/reports/active` | Autenticato | Segnalazioni attive dell'utente |
-| `GET` | `/api/reports/archived` | Autenticato | Segnalazioni risolte dell'utente |
-| `GET` | `/api/reports/all` | Admin | Tutte le segnalazioni della città |
-| `GET` | `/api/operators` | Admin | Lista operatori della città |
-| `POST` | `/api/report/status` | Operatore | Marca una segnalazione come risolta |
-| `POST` | `/api/report/respond` | Operatore | Accetta o rifiuta un'assegnazione |
-| `POST` | `/api/report/feedback` | Cittadino | Lascia un feedback (1–5 stelle) |
-| `POST` | `/api/admin/assign` | Admin | Assegna una segnalazione a un operatore |
+| `GET` | `/api/cities` | Public | List of all available municipalities |
+| `GET` | `/api/reports/active` | Authenticated | User's active reports |
+| `GET` | `/api/reports/archived` | Authenticated | User's resolved reports |
+| `GET` | `/api/reports/all` | Admin | All reports in the city |
+| `GET` | `/api/operators` | Admin | List of operators in the city |
+| `POST` | `/api/report/status` | Operator | Mark a report as resolved |
+| `POST` | `/api/report/respond` | Operator | Accept or reject an assignment |
+| `POST` | `/api/report/feedback` | Citizen | Leave feedback (1–5 stars) |
+| `POST` | `/api/admin/assign` | Admin | Assign a report to an operator |
 
 ---
 
 ## Build
 
-### Dipendenze
+### Dependencies
 
 - **libuv** ≥ 1.x
 - **SQLite 3** (`libsqlite3-dev`)
 - **cJSON** (`libcjson-dev`)
-- **GCC** con supporto a `-fsanitize=address`
+- **GCC** with `-fsanitize=address` support
 
-Su Ubuntu/Debian:
+On Ubuntu/Debian:
 
 ```bash
 sudo apt install libsqlite3-dev libcjson-dev libuv1-dev gcc
 ```
 
-### Compilazione
+### Compilation
 
 ```bash
 make
 ```
 
-Il Makefile compila con `-fsanitize=address -Wall -Wextra -O2`. Per rimuovere il binario:
+The Makefile compiles with `-fsanitize=address -Wall -Wextra -O2`. To remove the binary:
 
 ```bash
 make clean
 ```
 
-Per ripristinare anche il database e le sessioni:
+To also reset the database:
 
 ```bash
 make cleandb
@@ -206,56 +206,46 @@ make cleandb
 
 ---
 
-## Avvio
+## Running
 
 ```bash
 ./segnalacity
 ```
 
-Il server ascolta su **porta 8080** (configurabile via `PORT` in `config.h` o come macro al momento della compilazione):
+The server listens on **port 8080** (configurable via `PORT` in `config.h` or as a compile-time macro):
 
 ```bash
 make CFLAGS="-DPORT=9090 -O2 -Wall -Wextra"
 ```
 
-Al primo avvio, `geo_init()` carica `data/comuni.geojson` e genera `data/cities.json`. L'operazione può richiedere alcuni secondi la prima volta.
+On first launch, `geo_init()` loads `data/comuni.geojson` and generates `data/cities.json`. This operation may take a few seconds the first time.
 
 ---
 
-## Configurazione
+## Configuration
 
-Tutte le costanti si trovano in `config.h`:
+All constants are defined in `config.h`:
 
-| Costante | Valore predefinito | Descrizione |
+| Constant | Default Value | Description |
 |---|---|---|
-| `PORT` | `8080` | Porta di ascolto |
-| `APP_DB_PATH` | `segnalacity.db` | Percorso del database SQLite |
-| `KEEPALIVE_TIMEOUT` | `10` | Timeout connessione idle (secondi) |
-| `MAX_EVENTS` | `4096` | Max eventi per iterazione libuv |
-| `MAX_CLIENTS` | `16384` | Limite massimo connessioni simultanee |
+| `PORT` | `8080` | Listening port |
+| `APP_DB_PATH` | `segnalacity.db` | SQLite database path |
+| `KEEPALIVE_TIMEOUT` | `10` | Idle connection timeout (seconds) |
+| `MAX_EVENTS` | `4096` | Max events per libuv iteration |
+| `MAX_CLIENTS` | `16384` | Maximum simultaneous connections |
 | `LISTEN_BACKLOG` | `65535` | TCP listen backlog |
-| `RATE_LIMIT_RPS` | `100` | Max richieste/secondo per IP |
-| `CLIENT_BUFFER_SIZE` | `8 KB` | Buffer di ricezione per connessione |
-| `RESPONSE_BUFFER_SIZE` | `256 KB` | Buffer di risposta per richiesta |
-| `SESSION_MAX_AGE` | `86400` | Durata massima sessione (24 ore) |
-| `GEO_JSON_PATH` | `data/comuni.geojson` | GeoJSON ISTAT dei comuni |
-| `CITIES_JSON_PATH` | `data/cities.json` | JSON delle città (generato) |
+| `RATE_LIMIT_RPS` | `100` | Max requests/second per IP |
+| `CLIENT_BUFFER_SIZE` | `8 KB` | Receive buffer per connection |
+| `RESPONSE_BUFFER_SIZE` | `256 KB` | Response buffer per request |
+| `SESSION_MAX_AGE` | `86400` | Maximum session duration (24 hours) |
+| `GEO_JSON_PATH` | `data/comuni.geojson` | ISTAT municipalities GeoJSON |
+| `CITIES_JSON_PATH` | `data/cities.json` | Cities JSON (generated) |
 
 ---
 
-## Documentazione
 
-Il progetto è documentato con commenti in stile Doxygen. Per generare la documentazione HTML:
+## Technical Notes
 
-```bash
-doxygen Doxyfile
-```
-
----
-
-## Note tecniche
-
-- Il parsing HTTP è delegato a **picohttpparser**, un parser zero-copy embedded nel progetto.
-- Il motore di template (`template.c`) sostituisce variabili del tipo `{{NOME}}` all'interno dei file HTML, senza dipendenze esterne.
-- Le geometrie comunali provengono dal dataset **ISTAT** in formato GeoJSON; il bounding box è una approssimazione dell'area reale del comune.
-- Il rate limiter è disabilitato in modalità debug (`DEBUG_RATE_LIMIT 0`); impostarlo a `1` in `rate_limiter.h` per abilitarlo.
+- HTTP parsing is delegated to **picohttpparser**, a zero-copy parser embedded in the project.
+- The template engine (`template.c`) substitutes variables of the form `{{NAME}}` within HTML files, with no external dependencies.
+- Municipal geometries come from the **ISTAT** dataset in GeoJSON format; the bounding box is an approximation of the municipality's actual area.
