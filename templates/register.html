@@ -56,11 +56,11 @@
       <form method="POST" action="/register" id="reg-form">
         <div class="form-group">
           <label>Username</label>
-          <input name="username" required placeholder="Scegli un username" maxlength="30">
+          <input name="username" required placeholder="Scegli un username" maxlength="31">
         </div>
         <div class="form-group">
           <label>Password</label>
-          <input name="password" type="password" required placeholder="Almeno 6 caratteri">
+          <input name="password" type="password" required placeholder="Almeno 6 caratteri" maxlength="127">
         </div>
 
         <div class="form-group">
@@ -72,7 +72,7 @@
               autocomplete="off"
               required
               placeholder="Inizia a digitare il tuo comune..."
-              maxlength="80"
+              maxlength="31"
             >
             <div id="city-dropdown"></div>
           </div>

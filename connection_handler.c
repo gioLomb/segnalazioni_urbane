@@ -179,7 +179,7 @@ void on_read(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf) {
     // Rate-limit check
     char ip[INET6_ADDRSTRLEN] = {0};
     get_peer_ip(&ctx->handle, ip, sizeof(ip));
-    if (DEBUG_RATE_LIMIT && !rate_limit_check(ip)) {
+    if (ENABLE_RATE_LIMIT && !rate_limit_check(ip)) {
         HttpResponse r429 = {
             .statusCode = 429,
             .body = "Too Many Requests\n",

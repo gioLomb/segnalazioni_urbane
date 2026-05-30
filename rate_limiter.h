@@ -16,7 +16,8 @@
 #include "hash_table.h"
 
 #define RATE_LIMIT_RPS    100    /* max requests/sec per IP */
-#define DEBUG_RATE_LIMIT  1        /* set to 1 to enforce rate limiting   */
+#define MAX_SAVED_IP      10000
+#define ENABLE_RATE_LIMIT  1        /* set to 1 to enforce rate limiting   */
 
 
 /**
@@ -50,7 +51,7 @@ void rate_limiter_destroy(void);
  * @brief Sliding-window check — returns 1 if the request is allowed, 0 to reject.
  *
  * The table is recycled automatically when it exceeds 10 000 entries to
- * bound memory usage. Always returns 1 when DEBUG_RATE_LIMIT == 0.
+ * bound memory usage. Always returns 1 when ENABLE_RATE_LIMIT == 0.
  *
  * @param ip NUL-terminated IPv4 address string of the client.
  * @return 1 if within the rate limit, 0 if the request should be rejected.

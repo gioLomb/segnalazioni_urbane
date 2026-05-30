@@ -17,6 +17,7 @@
 #define OPERATOR_ID_PARAM_LEN 24
 // Status is a single decimal digit ("0", "1" or "2") plus NUL.
 #define STATUS_PARAM_LEN      4
+#define ACTION_PARAM_LEN      8
 
 /**
  * @brief Returns the list of available cities as a JSON array.

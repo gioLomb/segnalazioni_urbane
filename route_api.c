@@ -135,7 +135,7 @@ void route_api_report_respond(const HttpRequest *req, HttpResponse *resp) {
     }
 
     // Extracting form fields
-    char reportIds[REPORT_ID_PARAM_LEN] = {0}, action[8] = {0};
+    char reportIds[REPORT_ID_PARAM_LEN] = {0}, action[ACTION_PARAM_LEN] = {0};
     get_field(req->body, "report_id=", reportIds, sizeof(reportIds));
     get_field(req->body, "action=",    action,    sizeof(action));
     if (!reportIds[0] || !action[0]) {

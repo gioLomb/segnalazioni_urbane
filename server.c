@@ -44,8 +44,6 @@ unsigned long hash_key(const void *key, size_t keySize, unsigned long seed) {
     return h;
 }
 
-
-
 static void on_signal(uv_signal_t *handle, int signum) {
     (void)signum;
     // Stop the signal watcher and request the event loop to exit cleanly.
@@ -151,18 +149,7 @@ static int init_sessions(void) {
     return session_init();
 }
 
-/* ── main ────────────────────────────────────────────────────────────── */
 
-/**
- * Server startup sequence:
- *
- *  Ignore SIGPIPE so that a broken client pipe cannot kill the process.
- *  Initialise every subsystem — a single assert() provides fail-fast
- *  semantics; each helper prints its own diagnostic on failure.
- *  Bind the TCP socket and arm the SIGINT handler.
- *  Enter the event loop (blocks until SIGINT).
- *  Graceful shutdown: drain callbacks and destroy all state.
- */
 int main(void) {
     uv_loop_t  *loop;
     uv_tcp_t    server;

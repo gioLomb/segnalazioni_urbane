@@ -37,7 +37,7 @@ int rate_limit_check(const char *ip) {
 
     // Recycle the table when it grows too large; brief amnesia on all IPs
     // is acceptable compared to unbounded memory growth.
-    if (unlikely(rateTable->size > 10000)) {
+    if (unlikely(rateTable->size > MAX_SAVED_IP)) {
         extern unsigned long hash_key(const void *, size_t, unsigned long);
         ht_destroy(rateTable, NULL);
         rateTable = ht_create(1024, hash_key);
