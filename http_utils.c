@@ -156,11 +156,12 @@ void http_request_cookie(const HttpRequest *req, const char *name, char *dest, s
     dest[0] = '\0';
 
     size_t cookieLen = 0;
-    const char *h = http_request_header(req, "cookie", &cookieLen);
-    if (!h) return;
+    const char *cookieStart = http_request_header(req, "cookie", &cookieLen);
+    if (!cookieStart) return;
 
     size_t nameLen = strlen(name);
-    const char *end = h + cookieLen;
+    const char *end = cookieStart + cookieLen;
+    const char *h   = cookieStart;
 
     while (h < end) {
         // Fast scan for the next occurrence of the cookie name in the remaining buffer
@@ -172,7 +173,7 @@ void http_request_cookie(const HttpRequest *req, const char *name, char *dest, s
          *  - must be preceded by ';', ' ', or be at the very start of the value
          *  - must be immediately followed by '='
          */
-        bool prefixOk = (h == req->headers[0].value || *(h-1) == ' ' || *(h-1) == ';');
+        bool prefixOk = (h == cookieStart || *(h-1) == ' ' || *(h-1) == ';');
         if (prefixOk && (h + nameLen < end) && h[nameLen] == '=') {
             url_decode(h + nameLen + 1, dest, max);
             return;
