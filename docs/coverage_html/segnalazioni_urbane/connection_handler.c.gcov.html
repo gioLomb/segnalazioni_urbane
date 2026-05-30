@@ -257,7 +257,7 @@
 <span id="L179"><span class="lineNum">     179</span>                 :             :     // Rate-limit check</span>
 <span id="L180"><span class="lineNum">     180</span>                 :<span class="tlaGNC">         136 :     char ip[INET6_ADDRSTRLEN] = {0};</span></span>
 <span id="L181"><span class="lineNum">     181</span>                 :<span class="tlaGNC">         136 :     get_peer_ip(&amp;ctx-&gt;handle, ip, sizeof(ip));</span></span>
-<span id="L182"><span class="lineNum">     182</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 136 times"> + </span>]:<span class="tlaGNC">         136 :     if (DEBUG_RATE_LIMIT &amp;&amp; !rate_limit_check(ip)) {</span></span>
+<span id="L182"><span class="lineNum">     182</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 136 times"> + </span>]:<span class="tlaGNC">         136 :     if (ENABLE_RATE_LIMIT &amp;&amp; !rate_limit_check(ip)) {</span></span>
 <span id="L183"><span class="lineNum">     183</span>                 :<span class="tlaUNC">           0 :         HttpResponse r429 = {</span></span>
 <span id="L184"><span class="lineNum">     184</span>                 :             :             .statusCode = 429,</span>
 <span id="L185"><span class="lineNum">     185</span>                 :             :             .body = &quot;Too Many Requests\n&quot;,</span>
