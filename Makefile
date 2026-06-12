@@ -1,5 +1,5 @@
 CC      = gcc
-CFLAGS  = -fsanitize=address -Wall -Wextra -O2 -I. -D_GNU_SOURCE
+CFLAGS  = -fsanitize=address -Wall -Wextra -O2 -I. 
 LDFLAGS = -fsanitize=address -lsqlite3 -lpthread -lcjson $(shell pkg-config --libs libuv)
 
 SRCS =  rate_limiter.c connection_handler.c http_utils.c  server.c  report.c route_handler.c template.c route_api.c route_pages.c route_helpers.c\

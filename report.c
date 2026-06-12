@@ -233,8 +233,6 @@ void report_cache_invalidate_city(const char *city, uint64_t authorId) {
 
 uint64_t report_insert(uint64_t authorId, double lat, double lon,
                        const char *city, const char *category, const char *desc) {
-    // Format string "lffsssl": l=int64(authorId), f=double(lat), f=double(lon),
-    // s=string(city), s=string(category), s=string(desc), l=int64(timestamp).
     int rc = db_exec(
         "INSERT INTO reports "
         "(author_id, lat, lon, city, category, description, status, created_at) "
@@ -242,10 +240,13 @@ uint64_t report_insert(uint64_t authorId, double lat, double lon,
         "lffsssl",
         (int64_t)authorId, lat, lon, city, category, desc, (int64_t)time(NULL));
     if (rc != 0) return 0;
-    int64_t id = db_last_insert_id();
-    return (id > 0) ? (uint64_t)id : 0;
-}
 
+    int64_t id = db_last_insert_id();
+    if (id <= 0) return 0;
+
+    report_cache_invalidate_city(city, authorId);
+    return (uint64_t)id;
+}
 int report_assign(uint64_t reportId, uint64_t operatorId) {
     // The WHERE clause is an atomic guard: status = 0 ensures the report is
     // still active, and assigned_to IS NULL prevents double-assignment in

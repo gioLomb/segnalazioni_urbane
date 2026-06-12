@@ -565,28 +565,11 @@
     }
 
     /* ══════════════════════════════════════════════════════════════
-       POLLING — Page Visibility API instead of setInterval
-
-       Why not setInterval?
-         • Fires unconditionally every N ms even when the tab is hidden,
-           wasting bandwidth and server resources.
-         • Allows requests to stack up: if a fetch takes longer than the
-           interval a second request fires before the first completes.
-
        Page Visibility API solution:
          scheduleRefresh() uses setTimeout (not setInterval) so the next
          poll only starts after the previous fetch fully resolves,
          eliminating the pile-up problem.
 
-         A visibilitychange listener:
-           • On hide  → cancel the pending timeout immediately.
-           • On show  → call loadData() right away (admin sees fresh data
-                        the moment they return) then re-arm the cycle.
-
-         This results in zero wasted requests while the tab is in the
-         background and instant data on return, with no server-side changes
-         required.  document.hidden / visibilityState are supported by all
-         modern browsers without a polyfill.
     ══════════════════════════════════════════════════════════════ */
 
     function scheduleRefresh() {
